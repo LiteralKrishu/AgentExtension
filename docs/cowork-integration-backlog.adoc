@@ -1,0 +1,85 @@
+= AgentExtension integration backlog
+:toc:
+:toclevels: 1
+
+Baseline *AgentExtension 0.5.0*, verified on 9 November 2026.
+
+The five milestones in the research plan have shipped. They cover scoped permissions, skills and context sources, workspace notes and read connectors, versioned local plugins and two read-only subagents, and browser inspection with saved run reports. The release also includes scoped macOS computer use. link:claude-cowork-research.md[Cowork research] · link:milestones.md[Release and verification record]
+
+== Features with a partial integration
+
+[cols="1,2,3",options="header"]
+|===
+|Area |What ships in 0.5.0 |What remains
+
+|Permission policy
+|The broker binds approvals to the run, workspace, action, and target. Users can revoke access.
+|Add configurable allow, ask, and deny rules for users and workspaces. Apply administrator restrictions before user choices where an organization policy exists.
+
+|Skills
+|Users select text workflows from approved roots. The extension loads the selected instructions and reads text resources on demand.
+|Match eligible skills to the task within a fixed budget. Keep explicit-only skills available through manual selection. Add isolated skill execution after its runtime and permissions can be verified.
+
+|MCP connectors
+|Approved remote tools can read named targets. Each call requires approval. VS Code stores bearer credentials.
+|Add OAuth sign-in and account selection. Define approval rules for connector writes and account changes. Consider separately approved local MCP processes.
+
+|Plugins and hooks
+|Local plugins declare a version, capabilities, skills, worker roles, and connector references. Changes to the approved content require review.
+|Add validated package imports, a catalog or shared distribution, and namespaced workflow commands. Add built-in hooks for validation or events. Custom hooks need a separate executor with limits on input, time, and output.
+
+|Instructions and context
+|The extension uses a checked-in agent definition and shows submitted sources, trust labels, and character counts. TrueForge can compact session history.
+|Add opt-in user and workspace instruction profiles and path-scoped rules. Record the instruction version in saved reports. Add token budgets by source and show what context survives compaction when the runtime can report it.
+
+|Memory
+|Users can add or remove approved workspace notes. Each workspace has a separate store.
+|Add in-place editing and source references. Keep user preferences and agent-proposed notes in separate stores. Ask the user to approve a suggested note before saving it.
+
+|Subagents
+|The two read-only roles handle repository research and diff review. They return advice from bounded snapshots.
+|Add a test diagnosis role and support custom role definitions with explicit tool scopes. For workers that propose edits, use separate drafts and check the base revision before merge. Require parent review and reject overlapping or stale changes.
+
+|Browser and computer use
+|A fresh browser profile uses approved origins and exact action approvals. The macOS helper can inspect and act on accessible controls in one selected app.
+|Add approval for a single navigation beyond the current origin scope. Review support for more browser file transfers and native controls that require screen-based interaction. Keep scope and stop controls for each capability.
+
+|Audit and usage
+|The broker logs decisions. Saved reports record check outcomes and scoped browser and app activity. Individual tools have limits.
+|Add a redacted audit export and a run budget that tracks tokens, time, and tool calls across the parent and workers.
+|===
+
+== Capabilities still open
+
+[cols="1,3",options="header"]
+|===
+|Capability |Remaining work
+
+|Structured questions during a run
+|Let the agent pause with a question, explain what it needs, and resume with the user's answer. Use a separate state for questions and action approvals.
+
+|Scheduled reports
+|Create recurring read-only runs with a time zone, budget, scope, and run history. Define what happens when the workspace or device is offline. Require a fresh approval for any write.
+
+|Run checkpoints and recovery
+|Save the goal, approved plan, draft revision, and pending work so a run can resume after a restart. Recheck the workspace and request fresh grants before any protected action.
+
+|Cross-device sessions and remote task assignment
+|Use recoverable sessions as the basis for continuing a run on another device. Remote control needs device identity, revocation, and a defined offline recovery path.
+
+|Shared projects and administration
+|Add shared instructions, files, and memory with roles for viewing and editing. Add organization controls for tool access, network access, trusted devices, and audit visibility.
+
+|Editable artifacts and office files
+|Saved Markdown reports cover run evidence. Editable interactive artifacts and workflows for documents, spreadsheets, and slides remain research options.
+|===
+
+== Research options with no release commitment
+
+* Automatic screening of actions and a mode that skips prompts. The shipped broker uses explicit approvals for protected actions.
+* A managed cloud runner or a broader virtual machine boundary. The extension runs against local TrueForge and uses separate controls for commands, browser access, and native app access.
+* Computer-use teaching and recording. The research found desktop code paths for these features. Runtime behavior was outside that inspection.
+
+== Verification still open
+
+Run a compatible general coding model through the same workflows to check tool choice and task quality. The 0.5.0 tests verified the extension with scripted model responses, including real browser and native app operations. Flask Task B passed with a scripted fixture. A successful live-model run remains open. link:milestones.md[Verification record] · link:demo.md[Flask rehearsal]
