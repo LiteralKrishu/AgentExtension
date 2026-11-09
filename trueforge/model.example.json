@@ -1,0 +1,17 @@
+{
+  "manifest": {
+    "type": "custom",
+    "name": "local-lm-studio",
+    "baseUrl": "http://127.0.0.1:1234/v1",
+    "models": [
+      {
+        "name": "qwen",
+        "modelId": "qwen3.5-9b",
+        "properties": {
+          "contextLength": 32768,
+          "maxOutputTokens": 2600
+        }
+      }
+    ]
+  }
+}
