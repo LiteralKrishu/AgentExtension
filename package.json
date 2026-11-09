@@ -1,0 +1,214 @@
+{
+  "name": "agentextension",
+  "displayName": "AgentExtension",
+  "description": "Reviewable coding changes in VS Code, powered by local TrueForge.",
+  "version": "0.5.0",
+  "publisher": "LiteralKrishu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LiteralKrishu/AgentExtension.git"
+  },
+  "engines": {
+    "vscode": "^1.101.0",
+    "node": ">=22.14.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "main": "./src/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "agentextension.inlineEdit",
+        "title": "AgentExtension: Edit Selection"
+      },
+      {
+        "command": "agentextension.open",
+        "title": "AgentExtension: Open Agent Panel"
+      },
+      {
+        "command": "agentextension.cancel",
+        "title": "AgentExtension: Cancel Run"
+      },
+      {
+        "command": "agentextension.undo",
+        "title": "AgentExtension: Undo Last Apply"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "agentextension.inlineEdit",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+alt+i",
+        "when": "editorTextFocus && editorHasSelection && !editorReadonly"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "agentextension",
+          "title": "AgentExtension",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "agentextension": [
+        {
+          "id": "agentextension.panel",
+          "type": "webview",
+          "name": "Agent"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AgentExtension",
+      "properties": {
+        "agentextension.serverUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8790",
+          "scope": "machine",
+          "description": "Local TrueForge server URL."
+        },
+        "agentextension.model": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Model name from TrueForge, including the provider prefix."
+        },
+        "agentextension.compaction": {
+          "type": "boolean",
+          "default": true,
+          "scope": "machine",
+          "description": "Let TrueForge compact long histories. Disable this if your model template requires an original user message."
+        },
+        "agentextension.turnTimeoutSeconds": {
+          "type": "integer",
+          "default": 600,
+          "minimum": 30,
+          "maximum": 1800,
+          "scope": "machine",
+          "description": "Maximum time for a streamed TrueForge turn."
+        },
+        "agentextension.fallbackModel": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Optional second TrueForge model used when the primary model fails."
+        },
+        "agentextension.skillRoots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "maxItems": 7,
+          "scope": "machine",
+          "description": "Approved local folders containing skill-name/SKILL.md directories. Skills load only when selected. Scripts never run."
+        },
+        "agentextension.readConnectors": {
+          "type": "array",
+          "default": [],
+          "scope": "machine",
+          "maxItems": 8,
+          "description": "User-reviewed read-only MCP tools. Enable them per workspace in the panel. Use HTTPS or loopback HTTP. Store credentials with the Connector credential button.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "url",
+              "account",
+              "tools"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "account": {
+                "type": "string"
+              },
+              "tools": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "targetArgument",
+                    "targets"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "targetArgument": {
+                      "type": "string"
+                    },
+                    "targets": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "agentextension.pluginRoots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "maxItems": 7,
+          "scope": "machine",
+          "description": "Approved local folders containing plugin directories with plugin.json. Installation does not enable a plugin. Review its version, content digest and capabilities in Manage plugins."
+        },
+        "agentextension.browserOrigins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "maxItems": 8,
+          "scope": "machine",
+          "description": "Exact HTTPS origins or loopback HTTP origins available for explicit browser access. Select origins and interaction mode in the panel. No wildcard origins."
+        },
+        "agentextension.browserExecutable": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Optional absolute Chrome or Chromium executable path. Empty uses installed Google Chrome. The extension always creates its own profile."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "check": "node --check src/extension.js && node --check media/panel.js && node --check src/permissions.js && node --check src/skills.js && node --check src/prompt.js && node --check src/memory.js && node --check src/connectors.js && node --check src/plugins.js && node --check src/workers.js && node --check src/worker-session.js && node --check src/browser.js && node --check src/computer.js && node --check src/surface-access.js && node --check src/reports.js",
+    "test": "node --test test/*.test.js",
+    "test:ui": "node test/ui/run.cjs",
+    "build:native": "node scripts/build-native.cjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@truefoundry/trueforge-sdk": "0.184.1",
+    "diff": "8.0.4",
+    "playwright-core": "1.62.1",
+    "yaml": "2.9.1",
+    "zod": "4.6.7"
+  }
+}
