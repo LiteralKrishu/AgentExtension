@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "review-team",
+  "publisher": "LiteralKrishu",
+  "version": "1.0.0",
+  "description": "Research relevant repository excerpts and review a draft with bounded, read-only workers.",
+  "skills": ["review-workflow"],
+  "workers": ["repository-research", "diff-review"],
+  "connectors": [],
+  "capabilities": ["skill.read", "worker.research", "worker.review"]
+}
