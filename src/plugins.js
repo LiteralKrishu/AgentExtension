@@ -5,14 +5,21 @@ const { digest } = require('./permissions');
 const { readWithin, parseSkill } = require('./skills');
 
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(64);
-const roles = ['repository-research', 'diff-review'];
+const roles = ['repository-research', 'diff-review', 'test-diagnosis', 'edit-proposal'];
+const roleCapability = { 'repository-research': 'worker.research', 'diff-review': 'worker.review', 'test-diagnosis': 'worker.diagnose', 'edit-proposal': 'worker.edit' };
+// A custom role is a read-only worker. Its tool list must be empty: workers never call tools.
+const customRole = z.strictObject({
+  name: slug, description: z.string().trim().min(1).max(200), instructions: z.string().trim().min(1).max(2_000),
+  snapshot: z.enum(['repository', 'diff', 'check']), tools: z.array(z.string()).max(0),
+});
 const manifestSchema = z.strictObject({
   schemaVersion: z.literal(1), id: slug, publisher: z.string().trim().min(1).max(80),
   version: z.string().regex(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[a-zA-Z0-9.-]+)?$/).max(60),
   description: z.string().trim().min(1).max(500),
-  skills: z.array(slug).max(3).default([]), workers: z.array(z.enum(roles)).max(2).default([]),
+  skills: z.array(slug).max(3).default([]), workers: z.array(z.enum(roles)).max(4).default([]),
+  roles: z.array(customRole).max(3).default([]),
   connectors: z.array(z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/)).max(8).default([]),
-  capabilities: z.array(z.enum(['skill.read', 'worker.research', 'worker.review', 'connector.read'])).max(4),
+  capabilities: z.array(z.enum(['skill.read', 'worker.research', 'worker.review', 'worker.diagnose', 'worker.edit', 'worker.custom', 'connector.read'])).max(7),
 });
 
 async function loadPlugin(input, connectors = []) {
@@ -46,11 +53,12 @@ async function loadPlugin(input, connectors = []) {
   }
   await visit();
   const manifest = manifestSchema.parse(JSON.parse(files.get('plugin.json') ?? 'null'));
+  if (new Set(manifest.roles.map(role => role.name)).size !== manifest.roles.length) throw new Error('Duplicate plugin declarations are not allowed.');
   for (const key of ['skills', 'workers', 'connectors', 'capabilities']) {
     if (new Set(manifest[key]).size !== manifest[key].length) throw new Error('Duplicate plugin declarations are not allowed.');
   }
   const expected = [...(manifest.skills.length ? ['skill.read'] : []),
-    ...manifest.workers.map(role => role === 'repository-research' ? 'worker.research' : 'worker.review'),
+    ...manifest.workers.map(role => roleCapability[role]), ...(manifest.roles.length ? ['worker.custom'] : []),
     ...(manifest.connectors.length ? ['connector.read'] : [])].sort();
   if (digest(expected) !== digest([...manifest.capabilities].sort())) throw new Error('Capabilities must match the declared components.');
   const connectorPins = manifest.connectors.map(id => {
@@ -121,4 +129,4 @@ class PluginRegistry {
 }
 
 const pluginStorageKey = workspace => `plugins.v1.${digest(workspace)}`;
-module.exports = { PluginRegistry, loadPlugin, pluginStorageKey, roles };
+module.exports = { PluginRegistry, loadPlugin, pluginStorageKey, roles, roleCapability };

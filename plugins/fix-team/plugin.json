@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "fix-team",
+  "publisher": "LiteralKrishu",
+  "version": "1.0.0",
+  "description": "Diagnose a failed check and draft a contained fix for parent review.",
+  "skills": ["fix-workflow"],
+  "workers": ["test-diagnosis", "edit-proposal"],
+  "roles": [
+    {
+      "name": "docs-check",
+      "description": "Check repository excerpts for documentation that no longer matches the code.",
+      "instructions": "Compare the supplied documentation and code excerpts. Report statements in the documentation that the code contradicts. Cite the documentation line in each finding.",
+      "snapshot": "repository",
+      "tools": []
+    }
+  ],
+  "connectors": [],
+  "capabilities": ["skill.read", "worker.diagnose", "worker.edit", "worker.custom"]
+}

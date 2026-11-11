@@ -9,7 +9,8 @@
         "read_file",
         "propose_write",
         "propose_lines",
-        "review_changes"
+        "review_changes",
+        "run_command"
       ],
       "enableTools": [
         "search_workspace",

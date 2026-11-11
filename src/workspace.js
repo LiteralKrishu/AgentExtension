@@ -115,7 +115,9 @@ class Workspace {
         await fs.mkdir(path.dirname(target), { recursive: true });
         await fs.writeFile(target, after);
       }
-      return await runIsolated(command, args, directory, signal);
+      const result = await runIsolated(command, args, directory, signal);
+      // Show workspace-relative paths instead of the temporary snapshot folder.
+      return { ...result, output: result.output.split(`${directory}${path.sep}`).join('').split(directory).join('.') };
     } finally {
       await fs.rm(directory, { force: true, recursive: true });
     }

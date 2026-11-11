@@ -10,7 +10,7 @@ byId('form').addEventListener('submit', event => {
   event.preventDefault();
   if (prompt.value.trim()) send('run', { prompt: prompt.value, planFirst: event.submitter?.id === 'plan-first' });
 });
-for (const id of ['cancel', 'session', 'approve-plan', 'continue', 'apply', 'undo', 'select-skills', 'revoke', 'memory', 'connectors', 'connector-token', 'plugins', 'browser-access', 'computer-access', 'stop-surfaces', 'run-report']) {
+for (const id of ['cancel', 'session', 'approve-plan', 'continue', 'apply', 'undo', 'select-skills', 'revoke', 'memory', 'connectors', 'connector-token', 'plugins', 'browser-access', 'computer-access', 'stop-surfaces', 'run-report', 'schedules', 'policy', 'instructions', 'export-audit', 'resume-run', 'discard-checkpoint']) {
   byId(id).addEventListener('click', () => send(id));
 }
 
@@ -90,6 +90,25 @@ function renderReview(state) {
   byId('apply').disabled = state.applying;
 }
 
+let questionKey;
+function renderQuestion({ phase, question }) {
+  byId('question').hidden = phase !== 'question' || !question;
+  const key = JSON.stringify(question ?? null);
+  if (key === questionKey) return;
+  questionKey = key;
+  byId('question-answer').value = '';
+  if (!question) return;
+  byId('question-count').textContent = `${question.index} of up to ${question.limit}`;
+  byId('question-text').textContent = question.question;
+  byId('question-options').replaceChildren(...question.options.map((option, index) => {
+    const button = element('button', option, 'secondary');
+    button.type = 'button';
+    button.addEventListener('click', () => send('answer', { option: index, text: byId('question-answer').value }));
+    return button;
+  }));
+}
+byId('question-send').addEventListener('click', () => send('answer', { text: byId('question-answer').value }));
+byId('question-skip').addEventListener('click', () => send('skip-question'));
 let planKey;
 function renderPlan({ phase, plan, planApproved }) {
   byId('plan').hidden = !plan;
@@ -134,7 +153,8 @@ function renderWorkers(state) {
   byId('worker-list').replaceChildren(...workers.map(worker => {
     const card = element('details');
     card.append(element('summary', `${worker.role} · ${worker.state}`), element('p', worker.question, 'hint'));
-    if (worker.target) card.append(element('p', `${worker.target.scope} · draft ${worker.target.revision} · ${worker.target.omittedHunks} hunks omitted`, 'hint'));
+    if (worker.target?.scope) card.append(element('p', `${worker.target.scope} · draft ${worker.target.revision} · ${worker.target.omittedHunks} hunks omitted`, 'hint'));
+    else if (worker.target) card.append(element('p', `Separate draft based on revision ${worker.target.revision}${worker.hunks ? ` · ${worker.hunks} proposed hunks` : ''}`, 'hint'));
     if (worker.sources) card.append(element('p', worker.sources.map(source => `${source.file}:${source.start}–${source.end}${source.truncated ? ' (excerpt)' : ''}`).join(', '), 'hint'));
     if (worker.session) card.append(button('Open worker session', () => send('worker-session', { id: worker.id }), 'link'));
     if (worker.report) {
@@ -150,19 +170,27 @@ function renderWorkers(state) {
 window.addEventListener('message', ({ data }) => {
   if (data.type !== 'state') return;
   const state = data.state;
-  const busy = ['running', 'plan', 'review'].includes(state.phase);
+  const busy = ['running', 'plan', 'review', 'question'].includes(state.phase);
   byId('surface-scope').textContent = state.surfaceScope || 'Browser and computer access off.';
   byId('browser-access').disabled = byId('computer-access').disabled = busy || state.phase === 'ready' || state.applying;
   byId('stop-surfaces').hidden = !state.surfacesActive && !state.surfaceScope;
   byId('run-report').disabled = state.applying;
+  byId('schedule-summary').textContent = state.scheduleSummary || 'No scheduled reports.';
+  byId('policy-summary').textContent = state.policySummary || 'Every protected action asks first.';
+  byId('memory-summary').textContent = state.memorySummary || '';
+  byId('instruction-summary').textContent = state.instructionSummary || 'No instruction profiles in use.';
+  byId('instructions').disabled = busy || state.phase === 'ready' || state.applying;
+  byId('schedules').disabled = state.applying || Boolean(state.scheduledRunning);
   byId('surface-activity').hidden = !state.surfaceEvents?.length;
   byId('surface-events').replaceChildren(...(state.surfaceEvents ?? []).map(event => element('li', `${event.kind} · ${event.status}`)));
   byId('activity').hidden = state.phase === 'idle' && !state.status;
   byId('phase').textContent = state.phase;
   byId('phase').dataset.phase = state.phase;
   byId('status').textContent = state.status ?? '';
+  byId('usage').hidden = !state.usage;
+  byId('usage').textContent = state.usage ? `Usage: ${state.usage}` : '';
   byId('run').disabled = byId('plan-first').disabled = busy || state.phase === 'ready' || state.applying;
-  byId('cancel').hidden = !busy && state.phase !== 'ready';
+  byId('cancel').hidden = !busy && state.phase !== 'ready' && !state.scheduledRunning;
   byId('cancel').textContent = state.phase === 'ready' ? 'Discard' : 'Cancel';
   byId('session').hidden = !state.session;
   byId('history').hidden = !state.undo;
@@ -182,7 +210,10 @@ window.addEventListener('message', ({ data }) => {
   byId('permission-list').replaceChildren(...(state.permissions?.events ?? []).slice(-30).reverse()
     .map(event => element('li', `${event.decision} · ${event.tool} · ${event.reason}`)));
   byId('manifest').hidden = !state.manifest?.length;
-  byId('manifest-summary').textContent = `Context sources · ${state.manifest?.length ?? 0}`;
+  const totals = Object.entries(state.manifestTotals ?? {});
+  const characters = totals.reduce((sum, [, value]) => sum + value.characters, 0);
+  byId('manifest-summary').textContent = `Context sources · ${state.manifest?.length ?? 0}${characters ? ` · ${characters.toLocaleString()} characters, about ${Math.ceil(characters / 4).toLocaleString()} tokens` : ''}`;
+  byId('manifest-totals').replaceChildren(...totals.map(([kind, value]) => element('li', `${kind} · ${value.sources} · ${value.characters.toLocaleString()} characters · ~${value.estimatedTokens.toLocaleString()} tokens`)));
   byId('manifest-list').replaceChildren(...(state.manifest ?? []).map(entry => {
     const row = element('li');
     row.append(element('strong', `${entry.kind} · ${entry.source}`),
@@ -208,6 +239,13 @@ window.addEventListener('message', ({ data }) => {
     byId('tool-list').replaceChildren(...state.log.map(entry => element('li', entry)));
   }
   renderPlan(state);
+  renderQuestion(state);
+  byId('checkpoint').hidden = !state.checkpoint || busy;
+  if (state.checkpoint) {
+    byId('checkpoint-phase').textContent = state.checkpoint.phase;
+    byId('checkpoint-request').textContent = state.checkpoint.request;
+    byId('checkpoint-detail').textContent = `${state.checkpoint.files} staged file${state.checkpoint.files === 1 ? '' : 's'} · draft ${state.checkpoint.revision}${state.checkpoint.plan ? ' · approved plan' : ''} · saved ${new Date(state.checkpoint.savedAt).toLocaleString()}`;
+  }
   renderChecks(state);
   renderWorkers(state);
   renderReview(state);

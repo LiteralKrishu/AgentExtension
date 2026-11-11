@@ -66,3 +66,51 @@ test('prompt and visible manifest separate workflow instructions, repository dat
   assert.ok(manifest.entries.every(item => item.workspace === '/a' && item.digest.length === 64));
   assert.ok(manifest.entries.every(item => !Object.hasOwn(item, 'text')));
 });
+
+test('automatic matching picks eligible skills by name and description, skips explicit-only skills, and stays within budget', async t => {
+  const { AUTOMATIC } = require('../src/skills');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ae-match-'));
+  t.after(() => fs.rm(root, { force: true, recursive: true }));
+  const write = async (name, description, body = `Steps for ${name}.`, extra = '') => {
+    await fs.mkdir(path.join(root, name), { recursive: true });
+    await fs.writeFile(path.join(root, name, 'SKILL.md'), `---\nname: ${name}\ndescription: ${description}\n${extra}---\n${body}`);
+  };
+  await write('release-notes', 'Draft release notes and a changelog entry from merged pull requests.');
+  await write('sql-migrations', 'Write database migrations with rollback steps.', 'Migrate.', 'disable-model-invocation: true\n');
+  await write('python-tests', 'Write pytest unit tests for Python modules.');
+  await write('large-docs', 'Rewrite documentation pages and docs navigation.', 'x'.repeat(AUTOMATIC.characters + 1));
+  await write('api-docs', 'Document public API endpoints in the docs folder.');
+  const registry = new SkillRegistry([root]);
+  await registry.discover();
+  const names = request => registry.match(request).map(item => item.name);
+  assert.deepEqual(names('Draft the release notes for 2.4 from the changelog'), ['release-notes']);
+  assert.deepEqual(names('Write a database migration with rollback steps'), [], 'Explicit-only skills are never matched');
+  assert.deepEqual(names('Add pytest unit tests for the python parser module'), ['python-tests']);
+  assert.deepEqual(names('Rename a variable'), []);
+  assert.deepEqual(names('Write'), [], 'One shared word is not enough');
+  const [best] = registry.match('Draft the release notes for 2.4 from the changelog');
+  assert.deepEqual(best.terms, ['draft', 'release', 'note', 'changelog']);
+  // The large skill matches but exceeds the automatic body budget; the next match still loads.
+  const docs = registry.match('Update the docs pages and API endpoints documentation');
+  assert.deepEqual(docs.map(item => item.name).sort(), ['api-docs', 'large-docs']);
+  const added = await registry.addMatched(docs);
+  assert.deepEqual(added.map(skill => skill.name), ['api-docs']);
+  assert.match(added[0].body, /Steps for api-docs/);
+  // Combined limit: two manual selections leave one slot.
+  const fresh = new SkillRegistry([root]);
+  const catalog = await fresh.discover();
+  await fresh.select(catalog.filter(item => ['release-notes', 'sql-migrations'].includes(item.name)).map(item => item.id));
+  const more = await fresh.addMatched([...fresh.match('Add pytest unit tests for the python parser module'), ...fresh.match('Document public API endpoints')]);
+  assert.deepEqual(more.map(skill => skill.name), ['python-tests']);
+  assert.equal(fresh.selected.size, 3);
+  // A skill changed after discovery is not loaded.
+  const changed = new SkillRegistry([root]);
+  await changed.discover();
+  await write('python-tests', 'Write pytest unit tests for Python modules.', 'Changed body');
+  assert.deepEqual(await changed.addMatched(changed.match('Add pytest unit tests for the python parser module')), []);
+  const manifest = new ContextManifest('/a');
+  composePrompt({ request: 'Docs', assembled: { selected: [], budget: 1, text: '' }, skills: added, manifest });
+  const entry = manifest.entries.find(item => item.kind === 'skill');
+  assert.equal(entry.trust, 'matched workflow');
+  assert.match(entry.reason, /^Matched automatically on .+ \(score \d/);
+});

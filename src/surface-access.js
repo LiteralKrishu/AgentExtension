@@ -1,4 +1,5 @@
 const { digest } = require('./permissions');
+const { reason } = require('./policy');
 
 class SurfaceAccess {
   constructor({ permissions, signal, ask, onEvent = () => {}, limit = 30 }) {
@@ -14,6 +15,15 @@ class SurfaceAccess {
   async approve(tool, effect, target, args, scope, detail) {
     this.check();
     const action = this.permissions.action(tool, effect, target, args, scope);
+    const verdict = this.permissions.decide(effect, typeof target === 'string' ? target : target?.bundleId ?? JSON.stringify(target));
+    if (verdict.decision === 'deny') {
+      this.permissions.record(action, 'deny', reason(verdict));
+      throw new Error('A permission rule denies this action.');
+    }
+    if (verdict.decision === 'allow') {
+      if (!this.permissions.grant(action, undefined, reason(verdict))) throw new Error('Surface approval no longer matches.');
+      return action;
+    }
     const signal = AbortSignal.any([this.signal, AbortSignal.timeout(60_000)]);
     let stop;
     const answer = await Promise.race([this.ask(detail, signal), new Promise(resolve => {

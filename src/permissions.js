@@ -9,7 +9,7 @@ const digest = value => createHash('sha256').update(JSON.stringify(stable(value)
 
 // Host-owned grants never enter model messages or restored conversation history.
 class PermissionBroker {
-  constructor({ workspace, signal, onChange = () => {}, audit = () => {}, now = Date.now }) {
+  constructor({ workspace, signal, onChange = () => {}, audit = () => {}, now = Date.now, policy }) {
     if (!workspace) throw new Error('A canonical workspace identity is required.');
     this.workspace = workspace;
     this.runId = randomUUID();
@@ -17,6 +17,7 @@ class PermissionBroker {
     this.onChange = onChange;
     this.audit = audit;
     this.now = now;
+    this.policy = policy;
     this.epoch = 0;
     this.grants = new Map();
     this.denied = new Set();
@@ -46,13 +47,25 @@ class PermissionBroker {
       && !this.denied.has(action.effect) && !this.denied.has(action.tool);
   }
 
+  // Returns false when a permission rule turns the capability off for every target.
   allowScope(effect) {
     if (this.closed || this.signal?.aborted || this.denied.has(effect)) throw new Error('Permission scope is closed.');
+    const blocked = this.policy?.blocks(effect);
+    if (blocked) {
+      this.denied.add(effect);
+      this.record({ tool: 'host', effect, target: this.workspace }, 'deny', `Denied by ${blocked.source} rule ${blocked.effect} ${blocked.target}`);
+      return false;
+    }
     this.grants.set(`scope:${effect}`, { effect, expires: this.now() + 24 * 60 * 60 * 1000 });
     this.onChange(this.snapshot());
+    return true;
   }
 
-  grant(action, ttl = 5 * 60 * 1000) {
+  decide(effect, subject) {
+    return this.policy?.decide(effect, subject) ?? { decision: 'ask', source: 'default' };
+  }
+
+  grant(action, ttl = 5 * 60 * 1000, reason = 'One exact action') {
     if (!this.valid(action)) {
       this.record(action, 'deny', 'Approval scope changed or was revoked');
       return false;
@@ -60,7 +73,7 @@ class PermissionBroker {
     const key = digest(action);
     const prior = this.grants.get(key);
     this.grants.set(key, { effect: action.effect, count: (prior?.count ?? 0) + 1, expires: this.now() + ttl });
-    this.record(action, 'approve', 'One exact action');
+    this.record(action, 'approve', reason);
     return true;
   }
 

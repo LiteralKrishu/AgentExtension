@@ -5,3 +5,4 @@ docs/plan.md
 docs/research.md
 docs/claude-cowork-research.md
 .gitignore
+test-results/**

@@ -2,51 +2,63 @@
 :toc:
 :toclevels: 1
 
-Baseline *AgentExtension 0.5.0*, verified on 9 November 2026.
+Baseline *AgentExtension 0.5.0*, verified on 9 November 2026. On 11 November 2026, ten further milestones were implemented and verified on top of 0.5.0. They have not been released. The package version is still 0.5.0. link:milestones.md#verification-record-for-the-11-november-milestones[Verification record]
 
-The five milestones in the research plan have shipped. They cover scoped permissions, skills and context sources, workspace notes and read connectors, versioned local plugins and two read-only subagents, and browser inspection with saved run reports. The release also includes scoped macOS computer use. link:claude-cowork-research.md[Cowork research] · link:milestones.md[Release and verification record]
+The five milestones in the research plan shipped in 0.5.0. They cover scoped permissions, skills and context sources, workspace notes and read connectors, versioned local plugins and two read-only subagents, and browser inspection with saved run reports. The release also includes scoped macOS computer use. link:claude-cowork-research.md[Cowork research] · link:milestones.md[Release and verification record]
 
 == Features with a partial integration
 
 [cols="1,2,3",options="header"]
 |===
-|Area |What ships in 0.5.0 |What remains
+|Area |What is implemented |What remains
 
 |Permission policy
-|The broker binds approvals to the run, workspace, action, and target. Users can revoke access.
-|Add configurable allow, ask, and deny rules for users and workspaces. Apply administrator restrictions before user choices where an organization policy exists.
+|The broker binds approvals to the run, workspace, action, and target. Users can revoke access. Allow, ask, and deny rules come from three sources: an administrator policy file, user settings, and workspace rules kept in extension storage. Administrator deny and ask rules apply first. An invalid administrator file blocks runs. link:milestones.md#permission-rules[Details]
+|Read administrator rules from VS Code's managed policy channel or an organization service instead of a file. Add rules for connector writes and account changes when write connectors exist.
 
 |Skills
-|Users select text workflows from approved roots. The extension loads the selected instructions and reads text resources on demand.
-|Match eligible skills to the task within a fixed budget. Keep explicit-only skills available through manual selection. Add isolated skill execution after its runtime and permissions can be verified.
+|Users select text workflows from approved roots. Up to two eligible skills are matched to the request automatically, within a 12,000-character budget. Explicit-only skills stay manual. link:milestones.md#automatic-skill-matching[Details]
+|Let the model choose a skill from the catalog during a run, instead of only lexical matching at the start. Add isolated skill execution after its runtime and permissions can be verified.
 
 |MCP connectors
-|Approved remote tools can read named targets. Each call requires approval. VS Code stores bearer credentials.
+|Approved remote tools can read named targets. Reads ask for approval each time or follow permission rules. VS Code stores bearer credentials.
 |Add OAuth sign-in and account selection. Define approval rules for connector writes and account changes. Consider separately approved local MCP processes.
 
 |Plugins and hooks
-|Local plugins declare a version, capabilities, skills, worker roles, and connector references. Changes to the approved content require review.
+|Local plugins declare a version, capabilities, skills, worker roles, custom read-only roles, and connector references. Changes to the approved content require review. The bundled `fix-team` plugin adds diagnosis, edit-proposal, and a custom reviewer.
 |Add validated package imports, a catalog or shared distribution, and namespaced workflow commands. Add built-in hooks for validation or events. Custom hooks need a separate executor with limits on input, time, and output.
 
 |Instructions and context
-|The extension uses a checked-in agent definition and shows submitted sources, trust labels, and character counts. TrueForge can compact session history.
-|Add opt-in user and workspace instruction profiles and path-scoped rules. Record the instruction version in saved reports. Add token budgets by source and show what context survives compaction when the runtime can report it.
+|Opt-in user and workspace instruction profiles and path-scoped rules are available. Workspace files must be approved by digest. Reports record the instruction version. **Context sources** totals characters by source. The run shows TrueForge's input-token breakdown and compaction count. link:milestones.md#instruction-profiles-and-path-rules[Details]
+|Show which context survives compaction. TrueForge reports that compaction happened and its token use, but not what it kept.
 
 |Memory
-|Users can add or remove approved workspace notes. Each workspace has a separate store.
-|Add in-place editing and source references. Keep user preferences and agent-proposed notes in separate stores. Ask the user to approve a suggested note before saving it.
+|Workspace notes and user preferences are separate approved stores. Notes can be edited in place and cite source files. Agent-suggested notes wait in a third store until the user saves, edits, or discards them. link:milestones.md#notes-preferences-and-suggested-notes[Details]
+|Search or summarize notes when a store reaches its limit. Add memory that can be shared across devices.
 
 |Subagents
-|The two read-only roles handle repository research and diff review. They return advice from bounded snapshots.
-|Add a test diagnosis role and support custom role definitions with explicit tool scopes. For workers that propose edits, use separate drafts and check the base revision before merge. Require parent review and reject overlapping or stale changes.
+|Read-only research, diff review, and test diagnosis roles are available. Plugins can declare custom read-only roles. An edit-proposal worker drafts in a separate draft. The parent merges only onto the same base revision with no overlapping changes, and the user reviews every hunk. link:milestones.md#diagnosis-edit-proposal-and-custom-workers[Details]
+|Allow custom roles to use tools, each with an explicit read-only tool scope. Allow workers in scheduled reports within the schedule pin.
 
 |Browser and computer use
-|A fresh browser profile uses approved origins and exact action approvals. The macOS helper can inspect and act on accessible controls in one selected app.
-|Add approval for a single navigation beyond the current origin scope. Review support for more browser file transfers and native controls that require screen-based interaction. Keep scope and stop controls for each capability.
+|A fresh browser profile uses approved origins and exact action approvals. One read-only visit outside the scope can be approved, with a limit of three per run. The macOS helper can inspect and act on accessible controls in one selected app. link:milestones.md#one-approved-visit-outside-the-browser-scope[Details]
+|Review support for more browser file transfers and native controls that require screen-based interaction. Keep scope and stop controls for each capability.
+
+|Scheduled reports
+|Approved recurring read-only runs use an IANA time zone, a budget, and a pinned scope that includes connector targets. Run history, catch-up after VS Code restarts, offline and blocked outcomes, and per-occurrence claims are included. Scheduled runs have no write tools. Permission rules apply. link:milestones.md#scheduled-read-only-reports[Details]
+|Run schedules when VS Code is closed. This needs a background service or a TrueForge-hosted connector. Add a token limit using the usage TrueForge now reports. Allow selected skills, instructions, and read-only workers within the schedule pin. Add a notification channel outside VS Code. Exercise the schedule UI in the VS Code interface harness.
 
 |Audit and usage
-|The broker logs decisions. Saved reports record check outcomes and scoped browser and app activity. Individual tools have limits.
-|Add a redacted audit export and a run budget that tracks tokens, time, and tool calls across the parent and workers.
+|Runs track tokens, tool calls, and time across the parent agent, workers, and compaction against a configurable budget. Decisions and run summaries go to a hash-chained log for each workspace, with a redacted, verifiable export. link:milestones.md#run-budget-and-audit-export[Details]
+|Collect exports centrally for an organization. Add cost estimates when the model provider reports them.
+
+|Questions during a run
+|The agent can pause with TrueForge's question tool. The panel shows the question and up to five options. The user can choose an option, type an answer, or skip. Questions are kept separate from approvals and limited to five per run. link:milestones.md#questions-during-a-run[Details]
+|Support questions in scheduled reports by holding them for the next interactive session.
+
+|Run checkpoints and recovery
+|A checkpoint saves the request, plan, staged draft, checks, and progress without grants. After a restart or failure, **Resume** checks the workspace, restores the draft in a new session, and asks again for every protected action. link:milestones.md#run-checkpoints-and-recovery[Details]
+|Reattach to the original TrueForge session instead of starting a new one. Checkpoint inline edits.
 |===
 
 == Capabilities still open
@@ -55,20 +67,11 @@ The five milestones in the research plan have shipped. They cover scoped permiss
 |===
 |Capability |Remaining work
 
-|Structured questions during a run
-|Let the agent pause with a question, explain what it needs, and resume with the user's answer. Use a separate state for questions and action approvals.
-
-|Scheduled reports
-|Create recurring read-only runs with a time zone, budget, scope, and run history. Define what happens when the workspace or device is offline. Require a fresh approval for any write.
-
-|Run checkpoints and recovery
-|Save the goal, approved plan, draft revision, and pending work so a run can resume after a restart. Recheck the workspace and request fresh grants before any protected action.
-
 |Cross-device sessions and remote task assignment
-|Use recoverable sessions as the basis for continuing a run on another device. Remote control needs device identity, revocation, and a defined offline recovery path.
+|Use checkpoints as the basis for continuing a run on another device. Remote control needs device identity, revocation, and a defined offline recovery path. This needs a hosted service.
 
 |Shared projects and administration
-|Add shared instructions, files, and memory with roles for viewing and editing. Add organization controls for tool access, network access, trusted devices, and audit visibility.
+|Add shared instructions, files, and memory with roles for viewing and editing. Add organization controls for tool access, network access, trusted devices, and audit visibility. This needs a hosted service.
 
 |Editable artifacts and office files
 |Saved Markdown reports cover run evidence. Editable interactive artifacts and workflows for documents, spreadsheets, and slides remain research options.
@@ -82,4 +85,4 @@ The five milestones in the research plan have shipped. They cover scoped permiss
 
 == Verification still open
 
-Run a compatible general coding model through the same workflows to check tool choice and task quality. The 0.5.0 tests verified the extension with scripted model responses, including real browser and native app operations. Flask Task B passed with a scripted fixture. A successful live-model run remains open. link:milestones.md[Verification record] · link:demo.md[Flask rehearsal]
+Run a compatible general coding model through the same workflows to check tool choice and task quality. The 0.5.0 tests verified the extension with scripted model responses, including real browser and native app operations. Flask Task B passed with a scripted fixture. A successful live-model run remains open. The 11 November milestones were also verified with scripted responses. Their panel controls have not been exercised in the VS Code interface harness or on macOS. link:milestones.md[Verification record] · link:demo.md[Flask rehearsal]

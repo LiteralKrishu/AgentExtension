@@ -25,7 +25,7 @@ class RunReport {
     this.images.push({ name, snapshot: state.snapshot, origin: new URL(state.url).origin, digest: sha256(bytes) });
     return name;
   }
-  async save({ phase, revision, selection, changes = [], session, workers = [], plugins = [], permissions, applied = false }) {
+  async save({ phase, revision, selection, changes = [], session, workers = [], plugins = [], permissions, applied = false, instructions, policy, usage }) {
     await fs.mkdir(this.directory, { recursive: true });
     const patch = patchFor(changes);
     await fs.writeFile(path.join(this.directory, 'draft.patch'), patch, { mode: 0o600 });
@@ -52,16 +52,78 @@ class RunReport {
     lines.push('', '## Workers and plugins', '');
     for (const worker of workers) lines.push(`- ${escape(worker.role)} · ${escape(worker.state)} · snapshot ${escape(worker.snapshot)}${worker.session ? ` · [session](${worker.session})` : ''}`);
     for (const plugin of plugins) lines.push(`- ${escape(plugin.id)} ${escape(plugin.version)} · ${escape(plugin.digest)}`);
+    if (instructions) {
+      lines.push('', '## Instructions', '', `- Agent definition: ${escape(instructions.agent)}`,
+        `- User instruction profile: ${instructions.user ? escape(instructions.user) : 'none'}`,
+        `- Workspace instructions: ${instructions.workspace ? escape(instructions.workspace) : 'none approved'}`);
+      for (const rule of instructions.rules ?? []) lines.push(`- Path rule ${escape(rule.file)} · ${escape(rule.digest)} · ${rule.delivered ? 'delivered' : 'not used'}`);
+    }
+    if (usage) {
+      const limit = value => value ? value.toLocaleString('en-US') : 'none';
+      lines.push('', '## Usage', '', '| Measure | Used | Limit |', '| --- | --- | --- |',
+        `| Tokens (input + output) | ${usage.tokens.total.toLocaleString('en-US')} | ${limit(usage.limits.maxTokens)} |`,
+        `| Tool calls | ${usage.toolCalls} | ${limit(usage.limits.maxToolCalls)} |`,
+        `| Run time | ${usage.elapsedSeconds} s | ${usage.limits.maxMinutes ? `${usage.limits.maxMinutes * 60} s` : 'none'} |`, '');
+      for (const [actor, row] of Object.entries(usage.actors)) lines.push(`- ${escape(actor)}: ${row.calls} model calls · ${row.input.toLocaleString('en-US')} input · ${row.output.toLocaleString('en-US')} output tokens`);
+      if (usage.breakdown) lines.push(`- Last parent input by source: ${Object.entries(usage.breakdown).map(([key, value]) => `${escape(key)} ${Number(value).toLocaleString('en-US')}`).join(' · ')}`);
+      lines.push(`- Context compactions: ${usage.compactions.length}`);
+      if (usage.reached) lines.push(`- Limit reached: ${escape(usage.reached)}`);
+    }
+    if (policy) lines.push('', `Permission policy: ${escape(policy.slice(0, 16))}.`);
     lines.push('', `Permission log: ${permissions?.events?.length ?? 0} recent decisions. Access is closed at run end.`, '',
       'This report records execution evidence. It does not prove model reasoning or browser findings are correct. Browser and native-app changes occur when approved. Editor Undo does not reverse them.', '',
       'Draft patches and screenshots can contain source code or visible page data. Review them before sharing.', '');
     const file = path.join(this.directory, 'report.md');
     await fs.writeFile(file, lines.join('\n'), { mode: 0o600 });
-    const folders = await fs.readdir(this.parent, { withFileTypes: true });
-    const records = await Promise.all(folders.filter(item => item.isDirectory() && /^[a-f0-9-]{36}$/.test(item.name))
-      .map(async item => ({ name: item.name, time: (await fs.stat(path.join(this.parent, item.name))).mtimeMs })));
-    for (const old of records.sort((a, b) => b.time - a.time).slice(20)) if (old.name !== this.runId) await fs.rm(path.join(this.parent, old.name), { recursive: true, force: true });
+    await prune(this.parent, this.runId);
     return file;
   }
 }
-module.exports = { RunReport, patchFor };
+
+async function prune(parent, keep, limit = 20) {
+  const folders = await fs.readdir(parent, { withFileTypes: true });
+  const records = await Promise.all(folders.filter(item => item.isDirectory() && /^[a-f0-9-]{36}$/.test(item.name))
+    .map(async item => ({ name: item.name, time: (await fs.stat(path.join(parent, item.name))).mtimeMs })));
+  for (const old of records.sort((a, b) => b.time - a.time).slice(limit)) if (old.name !== keep) await fs.rm(path.join(parent, old.name), { recursive: true, force: true });
+}
+
+// Model text is untrusted. Keep it inside a fence so it cannot add links, headings or HTML to the evidence section.
+function fenced(text) {
+  const body = String(text ?? '').replace(/\r\n?/g, '\n').slice(0, 40_000);
+  const longest = Math.max(3, ...[...body.matchAll(/~{3,}/g)].map(match => match[0].length));
+  return `${'~'.repeat(longest + 1)}markdown\n${body || '(The model returned no report text.)'}\n${'~'.repeat(longest + 1)}`;
+}
+
+async function saveScheduledReport(storage, workspace, runId, record) {
+  const parent = path.join(storage, 'reports', digest(workspace).slice(0, 24));
+  const directory = path.join(parent, runId);
+  await fs.mkdir(directory, { recursive: true });
+  const { schedule, occurrence, trigger, status, reason, text, session, usage, limits, permissions, connectors, started, finished } = record;
+  const seconds = Math.round((finished - started) / 1000);
+  const lines = ['# AgentExtension scheduled report', '', `Schedule: ${escape(schedule.name)} · ${schedule.id}`, `Run: ${runId}`,
+    `Scheduled for: ${escape(occurrence.slot)} ${escape(schedule.timeZone)} (${new Date(occurrence.at).toISOString()}) · trigger: ${escape(trigger)}${occurrence.adjusted ? ' · moved forward by a clock change' : ''}`,
+    `Started: ${new Date(started).toISOString()} · Finished: ${new Date(finished).toISOString()}`,
+    `Outcome: ${escape(status)}${reason ? ` · ${escape(reason)}` : ''}. Mode: read-only. Editor changes: none.`, '',
+    '## Approved scope', '',
+    `- Workspace reads: ${escape(workspace)}`,
+    ...(connectors.length ? connectors.map(config => `- Connector ${escape(config.id)} · ${escape(config.account)} · ${config.tools.map(tool => `${escape(tool.name)}: ${tool.targets.map(escape).join(', ')}`).join('; ')}`)
+      : ['- Connectors: none']),
+    `- Schedule approval: ${schedule.approval.digest.slice(0, 16)} · approved ${new Date(schedule.approval.at).toISOString()}`,
+    '- Writes, draft edits, commands, browser, native apps and subagents: unavailable. Any change needs a new interactive run and its own approval.', '',
+    '## Budget', '', '| Measure | Used | Limit |', '| --- | --- | --- |',
+    `| Tool calls | ${usage.toolCalls} | ${limits.toolCalls} |`,
+    `| Connector reads | ${usage.connectorReads} | ${limits.connectorReads} |`,
+    `| Run time | ${seconds} s | ${limits.minutes * 60} s |`,
+    `| Write tool requests refused | ${usage.writesRequested} | 0 approved |`, ''];
+  if (session) lines.push(`[TrueForge session](${session})`, '');
+  lines.push('## Report', '', 'The text below is model output. It has not been verified.', '', fenced(text), '',
+    '## Permission decisions', '', 'Targets are hashed. Arguments, connector payloads and credentials are not logged.', '');
+  for (const event of permissions?.events ?? []) lines.push(`- ${escape(event.time)} · ${escape(event.tool)} · ${escape(event.effect)} · ${escape(event.decision)} · ${escape(event.reason)} · ${escape(event.target).slice(0, 16)}`);
+  if (!permissions?.events?.length) lines.push('No decisions recorded.');
+  lines.push('', 'This report records execution evidence for an unattended read-only run. It does not prove the findings are correct. Repository excerpts and connector text can contain private data. Review before sharing.', '');
+  const file = path.join(directory, 'report.md');
+  await fs.writeFile(file, lines.join('\n'), { mode: 0o600 });
+  await prune(parent, runId);
+  return file;
+}
+module.exports = { RunReport, patchFor, saveScheduledReport, fenced };

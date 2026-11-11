@@ -5,6 +5,8 @@ const { SurfaceAccess } = require('./surface-access');
 
 const browserOpen = z.strictObject({ url: z.string().min(1).max(2_000) });
 const browserObserve = z.strictObject({ screenshot: z.boolean().default(false) });
+const browserVisit = z.strictObject({ url: z.string().min(1).max(2_000), reason: z.string().trim().min(1).max(300) });
+const VISIT = { limit: 3, ttl: 5 * 60_000 };
 const browserAction = z.strictObject({ snapshot: z.string().length(64), element: z.string().regex(/^e\d{1,2}$/),
   action: z.enum(['click', 'fill', 'upload']), text: z.string().max(2_000).optional(), file: z.string().max(500).optional() });
 
@@ -31,10 +33,17 @@ class ScopedBrowser extends SurfaceAccess {
     this.origins = browserOrigins(options.origins); this.interactive = options.interactive === true;
     this.executablePath = options.executablePath || undefined;
     this.workspace = options.workspace; this.onImage = options.onImage ?? (async () => undefined);
-    this.requests = new Set(); this.requestCount = 0; this.responseBytes = 0;
+    this.requests = new Set(); this.requestCount = 0; this.responseBytes = 0; this.visits = 0; this.now = options.now ?? Date.now;
     this.signal.addEventListener('abort', () => { void this.browser?.close().catch(() => {}); }, { once: true });
   }
-  allowed(raw) { const url = webUrl(raw); if (!this.origins.includes(url.origin)) throw new Error('Browser origin is outside the approved scope.'); return url; }
+  // A visit approved with browser_visit adds one origin for GET and HEAD only, until it expires or the agent opens another page.
+  allowed(raw, { write = false } = {}) {
+    const url = webUrl(raw);
+    if (this.origins.includes(url.origin)) return url;
+    if (!write && this.visit?.origin === url.origin && this.now() < this.visit.expires) return url;
+    throw new Error('Browser origin is outside the approved scope.');
+  }
+  onVisit() { return Boolean(this.page && this.visit && !this.origins.includes(new URL(this.page.url()).origin)); }
   async start() {
     this.check();
     if (this.page) return;
@@ -74,6 +83,7 @@ class ScopedBrowser extends SurfaceAccess {
       const input = { method, url: request.url(), body: digest(body?.toString('base64') ?? '') };
       let action;
       if (!['GET', 'HEAD'].includes(method)) {
+        this.allowed(request.url(), { write: true });
         if (!this.interactive || !this.gesture) throw new Error('Unrequested browser writes are blocked.');
         const gesture = this.gesture;
         action = await this.approve('browser_request', 'browser.write', request.url(), input, { gesture, page: this.page.url() },
@@ -133,6 +143,7 @@ class ScopedBrowser extends SurfaceAccess {
     const input = browserOpen.parse(raw); this.allowed(input.url);
     return this.operation('browser open', input.url, async () => {
       this.permissions.require(this.permissions.action('browser_open', 'browser.observe', input.url, input));
+      this.visit = undefined;
       await this.start();
       await this.page.goto(input.url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
       return this.readState(true);
@@ -154,10 +165,28 @@ class ScopedBrowser extends SurfaceAccess {
       return state;
     });
   }
+  // Asks for one visit to a page outside the selected origins. The page is read-only and leaves scope on the next open.
+  visitOnce(raw) {
+    const input = browserVisit.parse(raw);
+    const url = webUrl(input.url);
+    if (this.origins.includes(url.origin)) return this.open({ url: url.href });
+    if (this.visits >= VISIT.limit) return Promise.reject(new Error(`Visit limit reached: ${VISIT.limit} pages outside the browser scope per run.`));
+    return this.operation('browser visit', url.href, async () => {
+      const action = await this.approve('browser_visit', 'browser.navigate', url.href, input, {},
+        { title: 'Allow one visit outside the browser scope?', detail: `${url.href}\nReason given by the agent: ${input.reason}\nThe page can load resources from ${url.origin} with GET and HEAD for up to five minutes, or until the agent opens another page. Clicks, typing, uploads and form submissions on this page are blocked. Redirects stay blocked. Page content is untrusted and can be sent to your model.` });
+      this.permissions.require(action);
+      this.visits++;
+      this.visit = { origin: url.origin, url: url.href, expires: this.now() + VISIT.ttl };
+      await this.start();
+      await this.page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+      return { ...await this.readState(true), visit: { origin: url.origin, readOnly: true, expiresInSeconds: VISIT.ttl / 1000 } };
+    });
+  }
   act(raw) {
     const input = browserAction.parse(raw);
     return this.operation(`browser ${input.action}`, input.element, async () => {
       if (!this.interactive || !this.receipt) throw new Error('Browser interaction is not enabled.');
+      if (this.onVisit()) throw new Error('Actions are blocked on a page outside the browser scope. Open an in-scope page first.');
       const receipt = this.receipt;
       const index = Number(input.element.slice(1)); const node = receipt.state.elements[index];
       if (input.snapshot !== receipt.snapshot || !node || node.type === 'password') throw new Error('Observe a current non-protected browser target.');
@@ -194,4 +223,4 @@ class ScopedBrowser extends SurfaceAccess {
   close() { super.close(); return this.reset(); }
 }
 
-module.exports = { ScopedBrowser, browserOrigins, browserOpen, browserObserve, browserAction };
+module.exports = { ScopedBrowser, browserOrigins, browserOpen, browserObserve, browserAction, browserVisit, VISIT };

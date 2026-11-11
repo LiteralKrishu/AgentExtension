@@ -41,6 +41,21 @@ function parseSkill(text, folder) {
     explicitOnly: meta['disable-model-invocation'] === true || meta.allow_implicit_invocation === false };
 }
 
+const STOP = new Set(('the and for with this that from into your you are was were will can not but all any its our out use using '
+  + 'make made then than them they what when where which who how why add get set run new now one two per via each also should '
+  + 'would could please file files code change changes update fix').split(' '));
+const stem = word => word.endsWith('ies') && word.length > 4 ? `${word.slice(0, -3)}y`
+  : word.endsWith('ing') && word.length > 5 ? word.slice(0, -3)
+    : word.endsWith('ed') && word.length > 4 ? word.slice(0, -2)
+      : word.endsWith('s') && !word.endsWith('ss') && word.length > 3 ? word.slice(0, -1) : word;
+function terms(text) {
+  return [...new Set(String(text).toLowerCase().split(/[^a-z0-9]+/).filter(word => word.length > 2 && !STOP.has(word))
+    .map(stem).filter(word => word.length > 2))];
+}
+
+// Automatic matching uses only names and descriptions. Bodies load after a match, inside the run budget.
+const AUTOMATIC = { limit: 2, characters: 12_000, minimum: 2.5 };
+
 class SkillRegistry {
   constructor(roots) {
     this.roots = roots.slice(0, 8);
@@ -110,6 +125,44 @@ class SkillRegistry {
     return readWithin(entry.root, `${entry.name}/${file}`, MAX_RESOURCE);
   }
 
+  // Scores eligible skills against the request. A name term counts three times a description term, weighted by rarity.
+  match(request, { exclude = [] } = {}) {
+    const wanted = terms(request);
+    const eligible = [...this.entries.values()].filter(entry => !entry.explicitOnly && !exclude.includes(entry.id));
+    const documents = eligible.map(entry => ({ entry, name: terms(entry.name.replace(/-/g, ' ')), description: terms(entry.description) }));
+    const frequency = term => documents.filter(item => item.name.includes(term) || item.description.includes(term)).length;
+    return documents.map(({ entry, name, description }) => {
+      const matched = wanted.filter(term => name.includes(term) || description.includes(term));
+      const score = matched.reduce((sum, term) => sum + (name.includes(term) ? 3 : 1) * Math.log(1 + documents.length / frequency(term)), 0);
+      return { id: entry.id, name: entry.name, score: Math.round(score * 100) / 100, terms: matched };
+    }).filter(item => item.score >= AUTOMATIC.minimum && item.terms.length >= 2)
+      .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  }
+
+  // Loads matched skills after any selected or plugin skills, within the automatic and combined limits.
+  async addMatched(matches) {
+    const added = [];
+    let automatic = 0;
+    for (const match of matches) {
+      if (this.selected.size >= 3 || added.length >= AUTOMATIC.limit) break;
+      const entry = this.entries.get(match.id);
+      if (!entry || this.selected.has(entry.id)) continue;
+      let body;
+      try {
+        const text = await readWithin(entry.root, entry.relative, MAX_SKILL);
+        if (digest(text) !== entry.digest) continue;
+        body = parseSkill(text, entry.name).body;
+      } catch { continue; }
+      const used = [...this.selected.values()].reduce((sum, skill) => sum + skill.body.length, 0);
+      if (automatic + body.length > AUTOMATIC.characters || used + body.length > MAX_SKILL) continue;
+      automatic += body.length;
+      const skill = { ...entry, body, matched: { score: match.score, terms: match.terms } };
+      this.selected.set(entry.id, skill);
+      added.push(skill);
+    }
+    return added;
+  }
+
   addPinned(skills) {
     const combined = [...this.selected.values(), ...skills];
     if (combined.length > 3 || combined.reduce((sum, skill) => sum + skill.body.length, 0) > MAX_SKILL) {
@@ -120,4 +173,4 @@ class SkillRegistry {
   }
 }
 
-module.exports = { SkillRegistry, parseSkill, readWithin };
+module.exports = { SkillRegistry, parseSkill, readWithin, terms, AUTOMATIC };

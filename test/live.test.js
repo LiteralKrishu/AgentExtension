@@ -30,7 +30,7 @@ function call(name, args, id) {
 }
 
 async function fixture(t, mode, { fallback = false, cancel = false, cancelOnToken = false, command = false,
-  forgetReview = false, planFirst = false, cancelPlan = false, capabilities = false, surfaceWrites = false } = {}) {
+  forgetReview = false, planFirst = false, cancelPlan = false, capabilities = false, surfaceWrites = false, policy } = {}) {
   const { TrueForge } = await import('@truefoundry/trueforge-sdk');
   const forge = new TrueForge({ baseUrl, maxRetries: 0 });
   const name = `agentextension-test-${randomBytes(5).toString('hex')}`;
@@ -140,7 +140,8 @@ async function fixture(t, mode, { fallback = false, cancel = false, cancelOnToke
       this.planGrant = undefined;
     },
   };
-  run.permissions = new PermissionBroker({ workspace: '/fixture', signal: controller.signal });
+  run.permissions = new PermissionBroker({ workspace: '/fixture', signal: controller.signal, policy });
+  const prompts = [];
   run.permissions.allowScope('workspace.read');
   run.permissions.allowScope('draft.edit');
   let connectorFixture;
@@ -179,6 +180,7 @@ async function fixture(t, mode, { fallback = false, cancel = false, cancelOnToke
       return !cancelPlan;
     },
     command: async (input, target) => {
+      prompts.push(input);
       assert.deepEqual(input, { command: 'python3', args: ['-V'] });
       assert.equal(executed.length, 0);
       assert.deepEqual(target, { revision: 3, scope: 'Accepted hunks' });
@@ -197,7 +199,7 @@ async function fixture(t, mode, { fallback = false, cancel = false, cancelOnToke
       return hunks.filter(hunk => hunk.file !== 'file2.txt');
     },
   });
-  return { task, run, disk, toolNames, output, retries, executed, checks, plans, manifest, connectorFixture,
+  return { task, run, disk, toolNames, output, retries, executed, checks, plans, manifest, connectorFixture, prompts,
     providerError: () => providerError, requests: () => requests };
 }
 
@@ -262,6 +264,25 @@ test('TrueForge approves the exact command and checks only the accepted hunks', 
   assert.equal(run.checks[0].revision, 3);
   assert.equal(run.checks[0].scope, 'Accepted hunks');
   assert.equal(run.checks[0].output, 'Check output');
+});
+
+test('permission rules run an allowed command without a prompt and refuse a denied one without asking', options, async t => {
+  const { PolicyEngine } = require('../src/policy');
+  const allowed = await fixture(t, 'good', { command: true, policy: new PolicyEngine({
+    workspace: [{ effect: 'command.execute', target: 'python3 -V', decision: 'allow' }] }) });
+  await allowed.task;
+  assert.equal(allowed.prompts.length, 0);
+  assert.deepEqual(allowed.executed, [{ command: 'python3', args: ['-V'], files: ['file1.txt', 'file3.txt'] }]);
+  assert.ok(allowed.run.permissions.events.some(event => event.tool === 'run_command' && event.decision === 'approve'
+    && event.reason === 'Allowed by workspace rule command.execute python3 -V'));
+  const denied = await fixture(t, 'good', { command: true, policy: new PolicyEngine({
+    admin: { rules: [{ effect: 'command.execute', target: 'python3 *', decision: 'deny', source: 'administrator' }], userAllowRules: true, sources: ['test'] },
+    workspace: [{ effect: 'command.execute', target: 'python3 -V', decision: 'allow' }] }) });
+  await denied.task;
+  assert.equal(denied.prompts.length, 0);
+  assert.deepEqual(denied.executed, []);
+  assert.ok(denied.run.permissions.events.some(event => event.tool === 'run_command' && event.decision === 'deny'
+    && event.reason === 'Denied by administrator rule command.execute python3 *'));
 });
 
 test('plan-first rejects early edits and resumes after plan approval', options, async t => {
@@ -339,4 +360,20 @@ test('editor line proposals use exact read receipts and reject stale ranges', op
   assert.equal(stale.isError, true);
   const changed = await client.callTool({ name: 'read_file', arguments: { file: 'example.txt', start_line: 1 } });
   assert.equal(JSON.parse(changed.content[0].text).text, 'first\r\ninserted\r\nsecond');
+  assert.equal(JSON.parse(changed.content[0].text).warning, undefined);
+  // Inserting a near copy of the anchor without deleting it is staged with a warning.
+  const receipt = JSON.parse(changed.content[0].text).receipt;
+  const copy = await client.callTool({ name: 'propose_lines', arguments: { receipt, anchor_line: 'second', new_text: 'second fixed\r\n' } });
+  assert.equal(copy.isError, undefined);
+  assert.equal(JSON.parse(copy.content[0].text).warning, undefined, 'Different first word: no warning');
+  const fresh = JSON.parse((await client.callTool({ name: 'read_file', arguments: { file: 'example.txt', start_line: 1 } })).content[0].text);
+  const duplicate = await client.callTool({ name: 'propose_lines', arguments: { receipt: fresh.receipt, anchor_line: 'first', new_text: 'first(1)\r\n' } });
+  assert.match(JSON.parse(duplicate.content[0].text).warning, /delete_count: 1/);
+  // The same unchanged range read again and again gets a note, then a refusal.
+  const reads = [];
+  for (let index = 0; index < 7; index++) reads.push(await client.callTool({ name: 'read_file', arguments: { file: 'example.txt', start_line: 2 } }));
+  assert.equal(JSON.parse(reads[1].content[0].text).note, undefined);
+  assert.match(JSON.parse(reads[2].content[0].text).note, /Read 3 times/);
+  assert.equal(reads[6].isError, true);
+  assert.match(reads[6].content[0].text, /Stop reading it/);
 });
