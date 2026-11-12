@@ -6,6 +6,7 @@ const { ContextManifest, composePrompt } = require('./prompt');
 const { ReadConnectors } = require('./connectors');
 const { RunBudget, OFFLINE } = require('./schedules');
 const { saveScheduledReport } = require('./reports');
+const { RunUsage } = require('./usage');
 
 // Runs one unattended read-only report. The schedule approval is the only standing approval. It covers workspace
 // reads and the exact connector targets that were reviewed when the schedule was approved, within the run budget.
@@ -25,6 +26,7 @@ async function runScheduledReport({ schedule, occurrence, trigger, workspace, se
   let text = '';
   const run = {
     readOnly: true, budget, workspace, signal, controller, permissions, maxTurns: schedule.budget.connectorReads + 3,
+    usage: new RunUsage({ maxTokens: budget.limits.maxTokens }, now),
     search: (query, limit) => retrieval.query('search', query, limit),
     resetDraft() { this.draft = new Draft((file, create) => workspace.read(file, create)); this.permissions.reset(); },
     onTool: name => onStatus(`Scheduled report: ${name}`),
@@ -42,7 +44,7 @@ async function runScheduledReport({ schedule, occurrence, trigger, workspace, se
     const index = await workspace.index(signal);
     const assembled = await retrieval.query('assemble', index, schedule.prompt);
     const scope = { schedule: schedule.name, occurrence: `${occurrence.slot} ${schedule.timeZone}`, trigger,
-      connectors: run.connectors?.catalog() ?? [], budget: schedule.budget };
+      connectors: run.connectors?.catalog() ?? [], budget: budget.limits };
     const prompt = composePrompt({ request: schedule.prompt, assembled, memory: notes, manifest: run.manifest,
       report: { instructions: REPORT_INSTRUCTIONS, scope } });
     permissions.require(permissions.action('context_send', 'workspace.read', workspace.root));
@@ -57,7 +59,7 @@ async function runScheduledReport({ schedule, occurrence, trigger, workspace, se
     });
     signal.throwIfAborted();
   } catch (error) {
-    status = deadline.aborted ? 'failed' : signal.aborted ? 'cancelled' : 'failed';
+    status = deadline.aborted || run.tokenLimitReached ? 'failed' : signal.aborted ? 'cancelled' : 'failed';
     reason = deadline.aborted ? `Run-time budget of ${schedule.budget.minutes} minutes reached.` : signal.aborted
       ? String(signal.reason?.message ?? 'Cancelled.') : error.message;
     if (status === 'failed' && !deadline.aborted && OFFLINE.test(reason)) status = 'offline';
@@ -66,11 +68,12 @@ async function runScheduledReport({ schedule, occurrence, trigger, workspace, se
     retrieval.close();
   }
   const finished = now();
+  const usage = { ...budget.used, tokens: run.usage.modelCalls ? run.usage.total : null };
   const report = await saveScheduledReport(storage, workspace.root, permissions.runId, {
-    schedule, occurrence, trigger, status, reason, text, session, usage: budget.used, limits: budget.limits,
+    schedule, occurrence, trigger, status, reason, text, session, usage, limits: budget.limits,
     permissions: permissions.snapshot(), connectors: selected, started, finished });
   return { status, reason, report, session, runId: permissions.runId,
-    usage: { ...budget.used, seconds: Math.round((finished - started) / 1000) } };
+    usage: { ...usage, seconds: Math.round((finished - started) / 1000) } };
 }
 
 module.exports = { runScheduledReport };

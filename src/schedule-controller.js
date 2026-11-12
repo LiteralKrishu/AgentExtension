@@ -3,7 +3,7 @@ const fs = require('node:fs/promises');
 const { digest } = require('./permissions');
 const { secretKey } = require('./connectors');
 const { WorkspaceMemory } = require('./memory');
-const { Scheduler, ScheduleStore, normalizeSchedule, validateTimeZone, schedulePin, nextOccurrence, localLabel, describeCadence } = require('./schedules');
+const { Scheduler, ScheduleStore, normalizeSchedule, validateTimeZone, schedulePin, nextOccurrence, localLabel, describeCadence, DEFAULT_SCHEDULE_TOKENS } = require('./schedules');
 const { runScheduledReport } = require('./scheduled-run');
 
 function createScheduleController({ context, panel, status, chooseFolder, makeWorkspace, runSettings, policyFor,
@@ -120,7 +120,7 @@ function createScheduleController({ context, panel, status, chooseFolder, makeWo
       `Request: ${schedule.prompt}`,
       `Reads: workspace files${connectors.length ? `; ${connectors.map(config => `${config.id} (${config.account}): ${config.tools.map(tool => `${tool.name} ${tool.targets.join(', ')}`).join('; ')}`).join(' · ')}` : ''}`,
       `Model: ${settings.model}${settings.fallbackModel ? `, fallback ${settings.fallbackModel}` : ''}. Repository excerpts, approved notes and connector results are sent to it.`,
-      `Budget: ${schedule.budget.minutes} min, ${schedule.budget.toolCalls} tool calls, ${schedule.budget.connectorReads} connector reads.`,
+      `Budget: ${schedule.budget.minutes} min, ${schedule.budget.toolCalls} tool calls, ${schedule.budget.connectorReads} connector reads, ${(schedule.budget.maxTokens ?? DEFAULT_SCHEDULE_TOKENS).toLocaleString('en-US')} model tokens.`,
       `Offline: runs only while VS Code is open with this trusted workspace. After downtime, only the latest missed run starts, and only within ${schedule.catchUpMinutes} minutes. Others are recorded as missed. An unreachable model server is recorded as offline and not retried.`,
       'No writes, draft edits, commands, browser, native app, or subagent access. Connector reads to the listed targets are approved in advance by this schedule. Any change to the workspace path, request, timing, budget, connectors, credentials, model or server pauses the schedule until you approve it again.'].filter(Boolean).join('\n');
   }
@@ -172,7 +172,7 @@ function createScheduleController({ context, panel, status, chooseFolder, makeWo
       const choice = await vscode.window.showQuickPick(rows.map(row => ({
         label: `${row.status} · ${row.status === 'missed' ? `${row.count}${row.countIsMinimum ? '+' : ''} × ${row.firstLocal}${row.count > 1 ? ` – ${row.lastLocal}` : ''}` : row.local} ${row.timeZone}`,
         description: row.trigger, row,
-        detail: [row.reason, row.usage ? `${row.usage.toolCalls} tool calls · ${row.usage.connectorReads} connector reads · ${row.usage.seconds} s` : ''].filter(Boolean).join(' · ') })),
+        detail: [row.reason, row.usage ? `${row.usage.toolCalls} tool calls · ${row.usage.connectorReads} connector reads · ${row.usage.tokens ?? 'unreported'} tokens · ${row.usage.seconds} s` : ''].filter(Boolean).join(' · ') })),
       { placeHolder: rows.length ? 'Run history, newest first. Select a run to open its report.' : 'No runs yet.' });
       if (choice?.row.report) await vscode.window.showTextDocument(vscode.Uri.file(choice.row.report), { preview: false });
     } else if (action?.id === 'delete') {
@@ -220,10 +220,10 @@ function createScheduleController({ context, panel, status, chooseFolder, makeWo
       connectors = picked.map(item => item.config.id);
     }
     const size = await vscode.window.showQuickPick([
-      { label: 'Standard', description: '5 min · 20 tool calls · 5 connector reads · catch up within 6 hours', budget: { minutes: 5, toolCalls: 20, connectorReads: 5 }, catchUpMinutes: 360 },
-      { label: 'Small', description: '2 min · 8 tool calls · 2 connector reads · catch up within 1 hour', budget: { minutes: 2, toolCalls: 8, connectorReads: 2 }, catchUpMinutes: 60 },
-      { label: 'Large', description: '10 min · 40 tool calls · 10 connector reads · catch up within 24 hours', budget: { minutes: 10, toolCalls: 40, connectorReads: 10 }, catchUpMinutes: 1_440 },
-      { label: 'Standard, never catch up', description: 'Missed runs are only recorded', budget: { minutes: 5, toolCalls: 20, connectorReads: 5 }, catchUpMinutes: 0 },
+      { label: 'Standard', description: '5 min · 20 tool calls · 5 connector reads · 100,000 tokens', budget: { minutes: 5, toolCalls: 20, connectorReads: 5, maxTokens: DEFAULT_SCHEDULE_TOKENS }, catchUpMinutes: 360 },
+      { label: 'Small', description: '2 min · 8 tool calls · 2 connector reads · 25,000 tokens', budget: { minutes: 2, toolCalls: 8, connectorReads: 2, maxTokens: 25_000 }, catchUpMinutes: 60 },
+      { label: 'Large', description: '10 min · 40 tool calls · 10 connector reads · 250,000 tokens', budget: { minutes: 10, toolCalls: 40, connectorReads: 10, maxTokens: 250_000 }, catchUpMinutes: 1_440 },
+      { label: 'Standard, never catch up', description: '100,000 tokens · missed runs are recorded only', budget: { minutes: 5, toolCalls: 20, connectorReads: 5, maxTokens: DEFAULT_SCHEDULE_TOKENS }, catchUpMinutes: 0 },
     ], { title: 'New scheduled report (7/7)', placeHolder: 'Run budget and offline catch-up' });
     if (!size) return;
     const schedule = normalizeSchedule({ name: name.trim(), prompt: prompt.trim(), days, times: times.split(',').map(time => time.trim()),

@@ -2,7 +2,7 @@
 
 ## Scope
 
-Version 0.5.0 adds scoped browser inspection, native computer use on macOS, and durable run reports.
+Version 0.6.0 adds six editor and scheduling features and includes the 11 November milestones. The previous release, 0.5.0, added scoped browser inspection, native computer use on macOS, and durable run reports.
 It retains versioned plugins, bounded workers, the permission broker, skills, context sources, approved notes, and read-only MCP connectors.
 Scheduling and remote device control remain later stages.
 
@@ -167,7 +167,7 @@ These checks verify the extension's execution and permission boundaries. They do
 
 ## Scheduled read-only reports
 
-This milestone adds recurring read-only runs. It builds on 0.5.0 and has not been released yet. The package version remains 0.5.0.
+This milestone introduced recurring read-only runs after 0.5.0. It ships in 0.6.0.
 
 A user creates a schedule from **Scheduled reports** in the panel. The schedule includes a name, request, days, up to four daily times, an IANA time zone, optional read connectors, and a budget preset. A modal shows the workspace, cadence, next run, data sent to the model, budget, offline behavior, and the reads available to unattended runs. Approval stores a SHA-256 pin of the canonical workspace, the normalized schedule, the selected connector configurations, credential digests, model, fallback model, and server URL. Up to eight schedules can be stored for each workspace.
 
@@ -265,7 +265,7 @@ Interactive runs enable TrueForge's built-in `ask_user_question` client tool by 
 
 `src/checkpoint.js` stores one checkpoint for each workspace in extension storage, with mode 0600 and an atomic rename. A checkpoint records the request, the plan-first flag, the approved plan, the draft revision, and each staged file's base, base digest, and text. It also records command checks without output, the review state, the last 2,000 characters of agent text, and the phase. It holds no grants. The run saves a checkpoint at start, on each tool call, draft change, and review, and while a question waits. A reviewed result is kept as a `ready` checkpoint until the user applies or discards it. A run that ends normally clears its checkpoint, and so does a user cancel. A run that stops for any other reason keeps the last saved checkpoint with phase `interrupted`. The runtime resets the draft after a failed attempt, so the last saved checkpoint is used. Inline edits are not saved, and checkpoints expire after seven days.
 
-Resume requires the same canonical workspace and the original bytes of every staged file. A new file must still be absent. Any difference is reported as a conflict, and the run does not start. A resumed run gets a new run ID and permission broker. It restores the draft into a fresh `Draft`, and does so again after a model retry. It adds a `RESUMED RUN` section to the prompt. If a plan was approved before, the resumed run starts in plan-first mode and needs a new plan approval. TrueForge sessions are not reattached because the old editor connector address and token end with the old extension host.
+The initial recovery flow required the original bytes of every staged file. Version 0.6.0 preserves independent edits and lets the user resolve overlaps before resuming. A resumed run gets a new run ID and permission broker. It restores the draft into a fresh `Draft`, and does so again after a model retry. It adds a `RESUMED RUN` section to the prompt. If a plan was approved before, the resumed run starts in plan-first mode and needs a new plan approval. The old editor connector address and token expire with the old extension host, so recovery starts a new TrueForge session.
 
 ## Verification record for the 11 November milestones
 
@@ -312,3 +312,24 @@ On 11 November 2026, `npm run test:qwen` ran seven times on a MacBook Air (Apple
 Results for each run are kept in `test-results/model-run<N>-*.md` with the matching JSON transcripts. Model behaviour varies between runs. One clean run does not prove that every scenario will pass every time. The misses in runs 3 to 5 came from code paths that the earlier runs had not reached.
 
 After these changes, `npm run check` passed and the suite passed 117 of 122 tests against a local TrueForge server. The five skipped tests need a real browser or macOS app. They were not re-run in this round, and these changes do not touch their code.
+
+## Editor and scheduling features in 0.6.0
+
+| Feature | What changed | Verification |
+| --- | --- | --- |
+| Check accepted changes | Rerun a recorded command from the review panel. The broker checks the command and selected hunks before the isolated run. The result appears beside Apply and in the run report. | The installed panel reran a check on accepted hunks, left rejected hunks out of the snapshot, and kept the workspace intact until Apply. |
+| Symbol-aware context | VS Code definitions and references add workspace excerpts within the existing budget. Keyword search supplies context when language providers return no results. | Provider fixtures returned definitions and references. The test excluded an outside-workspace result and checked the excerpt budget. |
+| Fix from Problems | **Fix with AgentExtension** starts a plan from a selected diagnostic and stages the fix for review. | The host test rejected an outdated diagnostic and sent a current one through plan approval and hunk review. |
+| Review working-tree changes | Select up to six text files and compare their current contents with Git HEAD. The read-only worker reports findings for the selected snapshot. | A real Git fixture and TrueForge worker received only the selected changes. A file change during review marked the findings stale. |
+| Checkpoint conflict recovery | Restore independent edits and preview overlapping changes. Choose which version to stage in each affected file. Earlier checks require a rerun after recovery changes the draft. | A restarted host preserved the developer's independent edit, staged the chosen conflict resolution, and asked for fresh review. |
+| Scheduled token limits | Stop scheduled runs when reported model usage reaches the approved limit. Existing schedules use a 100,000-token default. | TrueForge reported 1,250 tokens against a 1,000-token limit. The run stopped and recorded both values in its report. |
+
+Scheduled token enforcement uses the usage events sent by TrueForge. A model response can cross the limit before the usage arrives. Reports show **Unreported** when the provider supplies no usage.
+
+## Verification record for 0.6.0
+
+On 12 November 2026, `npm run check` passed. The full suite passed **128 of 128 tests**, with zero failures and zero skips. It ran on Apple Silicon with Node.js 24.18.0, TrueForge 0.184.2, Chrome, and a temporary native macOS test app. The model endpoint returned scripted responses for reproducible checks.
+
+The installed VSIX passed in a fresh VS Code profile. The interface test approved a plan, rejected a hunk, ran the accepted-hunk check twice, then applied and undid the approved changes. It also covered plugin approval, workers, scoped browser and app actions, cancellation, and saved evidence.
+
+The integration tests cover language-provider results and diagnostic Quick Fix through fixtures. The earlier Qwen scenarios provide separate evidence for live-model behavior. The original live-model Flask Task B remains open.

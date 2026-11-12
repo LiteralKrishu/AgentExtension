@@ -35,6 +35,25 @@ function commandTarget(run, input) {
   return { revision, scope, hunks, selection, key: JSON.stringify([commandSchema.parse(input), revision, selection, scope]) };
 }
 
+async function executeCheck(run, input, signal) {
+  const { revision, scope, hunks, selection } = commandTarget(run, input);
+  const changes = run.draft.changes(hunks);
+  let result;
+  try {
+    result = await run.workspace.command(input.command, input.args, changes, signal);
+    // Changes in the editor while the check ran make its result unsafe to reuse.
+    for (const { file, before } of changes) {
+      if (await run.workspace.read(file, before === null) !== before) throw new Error(`${file} changed while the check was running.`);
+    }
+  } catch (error) {
+    if (!signal.aborted) run.onCheck?.({ ...input, exitCode: null, status: error.message, revision, scope, selection, changes });
+    throw error;
+  }
+  signal.throwIfAborted();
+  run.onCheck?.({ ...input, ...result, revision, scope, selection, changes });
+  return { ...result, revision, scope };
+}
+
 function actionFor(run, name, args) {
   const effect = { search_workspace: 'workspace.read', read_file: 'workspace.read',
     propose_write: 'draft.edit', propose_lines: 'draft.edit', create_file: 'draft.edit',
@@ -191,20 +210,8 @@ function toolsFor(run, receipts) {
     return { revision: review.revision, accepted_hunks: review.hunks.length, rejected_hunks: review.rejected, applied: false };
   });
 
-  tool('run_command', 'Run one approved executable in an isolated workspace copy. Checks run against all staged hunks before review and only accepted hunks after review. No shell or network.', commandSchema, false, async (input, signal) => {
-    const { revision, scope, hunks, selection } = commandTarget(run, input);
-    const changes = run.draft.changes(hunks);
-    let result;
-    try {
-      result = await run.workspace.command(input.command, input.args, changes, signal);
-    } catch (error) {
-      if (!signal.aborted) run.onCheck?.({ ...input, exitCode: null, status: error.message, revision, scope, selection, changes });
-      throw error;
-    }
-    signal.throwIfAborted();
-    run.onCheck?.({ ...input, ...result, revision, scope, selection, changes });
-    return { ...result, revision, scope };
-  });
+  tool('run_command', 'Run one approved executable in an isolated workspace copy. Checks run against all staged hunks before review and only accepted hunks after review. No shell or network.', commandSchema, false,
+    (input, signal) => executeCheck(run, input, signal));
   if (run.skills?.selected.size) {
     tool('read_skill_resource', 'Read one text reference or asset from a user-selected skill. Use its catalog ID and a relative references/ or assets/ path. Scripts cannot run.', {
       skill: z.string().regex(/^[a-f0-9]{16}$/), file: pathSchema,
@@ -297,4 +304,4 @@ async function openBridge(run) {
   };
 }
 
-module.exports = { openBridge, commandSchema, commandTarget, planSchema, planKey, actionFor };
+module.exports = { openBridge, commandSchema, commandTarget, planSchema, planKey, actionFor, executeCheck };

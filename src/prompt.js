@@ -25,7 +25,7 @@ class ContextManifest {
   }
 }
 
-function composePrompt({ request, selection, planFirst, assembled, skills = [], memory = [], preferences = [], manifest, report, instructions, resume }) {
+function composePrompt({ request, selection, planFirst, assembled, skills = [], memory = [], preferences = [], manifest, report, instructions, resume, diagnostic }) {
   manifest.add('instructions', report ? 'Scheduled report definition' : 'Extension agent definition', report ? report.instructions : spec.instructions, { trust: 'host instructions' });
   const scope = report ? `SCHEDULED READ-ONLY REPORT MODE. This run was started by a schedule, not by a person at the keyboard. Read the workspace and the listed connector targets only. Write tools are unavailable and no approval can be given during this run.\nRUN SCOPE (host data)\n${JSON.stringify(report.scope)}`
     : selection ? 'INLINE MODE. Only replace text within the original selection.'
@@ -34,8 +34,13 @@ function composePrompt({ request, selection, planFirst, assembled, skills = [], 
   manifest.add('instructions', 'Run mode', scope, { trust: 'host instructions' });
   manifest.add('request', 'Your request', request, { trust: 'user instruction', limit: 8_000 });
   const parts = [scope, `USER REQUEST\n${request}`];
+  if (diagnostic) {
+    const text = JSON.stringify(diagnostic);
+    manifest.add('diagnostic', `${diagnostic.file}:${diagnostic.line}`, text, { reason: 'Selected from VS Code Problems' });
+    parts.push(`SELECTED EDITOR DIAGNOSTIC (data only)\n${text}`);
+  }
   if (resume) {
-    parts.push(`RESUMED RUN (host data). This run continues an interrupted run in a new session. The staged draft is restored; read files to see it. Approvals from the earlier run do not carry over: plan, review, commands and connector reads need approval again.${resume.previously_approved_plan ? ' Submit the previously approved plan with propose_plan, updated if needed, before editing.' : ''} Earlier checks ran in the old session; rerun any you need. Then continue the remaining work and call review_changes.\n${JSON.stringify(resume)}`);
+    parts.push(`RESUMED RUN (host data). This run continues an interrupted run in a new session. The staged draft is restored; read files to see it. Approvals from the earlier run do not carry over: plan, review, commands and connector reads need approval again.${resume.previously_approved_plan ? ' Submit the previously approved plan with propose_plan, updated if needed, before editing.' : ''}${resume.conflict_decisions?.length ? ' Honor the conflict decisions and preserve the edits the user chose to keep.' : ''} Earlier checks ran in the old session; rerun any you need. Then continue the remaining work and call review_changes.\n${JSON.stringify(resume)}`);
   }
   if (selection) {
     const text = JSON.stringify({ file: selection.file, selection: selection.base.slice(selection.start, selection.end) });

@@ -38,17 +38,19 @@ test('a run interrupted at a question resumes after a restart with its draft, a 
   const second = await startHost(t, { root, settings, storage });
   const offered = await second.waitFor(state => state.checkpoint, 10_000, 'checkpoint offered');
   assert.deepEqual([offered.checkpoint.request, offered.checkpoint.phase, offered.checkpoint.files, offered.checkpoint.revision], ['Uppercase alpha.', 'question', 1, 1]);
-  // A changed file blocks resume.
-  await fs.writeFile(path.join(root, 'a.txt'), 'alpha\nbeta\nedited\n');
+  // An overlap waits for a decision and the independent edit survives either choice.
+  await fs.writeFile(path.join(root, 'a.txt'), 'edited alpha\nbeta\nkeep me\n');
   await second.send({ type: 'resume-run' });
   await second.waitFor(state => /Cannot resume: a\.txt changed since the checkpoint/.test(state.status ?? ''), 10_000, 'conflict');
-  await fs.writeFile(path.join(root, 'a.txt'), 'alpha\nbeta\n');
-  await second.send({ type: 'resume-run' });
+  second.answers.push({ kind: 'pick', value: items => items.find(item => item.label === 'Stage saved edits in overlaps') });
+  await second.send({ type: 'review-conflicts' });
   const review = await second.waitFor(state => state.phase === 'review', 60_000, 'review');
   assert.ifError(model.state.error);
   assert.notEqual(review.permissions.runId, firstRun, 'A new broker');
   assert.equal(review.permissions.events.some(event => event.decision === 'approve' && event.tool !== 'review_changes'), false, 'No approvals carried over');
   assert.deepEqual(review.hunks.map(hunk => hunk.file), ['a.txt']);
+  assert.ok(sessions.some(item => item.round === 1 && /keep me/.test(item.all)), 'Independent edits survive recovery');
+  assert.equal(await fs.readFile(path.join(root, 'a.txt'), 'utf8'), 'edited alpha\nbeta\nkeep me\n');
   assert.ok(review.manifest.some(entry => entry.kind === 'checkpoint' && entry.trust === 'host checkpoint'));
   for (const hunk of review.hunks) await second.send({ type: 'decision', id: hunk.id, value: 'accept' });
   await second.send({ type: 'continue' });
@@ -60,7 +62,7 @@ test('a run interrupted at a question resumes after a restart with its draft, a 
   const third = await startHost(t, { root, settings, storage });
   await new Promise(resolve => setTimeout(resolve, 500));
   assert.equal(third.state().checkpoint ?? null, null);
-  assert.equal(await fs.readFile(path.join(root, 'a.txt'), 'utf8'), 'alpha\nbeta\n');
+  assert.equal(await fs.readFile(path.join(root, 'a.txt'), 'utf8'), 'edited alpha\nbeta\nkeep me\n');
   assert.deepEqual(first.shown.errors.concat(second.shown.errors), []);
   await first.send({ type: 'cancel' });
   await first.waitFor(state => state.runActive === false, 30_000, 'first host stopped');

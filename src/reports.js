@@ -111,6 +111,7 @@ async function saveScheduledReport(storage, workspace, runId, record) {
     `- Schedule approval: ${schedule.approval.digest.slice(0, 16)} · approved ${new Date(schedule.approval.at).toISOString()}`,
     '- Writes, draft edits, commands, browser, native apps and subagents: unavailable. Any change needs a new interactive run and its own approval.', '',
     '## Budget', '', '| Measure | Used | Limit |', '| --- | --- | --- |',
+    ...(limits.maxTokens ? [`| Model tokens | ${usage.tokens?.toLocaleString('en-US') ?? 'Unreported'} | ${limits.maxTokens.toLocaleString('en-US')} |`] : []),
     `| Tool calls | ${usage.toolCalls} | ${limits.toolCalls} |`,
     `| Connector reads | ${usage.connectorReads} | ${limits.connectorReads} |`,
     `| Run time | ${seconds} s | ${limits.minutes * 60} s |`,

@@ -29,10 +29,13 @@ Run `npm run package:vsix` to build the bundled VSIX. Pass an output path after 
 
 - **Inline edit.** Select code. Press **Cmd+Alt+I** on macOS or **Ctrl+Alt+I** on Windows or Linux. Enter an instruction. The first hunk opens in a native VS Code diff.
 - **Agent mode.** Open **AgentExtension** in the activity bar. Describe the change. Use `@file:src/path.py` or `@symbol:my_function` to add context. Put a path with spaces in quotes. Select **Run agent** to begin.
-- **Interrupted runs.** The extension saves a checkpoint as a run makes progress. It records the request, plan, staged draft, checks, and progress, but no approvals. If VS Code closes or a run stops because of an error, **Interrupted run** offers **Resume** and **Discard**. Resume first checks that each staged file is unchanged on disk, then starts a new session with the saved draft. The plan, hunk review, commands, and connector reads need approval again. Cancelling a run or discarding reviewed changes deletes the checkpoint. Applying them does too.
+- **Interrupted runs.** Select **Resume** to restore a saved draft in a new session. The extension preserves independent file edits. If edits overlap, select **Review conflicts** to preview the alternatives and choose which changes to stage. The plan, hunk review, commands, and connector reads need approval again. Applying or discarding the draft clears the checkpoint.
 - **Questions.** The agent can pause to ask a question with up to five options. The panel shows it under **Question from the agent**. Choose an option, type an answer, or select **Skip question**. Answers are sent as your input and do not approve any action. A run can ask up to five questions. Answered questions do not count toward the run's limit of 12 approval pauses. If the agent ends a turn with a plain-text question and nothing is staged, the extension asks it once to use the question panel or continue. Scheduled reports cannot ask questions.
 - **Plan first.** Select **Plan first** to review a goal, steps, and proposed checks. Select **Approve plan and start** to allow draft edits. To change the request before edits, cancel and update the prompt.
 - **Review.** Select **Preview file** to see the full file diff. Open an individual hunk with **Preview**. Choose **Accept** or **Reject** for each hunk. Select **Continue with decisions** to resume TrueForge. When the run completes, select **Apply approved hunks**.
+- **Check accepted changes.** After review, rerun a recorded command in an isolated copy with the accepted hunks. Review the command approval and check status beside **Apply approved hunks**. A changed source file invalidates the result of a check still in progress.
+- **Fix from Problems.** Open Quick Fix for a diagnostic and select **Fix with AgentExtension**. The run starts with the diagnostic's source location and asks for plan approval. Review the resulting hunks before applying them.
+- **Review working-tree changes.** Select up to six changed files to review against Git HEAD. The read-only worker reports findings in the panel. Changes to the selected files during review mark the findings stale.
 - **Verification.** If the agent requests a check, the approval dialog shows the executable, arguments, and draft scope. Expand **Verification** to see the command, its result, and its output. Results show when they cover an earlier draft or a different hunk selection.
 - **Save and undo.** Apply edits existing files in editor buffers. Use **Save All** if Auto Save is off. New files are created at apply time. **Undo last apply** reverts the last batch if the current text still matches it. Save reverted buffers if needed.
 - **Cancel.** Select **Cancel** in the panel or click the TrueForge status item. The extension discards the run's drafts. Use **Discard** to clear a completed review before apply.
@@ -154,14 +157,14 @@ Approving a schedule pre-approves each connector read to a listed target, up to 
 
 Times are local wall-clock times in the schedule's IANA time zone. A day runs at most four times. Weekdays are evaluated in that time zone. If a clock change skips a scheduled time, the report runs when local time resumes. For example, 02:30 runs at 03:30. If a clock change repeats a time, the report runs only at its first occurrence. History records the local time, zone, and UTC instant.
 
-| Budget preset | Run time | Tool calls | Connector reads | Catch-up window |
-| --- | --- | --- | --- | --- |
-| Small | 2 minutes | 8 | 2 | 1 hour |
-| Standard | 5 minutes | 20 | 5 | 6 hours |
-| Large | 10 minutes | 40 | 10 | 24 hours |
-| Standard, never catch up | 5 minutes | 20 | 5 | Only on-time runs |
+| Budget preset | Run time | Tool calls | Connector reads | Model tokens | Catch-up window |
+| --- | --- | --- | --- | --- | --- |
+| Small | 2 minutes | 8 | 2 | 25,000 | 1 hour |
+| Standard | 5 minutes | 20 | 5 | 100,000 | 6 hours |
+| Large | 10 minutes | 40 | 10 | 250,000 | 24 hours |
+| Standard, never catch up | 5 minutes | 20 | 5 | 100,000 | Only on-time runs |
 
-After a run reaches its tool-call or connector-read limit, later calls fail, but the model can still finish the report. At the time limit, the run is cancelled and the report records the cause. Each schedule supports up to 10 minutes, 40 tool calls, and 10 connector reads. A workspace supports up to eight schedules.
+After a run reaches its tool-call or connector-read limit, later calls fail and the model can still finish the report. The extension stops the run at its time limit or when TrueForge reports usage at or above its token limit. A model response can cross the limit before its usage arrives. The report shows the tokens reported by the provider, or **Unreported** if none arrived. Existing schedules use a 100,000-token limit and keep their approval. A workspace supports up to eight schedules.
 
 Schedules run only inside the VS Code extension host. The host checks schedules every 30 seconds while a trusted window has the workspace open. Turn off **AgentExtension: Scheduled Reports** to stop all schedules on this machine.
 
@@ -248,7 +251,7 @@ TrueForge owns the agent loop, model calls, tool discovery, and approval pauses.
 
 Run start grants workspace reads and in-memory draft proposals. Plans, reviews, commands, connector calls, apply, and undo use exact host-issued approvals. One-time grants bind the canonical workspace, run, policy, tool, normalized arguments, target, and scope. Commands also bind the draft revision and hunk selection. Grants expire after five minutes. Dispatch consumes them once. Denial and revocation take precedence. Retry clears pending approvals. Model summaries cannot restore them.
 
-The context pass ranks overlapping code windows with prompt keywords, rare terms, and path matches. Explicit mentions come first. Agent mode reserves candidates for implementation, tests, and documentation. It prefers test and documentation files that share the implementation name when the prompt matches that name. The model also gets a short list of likely files and line anchors for declarations, registrations, and headings. The panel shows selected paths, line ranges, and reasons. Retrieved excerpts have a 12,000-character budget in agent mode and a 4,000-character budget in inline mode. The request and the inline selection are separate from that budget. Each file read returns up to 5,000 characters of exact source text. A worker ranks excerpts and handles workspace searches. TrueForge preloads the search, read, proposal, review, and command tools, plus `suggest_note` and enabled worker tools. It defers the remaining tool schemas and can compact long turn histories.
+The context pass ranks overlapping code windows with prompt keywords, rare terms, and path matches. Explicit mentions come first. VS Code's language services can add definitions and references for explicit symbols, the active editor symbol when it matches the request, and a selected diagnostic. Provider results stay within the approved workspace and the same excerpt budget. Keyword search supplies context when a provider returns no results. Agent mode reserves candidates for implementation, tests, and documentation. The panel shows selected paths, line ranges, and reasons. Retrieved excerpts have a 12,000-character budget in agent mode and a 4,000-character budget in inline mode. The request and the inline selection are separate from that budget. Each file read returns up to 5,000 characters of exact source text. A worker ranks excerpts and handles workspace searches. TrueForge preloads the search, read, proposal, review, and command tools, plus `suggest_note` and enabled worker tools. It defers the remaining tool schemas and can compact long turn histories.
 
 Proposals stage exact-text replacements or line ranges in memory. A line proposal must use a recent read of that range. It can target a unique source line from the excerpt. A change to the same file invalidates the read. Inline edits are restricted to the original selection. Plan-first runs require plan approval before draft edits or commands. A separate TrueForge approval opens hunk review. Only the current reviewed revision can be applied. The extension checks the original text again before it applies the edits.
 
@@ -272,4 +275,4 @@ On a model error the extension clears editor drafts, then tries the configured f
 
 See [milestone results and limits](docs/milestones.md) for the release verification record. The integration suite uses real TrueForge sessions and a deterministic model endpoint. It verifies orchestration and permissions. It does not establish task quality for a general coding model. The earlier live-model Flask Task B result remains unresolved.
 
-The extension uses lexical retrieval and caps each index pass at 12,000 candidate paths and 32 million characters. The same limits affect initial retrieval and search. Command isolation is unavailable on Windows.
+The extension caps each keyword index pass at 12,000 candidate paths and 32 million characters. The same limits affect initial retrieval and search. Isolated commands run on macOS or on Linux with bubblewrap.

@@ -16,6 +16,7 @@ async function startHost(t, { root, settings, env = {}, storage: shared }) {
   const shown = { info: [], warning: [], documents: [], picks: [], errors: [] };
   const states = [];
   let provider;
+  let codeActions;
   let receive;
   const uri = fsPath => ({ fsPath, scheme: 'file', path: fsPath, toString: () => `file://${fsPath}` });
   const disposable = { dispose() {} };
@@ -32,6 +33,12 @@ async function startHost(t, { root, settings, env = {}, storage: shared }) {
     Uri: { file: uri, joinPath: (base, ...parts) => uri(path.join(base.fsPath, ...parts)), parse: value => ({ toString: () => value }),
       from: value => ({ ...value, toString: () => `${value.scheme}:${value.path}` }) },
     StatusBarAlignment: { Left: 1 }, Range: class {}, RelativePattern: class { constructor(base, pattern) { Object.assign(this, { base, pattern }); } },
+    CodeAction: class { constructor(title, kind) { Object.assign(this, { title, kind }); } },
+    CodeActionKind: { QuickFix: 'quickfix' },
+    languages: {
+      registerCodeActionsProvider: (_, value) => { codeActions = value; return disposable; },
+      getDiagnostics: () => [],
+    },
     WorkspaceEdit: class { constructor() { this.edits = []; } replace(...args) { this.edits.push(['replace', ...args]); } createFile(...args) { this.edits.push(['create', ...args]); } },
     env: { openExternal: async () => true },
     commands: { registerCommand: (name, handler) => { commands.set(name, handler); return disposable; }, executeCommand: async (...args) => { shown.info.push(`command:${args[0]}`); } },
@@ -109,7 +116,8 @@ async function startHost(t, { root, settings, env = {}, storage: shared }) {
   const state = () => states.at(-1) ?? {};
   return host = {
     vscode, context, storage, answers, shown, listeners, settings, secrets,
-    command: name => commands.get(`agentextension.${name}`)(),
+    command: (name, ...args) => commands.get(`agentextension.${name}`)(...args),
+    codeActions,
     // Sends a webview message and waits for the extension's handler to finish.
     send: async message => { await receive(message); await sleep(60); },
     state, states,

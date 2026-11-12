@@ -10,7 +10,7 @@ byId('form').addEventListener('submit', event => {
   event.preventDefault();
   if (prompt.value.trim()) send('run', { prompt: prompt.value, planFirst: event.submitter?.id === 'plan-first' });
 });
-for (const id of ['cancel', 'session', 'approve-plan', 'continue', 'apply', 'undo', 'select-skills', 'revoke', 'memory', 'connectors', 'connector-token', 'plugins', 'browser-access', 'computer-access', 'stop-surfaces', 'run-report', 'schedules', 'policy', 'instructions', 'export-audit', 'resume-run', 'discard-checkpoint']) {
+for (const id of ['cancel', 'session', 'approve-plan', 'continue', 'apply', 'check-accepted', 'undo', 'select-skills', 'revoke', 'memory', 'connectors', 'connector-token', 'plugins', 'browser-access', 'computer-access', 'stop-surfaces', 'run-report', 'schedules', 'policy', 'instructions', 'export-audit', 'resume-run', 'review-conflicts', 'discard-checkpoint', 'review-git']) {
   byId(id).addEventListener('click', () => send(id));
 }
 
@@ -88,6 +88,17 @@ function renderReview(state) {
   byId('continue').disabled = hunks.some(hunk => !decisions[hunk.id]);
   byId('apply').hidden = reviewMode !== 'apply';
   byId('apply').disabled = state.applying;
+  byId('check-accepted').hidden = reviewMode !== 'apply';
+  byId('check-accepted').disabled = state.applying || !state.checks.length;
+  const checkStatus = byId('accepted-check-status');
+  checkStatus.hidden = reviewMode !== 'apply';
+  const matching = state.checks.filter(check => check.revision === state.revision && check.selection === state.acceptedSelection);
+  const latest = [...new Map(matching.map(check => [JSON.stringify([check.command, check.args]), check])).values()];
+  checkStatus.textContent = state.checkingAccepted ? 'Checking accepted changes…'
+    : !latest.length ? 'No check has run on this selection.'
+      : latest.some(check => check.exitCode !== null && check.exitCode !== 0) ? 'A check failed on this selection.'
+        : latest.some(check => check.exitCode === null) ? 'A check could not verify this selection.'
+          : 'Recorded checks passed on this selection.';
 }
 
 let questionKey;
@@ -175,6 +186,7 @@ window.addEventListener('message', ({ data }) => {
   byId('browser-access').disabled = byId('computer-access').disabled = busy || state.phase === 'ready' || state.applying;
   byId('stop-surfaces').hidden = !state.surfacesActive && !state.surfaceScope;
   byId('run-report').disabled = state.applying;
+  byId('review-git').disabled = busy || state.phase === 'ready' || state.applying || Boolean(state.scheduledRunning);
   byId('schedule-summary').textContent = state.scheduleSummary || 'No scheduled reports.';
   byId('policy-summary').textContent = state.policySummary || 'Every protected action asks first.';
   byId('memory-summary').textContent = state.memorySummary || '';
@@ -191,7 +203,7 @@ window.addEventListener('message', ({ data }) => {
   byId('usage').textContent = state.usage ? `Usage: ${state.usage}` : '';
   byId('run').disabled = byId('plan-first').disabled = busy || state.phase === 'ready' || state.applying;
   byId('cancel').hidden = !busy && state.phase !== 'ready' && !state.scheduledRunning;
-  byId('cancel').textContent = state.phase === 'ready' ? 'Discard' : 'Cancel';
+  byId('cancel').textContent = state.checkingAccepted ? 'Cancel check' : state.phase === 'ready' ? 'Discard' : 'Cancel';
   byId('session').hidden = !state.session;
   byId('history').hidden = !state.undo;
   byId('undo').disabled = state.applying || busy;
@@ -241,6 +253,7 @@ window.addEventListener('message', ({ data }) => {
   renderPlan(state);
   renderQuestion(state);
   byId('checkpoint').hidden = !state.checkpoint || busy;
+  byId('review-conflicts').hidden = !state.checkpointConflicts;
   if (state.checkpoint) {
     byId('checkpoint-phase').textContent = state.checkpoint.phase;
     byId('checkpoint-request').textContent = state.checkpoint.request;

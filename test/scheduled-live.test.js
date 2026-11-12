@@ -16,12 +16,14 @@ const options = { skip: !baseUrl && 'Set AGENTEXTENSION_TEST_FORGE_URL to a loca
 const WRITE_TOOLS = ['propose_write', 'propose_lines', 'create_file', 'review_changes', 'run_command', 'propose_plan',
   'research_repository', 'review_draft', 'browser_open', 'browser_act', 'computer_act', 'read_skill_resource'];
 
-function respond(res, req, message) {
+function respond(res, req, message, usage) {
   const chunk = (delta, finish_reason) => ({ id: 'scheduled', object: 'chat.completion.chunk', created: 1, model: req.model,
     choices: [{ index: 0, delta, finish_reason }] });
   res.writeHead(200, { 'content-type': 'text/event-stream' });
   res.write(`data: ${JSON.stringify(chunk({ role: 'assistant', ...message }, null))}\n\n`);
-  res.end(`data: ${JSON.stringify(chunk({}, message.tool_calls ? 'tool_calls' : 'stop'))}\n\ndata: [DONE]\n\n`);
+  res.write(`data: ${JSON.stringify(chunk({}, message.tool_calls ? 'tool_calls' : 'stop'))}\n\n`);
+  if (usage) res.write(`data: ${JSON.stringify({ ...chunk({}, null), choices: [], usage })}\n\n`);
+  res.end('data: [DONE]\n\n');
 }
 
 async function environment(t) {
@@ -52,6 +54,9 @@ async function environment(t) {
       const call = (tool, args) => respond(res, input, { tool_calls: [{ index: 0, id: `call_${round}`, type: 'function',
         function: { name: tool, arguments: JSON.stringify(args) } }] });
       const deferred = (tool, args) => call(defer, { mcp_server: server, tool_name: tool, input: args });
+      if (all.includes('Token limit probe')) {
+        return respond(res, input, { content: 'Token limit probe result.' }, { prompt_tokens: 1_200, completion_tokens: 50, total_tokens: 1_250 });
+      }
       if (all.includes('Nightly release summary')) {
         if (round === 0) return call(find('search_workspace'), { query: 'release' });
         if (round === 1) return call(find('read_file'), { file: 'NOTES.md' });
@@ -118,6 +123,22 @@ async function pinFor(env, schedule, configs = [env.connector.config]) {
     credentials: await Promise.all(selected.map(async config => `${config.id}:${await env.secrets.get(secretKey(config)) ?? ''}`)),
     model: env.settings.model, serverUrl: env.settings.serverUrl });
 }
+
+test('a scheduled report stops when streamed model usage reaches its approved token limit', options, async t => {
+  const env = await environment(t);
+  const input = scheduleFor('Token limit probe', { connectors: [], budget: { minutes: 2, toolCalls: 12, connectorReads: 0, maxTokens: 1_000 } });
+  const store = new ScheduleStore(env.storage, env.root);
+  const schedule = await store.create(input, await pinFor(env, input), Date.now());
+  const at = Date.now();
+  const result = await runScheduledReport({ schedule, occurrence: { at, slot: 'Test occurrence' }, trigger: 'manual',
+    workspace: env.workspace, settings: env.settings, secrets: env.secrets, storage: env.storage });
+  assert.ifError(env.providerError());
+  assert.equal(result.status, 'failed');
+  assert.match(result.reason, /token limit of 1,000/);
+  assert.equal(result.usage.tokens, 1_250);
+  assert.match(await fs.readFile(result.report, 'utf8'), /\| Model tokens \| 1,250 \| 1,000 \|/);
+  assert.equal(env.seen.length, 1);
+});
 
 test('a due schedule runs once through TrueForge with read tools, a standing connector approval and a saved report', options, async t => {
   const env = await environment(t);

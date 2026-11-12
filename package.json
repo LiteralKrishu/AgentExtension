@@ -2,7 +2,7 @@
   "name": "agentextension",
   "displayName": "AgentExtension",
   "description": "Reviewable coding changes in VS Code, powered by local TrueForge.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "LiteralKrishu",
   "license": "MIT",
   "repository": {
@@ -18,6 +18,9 @@
     "Other"
   ],
   "main": "./src/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": false
@@ -33,6 +36,10 @@
       {
         "command": "agentextension.open",
         "title": "AgentExtension: Open Agent Panel"
+      },
+      {
+        "command": "agentextension.reviewGit",
+        "title": "AgentExtension: Review Working-Tree Changes"
       },
       {
         "command": "agentextension.cancel",
@@ -214,13 +221,31 @@
         },
         "agentextension.runBudget": {
           "type": "object",
-          "default": { "maxTokens": 1000000, "maxMinutes": 30, "maxToolCalls": 200 },
+          "default": {
+            "maxTokens": 1000000,
+            "maxMinutes": 30,
+            "maxToolCalls": 200
+          },
           "scope": "application",
           "additionalProperties": false,
           "properties": {
-            "maxTokens": { "type": "integer", "minimum": 0, "description": "Input plus output tokens across the agent and its workers. 0 means no limit." },
-            "maxMinutes": { "type": "integer", "minimum": 0, "maximum": 240, "description": "Run time in minutes. 0 means no limit." },
-            "maxToolCalls": { "type": "integer", "minimum": 0, "maximum": 2000, "description": "Editor tool calls, including worker calls. 0 means no limit." }
+            "maxTokens": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Input plus output tokens across the agent and its workers. 0 means no limit."
+            },
+            "maxMinutes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "description": "Run time in minutes. 0 means no limit."
+            },
+            "maxToolCalls": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2000,
+              "description": "Editor tool calls, including worker calls. 0 means no limit."
+            }
           },
           "markdownDescription": "Limits for one agent run. After a limit is reached, only `review_changes` still runs, so staged work can be reviewed. At 125% of the token or time limit the run is cancelled."
         },
@@ -245,13 +270,54 @@
           "markdownDescription": "User permission rules for every workspace. Each rule has an `effect`, a `target` with `*` wildcards, and a `decision` of `allow`, `ask` or `deny`. Administrator rules apply first. Allow rules are limited to `command.execute`, `connector.read`, `browser.write` and `computer.write`, and need a specific target. Workspace settings cannot set this value.",
           "items": {
             "type": "object",
-            "required": ["effect", "decision"],
+            "required": [
+              "effect",
+              "decision"
+            ],
             "additionalProperties": false,
             "properties": {
-              "effect": { "type": "string", "enum": ["*", "command.execute", "connector.read", "connector.catalog", "connector.*", "browser.observe", "browser.write", "browser.navigate", "browser.*", "computer.observe", "computer.write", "computer.*", "worker.research", "worker.review", "worker.diagnose", "worker.edit", "worker.custom", "worker.*", "skill.read", "memory.suggest"] },
-              "target": { "type": "string", "default": "*", "maxLength": 500 },
-              "decision": { "type": "string", "enum": ["allow", "ask", "deny"] },
-              "note": { "type": "string", "maxLength": 200 }
+              "effect": {
+                "type": "string",
+                "enum": [
+                  "*",
+                  "command.execute",
+                  "connector.read",
+                  "connector.catalog",
+                  "connector.*",
+                  "browser.observe",
+                  "browser.write",
+                  "browser.navigate",
+                  "browser.*",
+                  "computer.observe",
+                  "computer.write",
+                  "computer.*",
+                  "worker.research",
+                  "worker.review",
+                  "worker.diagnose",
+                  "worker.edit",
+                  "worker.custom",
+                  "worker.*",
+                  "skill.read",
+                  "memory.suggest"
+                ]
+              },
+              "target": {
+                "type": "string",
+                "default": "*",
+                "maxLength": 500
+              },
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "allow",
+                  "ask",
+                  "deny"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 200
+              }
             }
           }
         },

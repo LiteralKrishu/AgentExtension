@@ -9,12 +9,14 @@ const HISTORY_PER_SCHEDULE = 50;
 const ENUMERATION_WINDOW = 35 * 24 * 60 * 60 * 1000;
 const DAY = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DEFAULT_SCHEDULE_TOKENS = 100_000;
 
 const identifier = z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/);
 const budgetSchema = z.strictObject({
   minutes: z.number().int().min(1).max(10).default(5),
   toolCalls: z.number().int().min(1).max(40).default(20),
   connectorReads: z.number().int().min(0).max(10).default(5),
+  maxTokens: z.number().int().min(1_000).max(1_000_000).optional(),
 });
 const scheduleInput = z.strictObject({
   name: z.string().trim().min(1).max(80),
@@ -133,8 +135,8 @@ function schedulePin({ workspace, schedule, connectors = [], credentials = [], m
 }
 
 class RunBudget {
-  constructor({ toolCalls, connectorReads, minutes }) {
-    this.limits = { toolCalls, connectorReads, minutes };
+  constructor({ toolCalls, connectorReads, minutes, maxTokens = DEFAULT_SCHEDULE_TOKENS }) {
+    this.limits = { toolCalls, connectorReads, minutes, maxTokens };
     this.used = { toolCalls: 0, connectorReads: 0, writesRequested: 0 };
   }
   canRead() { return this.used.connectorReads < this.limits.connectorReads; }
@@ -338,4 +340,4 @@ class Scheduler {
 }
 
 module.exports = { Scheduler, ScheduleStore, RunBudget, normalizeSchedule, validateTimeZone, schedulePin, zonedInstant, wallTime,
-  occurrencesBetween, nextOccurrence, localLabel, describeCadence, scheduleInput, budgetSchema, OFFLINE, MAX_SCHEDULES };
+  occurrencesBetween, nextOccurrence, localLabel, describeCadence, scheduleInput, budgetSchema, OFFLINE, MAX_SCHEDULES, DEFAULT_SCHEDULE_TOKENS };

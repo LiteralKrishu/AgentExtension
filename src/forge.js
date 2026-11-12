@@ -150,6 +150,18 @@ async function runForge(settings, run, prompt, ui) {
       let askedQuestion = false;
       let questionPauses = 0;
       const counted = new Set();
+      const countUsage = message => {
+        if (message?.usage && !counted.has(`usage:${message.id}`)) {
+          counted.add(`usage:${message.id}`);
+          run.usage?.model(message.usage, 'parent');
+        }
+      };
+      function enforceScheduledTokenLimit() {
+        if (!run.readOnly || !run.usage || !run.usage.exceeded()) return;
+        run.tokenLimitReached = true;
+        run.controller.abort(new Error(`Scheduled report reached its token limit of ${run.usage.limits.maxTokens.toLocaleString('en-US')}.`));
+        run.signal.throwIfAborted();
+      }
       // Approval pauses are limited. Answered questions and the one-time nudges have their own limits and do not count.
       const pauseLimit = run.maxTurns ?? 12;
       for (let turn = 0; turn < pauseLimit; turn++) {
@@ -163,15 +175,18 @@ async function runForge(settings, run, prompt, ui) {
             if (isEventDelta(event)) {
               const base = messages.get(event.id);
               if (base) mergeEventDelta(base, event);
+              if (run.readOnly && event.usage) countUsage(event);
               if (event.threadId === 'main' && event.type === 'model.message.delta' && event.content) ui.token(event.content);
             } else if (event.type === 'model.message') {
               messages.set(event.id, event);
+              if (run.readOnly) countUsage(event);
               if (event.threadId === 'main' && event.content) ui.token(event.content);
             } else if (event.type === 'turn.done') {
               terminal = event.state;
             } else if (event.type === 'thread.context_compaction_finished') {
               run.usage?.compaction(event);
             }
+            enforceScheduledTokenLimit();
           }
         } catch {
           run.signal.throwIfAborted();
@@ -181,9 +196,8 @@ async function runForge(settings, run, prompt, ui) {
         }
         run.signal.throwIfAborted();
         // Count each model call once, after its deltas have merged.
-        for (const message of messages.values()) {
-          if (message.usage && !counted.has(`usage:${message.id}`)) { counted.add(`usage:${message.id}`); run.usage?.model(message.usage, 'parent'); }
-        }
+        for (const message of messages.values()) countUsage(message);
+        enforceScheduledTokenLimit();
         run.onUsage?.();
         const stop = run.usage?.hardStop();
         if (stop) { run.controller?.abort(new Error(stop)); run.signal.throwIfAborted(); }

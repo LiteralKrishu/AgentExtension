@@ -136,6 +136,12 @@ async function main(){
  assert.match(evidence,/Passed · node/);
  assert.match(evidence,/Accepted hunks · draft 3/);
  assert.match(evidence,/Accepted draft verified/);
+ await ui(`d.querySelector('#check-accepted').click();return true`);
+ await page.getByRole('button',{name:'Run command',exact:true}).click();
+ await waitFor(()=>ui(`return d.querySelector('#check-list').querySelectorAll('details').length`),count=>count===2);
+ assert.match(await ui(`return d.querySelector('#accepted-check-status').textContent`),/passed/);
+ await waitFor(()=>ui(`return !d.querySelector('#apply').disabled`),Boolean);
+ say('USER-INITIATED ACCEPTED-HUNK RECHECK PASS');
  assert.equal(await disk('a.js'),originalA);
  assert.equal(await disk('b.js'),originalB);
  say('FILE PREVIEW AND ACCEPTED SNAPSHOT PASS');

@@ -164,12 +164,13 @@ test('the extension creates, approves, runs on its timer, records and re-approve
   assert.match(approval.detail, /No writes, draft edits, commands, browser, native app, or subagent access/);
   assert.match(approval.detail, /docs \(test-reader\): read_doc manual/);
   assert.match(approval.detail, /only within 60 minutes/);
+  assert.match(approval.detail, /25,000 model tokens/);
   assert.ok(!approval.detail.includes(connector.token));
   const { ScheduleStore } = require('../src/schedules');
   const store = new ScheduleStore(storage, root);
   const [created] = await store.list();
   assert.deepEqual([created.name, created.times, created.timeZone, created.connectors, created.budget],
-    ['TODO sweep', [time], 'UTC', ['docs'], { minutes: 2, toolCalls: 8, connectorReads: 2 }]);
+    ['TODO sweep', [time], 'UTC', ['docs'], { minutes: 2, toolCalls: 8, connectorReads: 2, maxTokens: 25_000 }]);
   const stored = await fs.readFile(store.file, 'utf8');
   assert.ok(!stored.includes(connector.token), 'Credentials are not written to schedule storage');
 

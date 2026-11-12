@@ -82,7 +82,7 @@ function outline(file, category, words) {
     .slice(0, 12).sort((left, right) => left.line - right.line).map(item => `${item.line}: ${item.text}`);
 }
 
-function assemble(files, prompt, budget = CONTEXT_BUDGET) {
+function assemble(files, prompt, budget = CONTEXT_BUDGET, anchors = []) {
   const ranked = rank(files, prompt);
   const categories = ['implementation', 'test', 'documentation'];
   const pinned = ranked.filter(item => item.exactFile || item.symbol);
@@ -99,7 +99,15 @@ function assemble(files, prompt, budget = CONTEXT_BUDGET) {
       outlines.set(item.file, outline(file, item.category, query));
     }
   }
-  const queue = [...pinned, ...representative.filter(Boolean), ...ranked];
+  const locations = anchors.flatMap(anchor => {
+    const file = files.find(item => item.path === anchor.file);
+    if (!file) return [];
+    const lines = file.text.split(/\r?\n/);
+    const start = Math.max(1, anchor.line - 5);
+    const end = Math.min(lines.length, anchor.line + 12);
+    return [{ ...anchor, start, end, sample: lines.slice(start - 1, end).join('\n') }];
+  });
+  const queue = [...pinned, ...locations, ...representative.filter(Boolean), ...ranked];
   const selected = [];
   const perFile = new Map();
   const seen = new Set();
@@ -116,10 +124,11 @@ function assemble(files, prompt, budget = CONTEXT_BUDGET) {
     if (text.length + excerpt.length + 1 > budget) continue;
     text += excerpt + '\n';
     perFile.set(item.file, (perFile.get(item.file) ?? 0) + 1);
-    selected.push({ file: item.file, start: item.start, end: item.end, reason: item.reason });
+    selected.push({ file: item.file, start: item.start, end: item.end, reason: item.reason,
+      ...(typeof item.symbol === 'string' ? { symbol: item.symbol } : {}) });
   }
   const unresolved = mentions(prompt).filter(item => !selected.some(hit => item.type === 'file'
-    ? hit.file === item.value : hit.reason === `Explicit symbol ${item.value}`));
+    ? hit.file === item.value : hit.reason === `Explicit symbol ${item.value}` || hit.symbol === item.value));
   return { text, selected, unresolved, budget, used: text.length };
 }
 

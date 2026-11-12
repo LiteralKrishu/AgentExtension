@@ -29,7 +29,7 @@ const roleEffects = Object.fromEntries(Object.entries(ROLES).map(([role, value])
 function draftTarget(run) {
   const reviewed = run.reviewed?.revision === run.draft.revision;
   const hunks = reviewed ? run.reviewed.hunks : run.draft.review();
-  return { revision: run.draft.revision, scope: reviewed ? 'Accepted hunks' : 'All staged hunks',
+  return { revision: run.draft.revision, scope: run.diffScope ?? (reviewed ? 'Accepted hunks' : 'All staged hunks'),
     selection: digest(hunks), hunks };
 }
 function targetKey(run) {
@@ -230,7 +230,10 @@ class WorkerPool {
         if (generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker permission changed.');
         if (definition.output === 'edits') return this.propose(id, row, role, snapshot, parsed);
         const report = parsed;
-        const stale = definition.snapshot === 'diff' && snapshot.target.key !== targetKey(this.run);
+        const stale = definition.snapshot === 'diff' && (snapshot.target.key !== targetKey(this.run)
+          || (typeof this.run.diffStillCurrent === 'function' && !await this.run.diffStillCurrent(signal)));
+        signal.throwIfAborted();
+        if (generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker permission changed.');
         Object.assign(row, { state: stale ? 'stale' : 'completed', report });
         this.publish();
         return { id, role, snapshot: snapshot.digest, target: snapshot.target, stale, advisoryOnly: true, ...report };

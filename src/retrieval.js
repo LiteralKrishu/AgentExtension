@@ -7,9 +7,9 @@ if (!isMainThread) {
     try {
       let result;
       if (action === 'assemble') {
-        const [index, prompt, budget] = args;
+        const [index, prompt, budget, anchors] = args;
         files = index;
-        result = assemble(files, prompt, budget);
+        result = assemble(files, prompt, budget, anchors);
       } else {
         result = search(files, ...args);
       }

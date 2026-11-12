@@ -2,7 +2,7 @@
 :toc:
 :toclevels: 1
 
-Baseline *AgentExtension 0.5.0*, verified on 9 November 2026. On 11 November 2026, ten further milestones were implemented and verified on top of 0.5.0. They have not been released. The package version is still 0.5.0. link:milestones.md#verification-record-for-the-11-november-milestones[Verification record]
+Baseline *AgentExtension 0.6.0*, verified on 12 November 2026. This package includes the ten milestones implemented on 11 November and the six editor and scheduling features in the 0.6.0 write-up. link:milestones.md#editor-and-scheduling-features-in-060[Release features] · link:milestones.md#verification-record-for-060[Verification record]
 
 The five milestones in the research plan shipped in 0.5.0. They cover scoped permissions, skills and context sources, workspace notes and read connectors, versioned local plugins and two read-only subagents, and browser inspection with saved run reports. The release also includes scoped macOS computer use. link:claude-cowork-research.md[Cowork research] · link:milestones.md[Release and verification record]
 
@@ -45,8 +45,8 @@ The five milestones in the research plan shipped in 0.5.0. They cover scoped per
 |Review support for more browser file transfers and native controls that require screen-based interaction. Keep scope and stop controls for each capability.
 
 |Scheduled reports
-|Approved recurring read-only runs use an IANA time zone, a budget, and a pinned scope that includes connector targets. Run history, catch-up after VS Code restarts, offline and blocked outcomes, and per-occurrence claims are included. Scheduled runs have no write tools. Permission rules apply. link:milestones.md#scheduled-read-only-reports[Details]
-|Run schedules when VS Code is closed. This needs a background service or a TrueForge-hosted connector. Add a token limit using the usage TrueForge now reports. Allow selected skills, instructions, and read-only workers within the schedule pin. Add a notification channel outside VS Code. Exercise the schedule UI in the VS Code interface harness.
+|Approved recurring read-only runs use an IANA time zone, time and call budgets, a token limit, and a pinned scope that includes connector targets. Run history, catch-up after VS Code restarts, offline and blocked outcomes, and per-occurrence claims are included. Scheduled runs have no write tools. Permission rules apply. link:milestones.md#scheduled-read-only-reports[Details]
+|Run schedules when VS Code is closed. This needs a background service or a TrueForge-hosted connector. Allow selected skills, instructions, and read-only workers within the schedule pin. Add a notification channel outside VS Code. Exercise the schedule UI in the VS Code interface harness.
 
 |Audit and usage
 |Runs track tokens, tool calls, and time across the parent agent, workers, and compaction against a configurable budget. Decisions and run summaries go to a hash-chained log for each workspace, with a redacted, verifiable export. link:milestones.md#run-budget-and-audit-export[Details]
@@ -57,7 +57,7 @@ The five milestones in the research plan shipped in 0.5.0. They cover scoped per
 |Support questions in scheduled reports by holding them for the next interactive session.
 
 |Run checkpoints and recovery
-|A checkpoint saves the request, plan, staged draft, checks, and progress without grants. After a restart or failure, **Resume** checks the workspace, restores the draft in a new session, and asks again for every protected action. link:milestones.md#run-checkpoints-and-recovery[Details]
+|A checkpoint saves the request, plan, staged draft, checks, and progress without grants. **Resume** restores independent changes into a new draft. **Review conflicts** previews overlapping changes and lets the user choose which edits to stage. Protected actions require new approvals. link:milestones.md#run-checkpoints-and-recovery[Details]
 |Reattach to the original TrueForge session instead of starting a new one. Checkpoint inline edits.
 |===
 
@@ -85,4 +85,4 @@ The five milestones in the research plan shipped in 0.5.0. They cover scoped per
 
 == Verification still open
 
-Run a compatible general coding model through the same workflows to check tool choice and task quality. The 0.5.0 tests verified the extension with scripted model responses, including real browser and native app operations. Flask Task B passed with a scripted fixture. A successful live-model run remains open. The 11 November milestones were also verified with scripted responses. Their panel controls have not been exercised in the VS Code interface harness or on macOS. link:milestones.md[Verification record] · link:demo.md[Flask rehearsal]
+The latest Qwen run passed the required checks in seven scenarios. The edit-proposal worker did not merge its patch in that run. A successful live-model run of the original Flask Task B remains open. Continue to test panel controls and model choices independently. link:milestones.md#real-model-verification-with-qwen-35-9b[Qwen verification] · link:demo.md[Flask rehearsal]
