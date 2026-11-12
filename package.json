@@ -2,7 +2,7 @@
   "name": "agentextension",
   "displayName": "AgentExtension",
   "description": "Reviewable coding changes in VS Code, powered by local TrueForge.",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "publisher": "LiteralKrishu",
   "license": "MIT",
   "repository": {

@@ -2,9 +2,23 @@
 
 ## Scope
 
-Version 0.6.0 adds six editor and scheduling features and includes the 11 November milestones. The previous release, 0.5.0, added scoped browser inspection, native computer use on macOS, and durable run reports.
-It retains versioned plugins, bounded workers, the permission broker, skills, context sources, approved notes, and read-only MCP connectors.
-Scheduling and remote device control remain later stages.
+Version 0.6.1 makes the redesigned sidebar the default. Version 0.6.0 added six editor and scheduling features. Version 0.5.0 added scoped browser inspection, native computer use on macOS, and saved run reports.
+
+## Sidebar redesign in 0.6.1
+
+The prompt stays at the bottom while the run and review scroll above it. Press **Enter** to run or **Shift+Enter** to add a line. Use **Plan first** to request a plan, **@ Context** to choose a workspace file or enter a symbol, and the model link to open settings.
+
+Open **Workspace** to manage skills, notes, instructions, connectors, plugins, browser and computer access, permission rules, and reports. Expand **Run details** to see context sources, permission decisions, tool activity, check results, and worker findings.
+
+The panel brings pending questions, plans, and proposed changes into view. The review shows how many changes need a decision and opens diffs in the editor. Cancel, revoke, and stop controls stay near the prompt while available. Apply still uses the approved changes, and Undo reverses the last apply when the editor contents match.
+
+## Verification record for the sidebar redesign
+
+The redesigned panel passed `npm run check` and all **128 regression tests**, with zero failures and zero skips. The suite used local TrueForge 0.184.2 with a scripted model, Chrome, and a temporary macOS test app.
+
+The installed VSIX test checked the pinned prompt, keyboard submission, multiline input, file and symbol references, and context details. It also checked plan approval, native diff preview, rejection of a change, checks on the accepted draft, apply and undo, plugin approval, worker cancellation, and scoped browser and computer actions.
+
+Install `AgentExtension-0.6.1.vsix` with **Extensions: Install from VSIX**. Run `npm run package:vsix` to build the package from source.
 
 ## First milestone
 

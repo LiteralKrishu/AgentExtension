@@ -213,7 +213,9 @@ async function main() {
     await fs.writeFile(path.join(root, 'results.json'), JSON.stringify({ passed: true, connectorReads: fixture.calls(),
       version: require('../../package.json').version, packaged: Boolean(process.env.AGENTEXTENSION_VSIX), workerCalls,
       browserWrites: browserFixture.calls.writes, outOfScopeRequests: browserFixture.calls.escaped, nativeActions: 2,
-      checks: ['browser scope selection', 'native app selection', 'browser screenshot', 'per-action and outgoing-write approvals', 'native fill and press', 'stop during browser navigation', 'saved reports and exact checked patches', 'plugin approval', 'changed plugin blocked', 'capability update reapproval', 'plugin disable', 'research worker', 'draft review worker', 'stale report', 'two child cancellation', 'skills', 'approved memory', 'credential storage', 'connector approval', 'context panel', 'plan', 'native diff', 'accepted-hunk check', 'user-initiated accepted-hunk recheck', 'apply', 'undo', 'revocation', 'note removal'] }, null, 2));
+      checks: ['pinned prompt during plan and review', 'Enter submission and Shift+Enter newline', 'file picker and symbol insertion',
+        'workspace drawer actions', 'expandable context sources', 'visible revoke and stop controls',
+        'browser scope selection', 'native app selection', 'browser screenshot', 'per-action and outgoing-write approvals', 'native fill and press', 'stop during browser navigation', 'saved reports and exact checked patches', 'plugin approval', 'changed plugin blocked', 'capability update reapproval', 'plugin disable', 'research worker', 'draft review worker', 'stale report', 'two child cancellation', 'skills', 'approved memory', 'credential storage', 'connector approval', 'context panel', 'plan', 'native diff', 'accepted-hunk check', 'user-initiated accepted-hunk recheck', 'apply', 'undo', 'revocation', 'note removal'] }, null, 2));
   } finally {
     code?.kill();
     provider.close(); provider.closeAllConnections(); fixture.close();

@@ -31,10 +31,16 @@ const { PolicyEngine, loadAdminPolicy, parseRules, ALLOWABLE, GOVERNED, commandS
 
 const SCHEME = 'agentextension-preview';
 
+function configuredModel() {
+  const model = vscode.workspace.getConfiguration('agentextension').get('model');
+  return typeof model === 'string' ? model.trim() : '';
+}
+
 class Panel {
   constructor(context) {
     this.context = context;
-    this.state = { phase: 'idle', text: '', log: [], context: [], manifest: [], skills: [], hunks: [], checks: [], undo: false };
+    this.state = { phase: 'idle', text: '', log: [], context: [], manifest: [], skills: [], hunks: [], checks: [], undo: false,
+      model: configuredModel() };
     this.previews = new Map();
   }
 
@@ -50,41 +56,40 @@ class Panel {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
       <link rel="stylesheet" href="${style}"><title>AgentExtension</title></head>
-      <body><main>
-        <header><div class="eyebrow">LOCAL CODING AGENT</div><h1>AgentExtension</h1><p>Review changes before applying them.</p></header>
-        <form id="form"><label for="prompt">What should change?</label>
-          <textarea id="prompt" rows="4" maxlength="8000" placeholder="Describe a change in this workspace"></textarea>
-          <div class="hint">Add context with <code>@file:path</code> or <code>@symbol:name</code>.</div>
-          <div class="actions"><button id="run" type="submit">Run agent</button><button id="plan-first" class="secondary" type="submit">Plan first</button><button id="cancel" class="secondary" type="button" hidden>Cancel</button></div>
-        </form>
-        <section aria-label="Workspace controls">
-          <div class="actions"><button id="select-skills" class="secondary" type="button">Choose skills</button><button id="revoke" class="secondary" type="button" hidden>Revoke run access</button></div>
-          <p id="skill-summary" class="hint">No skills selected.</p>
-          <div class="actions"><button id="memory" class="secondary" type="button">Notes</button><button id="connectors" class="secondary" type="button">Choose connectors</button><button id="connector-token" class="secondary" type="button">Connector credential</button></div>
-          <p id="memory-summary" class="hint"></p>
-          <p id="connector-summary" class="hint">No connectors enabled.</p>
-          <div class="actions"><button id="plugins" class="secondary" type="button">Manage plugins</button></div>
-          <p id="plugin-summary" class="hint">No plugins enabled.</p>
-          <div class="actions"><button id="browser-access" class="secondary" type="button">Browser access</button><button id="computer-access" class="secondary" type="button">Computer access</button><button id="stop-surfaces" class="secondary" type="button" hidden>Stop browser and computer</button></div>
-          <p id="surface-scope" class="hint">Browser and computer access off.</p>
-          <details id="surface-activity" hidden><summary>Browser and computer activity</summary><ul id="surface-events"></ul></details>
-          <div class="actions"><button id="schedules" class="secondary" type="button">Scheduled reports</button><button id="policy" class="secondary" type="button">Permission rules</button><button id="instructions" class="secondary" type="button">Instructions</button></div>
-          <p id="instruction-summary" class="hint">No instruction profiles in use.</p>
-          <p id="policy-summary" class="hint">Every protected action asks first.</p>
-          <p id="schedule-summary" class="hint">No scheduled reports.</p>
-          <button id="run-report" class="link" type="button">Open saved run report</button> <button id="export-audit" class="link" type="button">Export audit log</button>
-          <button id="review-git" class="link" type="button">Review working-tree changes</button>
-          <details id="permissions" hidden><summary>Permissions and decisions</summary><p id="permission-scope" class="hint"></p><ul id="permission-list"></ul></details>
-          <details id="manifest" hidden><summary id="manifest-summary">Context sources</summary><p class="hint">Sources sent during this run. Token counts are estimates at four characters per token. Compaction can change what the model retains.</p><ul id="manifest-totals"></ul><ul id="manifest-list"></ul></details>
+      <body><main class="panel">
+        <header class="toolbar">
+          <span id="phase" class="phase" data-phase="idle">Ready</span>
+          <button id="workspace-toggle" class="quiet" type="button" aria-controls="workspace" aria-expanded="false">Workspace <span aria-hidden="true">⌄</span></button>
+        </header>
+        <div id="workspace" class="workspace" aria-label="Workspace controls" role="region" hidden>
+          <section>
+            <h2>Context</h2>
+            <div class="actions"><button id="select-skills" class="secondary" type="button">Choose skills</button><button id="memory" class="secondary" type="button">Notes</button><button id="instructions" class="secondary" type="button">Instructions</button></div>
+            <p id="skill-summary" class="hint"></p><p id="memory-summary" class="hint"></p><p id="instruction-summary" class="hint"></p>
+          </section>
+          <section>
+            <h2>Tools and access</h2>
+            <div class="actions"><button id="connectors" class="secondary" type="button">Choose connectors</button><button id="connector-token" class="secondary" type="button">Connector credential</button><button id="plugins" class="secondary" type="button">Manage plugins</button></div>
+            <p id="connector-summary" class="hint"></p><p id="plugin-summary" class="hint"></p>
+            <div class="actions"><button id="browser-access" class="secondary" type="button">Browser access</button><button id="computer-access" class="secondary" type="button">Computer access</button><button id="policy" class="secondary" type="button">Permission rules</button></div>
+            <p id="surface-scope" class="hint"></p><p id="policy-summary" class="hint"></p>
+          </section>
+          <section>
+            <h2>Reports and review</h2>
+            <div class="actions"><button id="review-git" class="secondary" type="button">Review working-tree changes</button><button id="schedules" class="secondary" type="button">Scheduled reports</button><button id="run-report" class="secondary" type="button">Open saved run report</button><button id="export-audit" class="secondary" type="button">Export audit log</button></div>
+            <p id="schedule-summary" class="hint"></p>
+          </section>
+        </div>
+        <div id="status" class="run-status" role="status" hidden></div>
+        <div id="stream" class="stream" role="region" aria-label="Run and review" tabindex="0">
+          <div class="flow">
+        <section id="welcome" class="welcome">
+          <h1>What would you like to change?</h1>
+          <p id="welcome-hint" class="hint">Describe a task below. You can review the proposed edits before applying them.</p>
         </section>
         <section id="activity" hidden>
-          <div class="section-heading"><h2>Run</h2><span id="phase" class="pill"></span></div>
-          <p id="status" aria-live="polite"></p>
-          <p id="usage" class="hint" hidden></p>
-          <div id="session-links"><button id="session" class="link" hidden>Open TrueForge session ↗</button></div>
-          <details id="context" hidden><summary id="context-summary">Selected context</summary><ul id="context-list"></ul></details>
-          <details id="tools" hidden><summary>Tool activity</summary><ul id="tool-list"></ul></details>
-          <div id="response" hidden></div>
+          <div id="request-card" class="request" hidden><h2>Your request</h2><p id="request"></p></div>
+          <div id="response" class="response" hidden></div>
         </section>
         <section id="checkpoint" hidden>
           <div class="section-heading"><h2>Interrupted run</h2><span id="checkpoint-phase" class="pill"></span></div>
@@ -104,8 +109,6 @@ class Panel {
           <p id="plan-goal"></p><ol id="plan-steps"></ol><ul id="plan-checks"></ul>
           <button id="approve-plan" type="button" hidden>Approve plan and start</button>
         </section>
-        <section id="verification" hidden><h2>Verification</h2><div id="check-list"></div></section>
-        <section id="workers" hidden><h2>Research and review workers</h2><p class="hint">Advice from isolated snapshots. Workers cannot edit or approve changes.</p><div id="worker-list"></div></section>
         <section id="review" hidden>
           <div class="section-heading"><h2>Review changes</h2><span id="count" class="pill"></span></div>
           <p id="review-help"></p><div id="hunks"></div>
@@ -114,6 +117,51 @@ class Panel {
           <button id="check-accepted" class="secondary" hidden>Check accepted changes</button><button id="apply" hidden>Apply approved hunks</button>
         </section>
         <section id="history" hidden><button id="undo" class="secondary">Undo last apply</button></section>
+        <details id="run-details" class="run-details" hidden>
+          <summary>Run details</summary>
+          <div class="detail-body">
+            <p id="usage" class="hint" hidden></p>
+            <button id="session" class="link" hidden>Open TrueForge session ↗</button>
+            <details id="context" hidden><summary id="context-summary">Selected context</summary><ul id="context-list"></ul></details>
+            <details id="manifest" hidden><summary id="manifest-summary">Context sources</summary><p class="hint">Sources sent during this run. Token counts are estimates at four characters per token. Compaction can change what the model retains.</p><ul id="manifest-totals"></ul><ul id="manifest-list"></ul></details>
+            <details id="permissions" hidden><summary>Permissions and decisions</summary><p id="permission-scope" class="hint"></p><ul id="permission-list"></ul></details>
+            <details id="tools" hidden><summary>Tool activity</summary><ul id="tool-list"></ul></details>
+            <details id="surface-activity" hidden><summary>Browser and computer activity</summary><ul id="surface-events"></ul></details>
+            <details id="verification" hidden><summary>Verification</summary><div id="check-list"></div></details>
+            <details id="workers" hidden><summary>Research and review workers</summary><p class="hint">Advice from isolated snapshots. Workers cannot edit or approve changes.</p><div id="worker-list"></div></details>
+          </div>
+        </details>
+          </div>
+        </div>
+        <footer class="composer-area">
+          <div id="safety-actions" class="actions safety-actions" hidden>
+            <button id="revoke" class="quiet" type="button" hidden>Revoke run access</button>
+            <button id="stop-surfaces" class="quiet" type="button" hidden>Stop browser and computer</button>
+          </div>
+          <form id="form" class="composer">
+            <label for="prompt" class="sr-only">Describe a task</label>
+            <textarea id="prompt" rows="2" maxlength="8000" placeholder="Describe a task…"></textarea>
+            <div class="composer-actions">
+              <details id="add-context" class="context-menu">
+                <summary class="quiet" title="Add a file or symbol reference">@ Context</summary>
+                <div class="context-options">
+                  <button id="attach-file" class="quiet" type="button">Choose a file…</button>
+                  <button id="attach-symbol" class="quiet" type="button">Type a symbol name</button>
+                  <p class="hint">You can also type <code>@file:path</code> or <code>@symbol:name</code>.</p>
+                </div>
+              </details>
+              <div class="actions run-actions">
+                <button id="plan-first" class="quiet" type="submit">Plan first</button>
+                <button id="run" type="submit" title="Run agent (Enter)">Run agent</button>
+                <button id="cancel" class="secondary" type="button" hidden>Cancel</button>
+              </div>
+            </div>
+          </form>
+          <div class="composer-meta">
+            <button id="model-settings" class="link" type="button">Model settings</button>
+            <span class="hint">Shift+Enter for a new line</span>
+          </div>
+        </footer>
       </main><script nonce="${nonce}" src="${script}"></script></body></html>`;
     view.onDidDispose(() => { if (this.view === view) this.view = undefined; });
     webview.onDidReceiveMessage(message => {
@@ -216,6 +264,9 @@ function activate(context) {
   };
   context.subscriptions.push(status, audit, vscode.window.registerWebviewViewProvider('agentextension.panel', panel),
     vscode.workspace.onDidChangeConfiguration(event => {
+      if (event.affectsConfiguration('agentextension.model')) {
+        panel.update({ model: configuredModel() });
+      }
       if (event.affectsConfiguration('agentextension.readConnectors') || event.affectsConfiguration('agentextension.skillRoots')
           || event.affectsConfiguration('agentextension.pluginRoots') || event.affectsConfiguration('agentextension.browserOrigins')
           || event.affectsConfiguration('agentextension.browserExecutable')) {
@@ -634,7 +685,7 @@ function activate(context) {
     status.text = '$(sync~spin) TrueForge';
     status.tooltip = 'Cancel the running AgentExtension task';
     status.show();
-    panel.update({ phase: 'running', text: '', log: [], context: [], hunks: [], decisions: {},
+    panel.update({ phase: 'running', request, text: '', log: [], context: [], hunks: [], decisions: {},
       manifest: [], workers: [], plugins: [], surfaceEvents: [], surfacesActive: false,
       plan: undefined, planApproved: false, checks: [], revision: 0, acceptedSelection: undefined,
       session: '', status: 'Selecting repository context…', budget: '', unresolved: [], reviewMode: '' });
@@ -642,7 +693,7 @@ function activate(context) {
 
     try {
       const config = vscode.workspace.getConfiguration('agentextension');
-      if (!config.get('model')?.trim()) throw new Error('Set AgentExtension: Model in VS Code Settings first.');
+      if (!configuredModel()) throw new Error('Set AgentExtension: Model in VS Code Settings first.');
       if (selection && await workspace.read(selection.file) !== selection.base) {
         throw new Error('The selection changed. Select the current code and try again.');
       }
@@ -1062,7 +1113,7 @@ function activate(context) {
       const files = selected.map(item => item.label);
       active = run;
       panel.update({ runActive: true, phase: 'running', reviewMode: '', hunks: [], checks: [], workers: [],
-        context: [], manifest: [], log: [], text: '', plan: undefined, session: '', status: 'Reading selected Git changes…' });
+        context: [], manifest: [], log: [], request: '', text: '', plan: undefined, session: '', status: 'Reading selected Git changes…' });
       status.text = '$(sync~spin) Reviewing Git changes';
       status.show();
       await panel.show();
@@ -1274,6 +1325,20 @@ function activate(context) {
   panel.handle = async message => {
     switch (message?.type) {
       case 'ready': panel.publish(); break;
+      case 'model-settings':
+        await vscode.commands.executeCommand('workbench.action.openSettings', '@id:agentextension.model');
+        break;
+      case 'attach-file': {
+        const folder = await chooseFolder();
+        if (!folder) break;
+        const workspace = makeWorkspace(folder);
+        const paths = (await workspace.sourcePaths()).filter(file => !/["\r\n]/.test(file));
+        const file = await vscode.window.showQuickPick(paths, { placeHolder: 'Choose a file to reference in your prompt' });
+        if (!file) break;
+        await workspace.resolve(file);
+        void panel.view?.webview.postMessage({ type: 'file-reference', file });
+        break;
+      }
       case 'select-skills': await chooseSkills(); break;
       case 'memory': await memory(); break;
       case 'connectors': await chooseConnectors(); break;

@@ -74,10 +74,14 @@ class Workspace {
     }).slice(0, 12_000);
   }
 
+  async sourcePaths(signal) {
+    return (await this.paths(signal)).filter(file => !NON_SOURCE.test(file));
+  }
+
   async index(signal) {
     const files = [];
     let total = 0;
-    const paths = (await this.paths(signal)).filter(file => !NON_SOURCE.test(file));
+    const paths = await this.sourcePaths(signal);
     for (let index = 0; index < paths.length && total < 32_000_000; index += 24) {
       signal.throwIfAborted();
       const batch = await Promise.all(paths.slice(index, index + 24).map(async file => {

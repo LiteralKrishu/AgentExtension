@@ -4,13 +4,72 @@ const byId = id => document.getElementById(id);
 const send = (type, fields = {}) => vscode.postMessage({ type, ...fields });
 
 const prompt = byId('prompt');
+const form = byId('form');
+const workspace = byId('workspace');
+const workspaceToggle = byId('workspace-toggle');
+const contextMenu = byId('add-context');
+const stream = byId('stream');
+const phaseLabels = { idle: 'Ready', running: 'Running', question: 'Answer needed', plan: 'Plan to review',
+  review: 'Changes to review', ready: 'Ready to apply', done: 'Complete', applied: 'Applied', error: 'Error', cancelled: 'Cancelled' };
+
+function showWorkspace(open) {
+  workspace.hidden = !open;
+  workspaceToggle.setAttribute('aria-expanded', String(open));
+}
+
+workspaceToggle.addEventListener('click', () => showWorkspace(workspace.hidden));
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  if (contextMenu.open) {
+    contextMenu.open = false;
+    contextMenu.querySelector('summary').focus();
+  } else if (!workspace.hidden) {
+    showWorkspace(false);
+    workspaceToggle.focus();
+  }
+});
+document.addEventListener('click', event => {
+  if (!contextMenu.contains(event.target)) contextMenu.open = false;
+});
+
+function insertReference(reference, selection = '') {
+  const start = prompt.selectionStart;
+  const end = prompt.selectionEnd;
+  const prefix = start && !/\s/.test(prompt.value[start - 1]) ? ' ' : '';
+  const suffix = end < prompt.value.length && /\s/.test(prompt.value[end]) ? '' : ' ';
+  const insertion = prefix + reference + selection + suffix;
+  if (prompt.value.length - (end - start) + insertion.length > prompt.maxLength) return;
+  prompt.setRangeText(insertion, start, end, 'end');
+  if (selection) prompt.setSelectionRange(start + prefix.length + reference.length, start + insertion.length - suffix.length);
+  prompt.dispatchEvent(new Event('input'));
+  prompt.focus();
+}
+
+byId('attach-file').addEventListener('click', () => {
+  contextMenu.open = false;
+  prompt.focus();
+  send('attach-file');
+});
+byId('attach-symbol').addEventListener('click', () => {
+  contextMenu.open = false;
+  insertReference('@symbol:', 'name');
+});
+
 prompt.value = vscode.getState()?.prompt ?? '';
 prompt.addEventListener('input', () => vscode.setState({ prompt: prompt.value }));
-byId('form').addEventListener('submit', event => {
+prompt.addEventListener('keydown', event => {
+  if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return;
   event.preventDefault();
-  if (prompt.value.trim()) send('run', { prompt: prompt.value, planFirst: event.submitter?.id === 'plan-first' });
+  if (!event.repeat && !byId('run').disabled) form.requestSubmit(byId('run'));
 });
-for (const id of ['cancel', 'session', 'approve-plan', 'continue', 'apply', 'check-accepted', 'undo', 'select-skills', 'revoke', 'memory', 'connectors', 'connector-token', 'plugins', 'browser-access', 'computer-access', 'stop-surfaces', 'run-report', 'schedules', 'policy', 'instructions', 'export-audit', 'resume-run', 'review-conflicts', 'discard-checkpoint', 'review-git']) {
+form.addEventListener('submit', event => {
+  event.preventDefault();
+  if (!prompt.value.trim() || byId('run').disabled) return;
+  showWorkspace(false);
+  contextMenu.open = false;
+  send('run', { prompt: prompt.value, planFirst: event.submitter?.id === 'plan-first' });
+});
+for (const id of ['cancel', 'session', 'approve-plan', 'continue', 'apply', 'check-accepted', 'undo', 'select-skills', 'revoke', 'memory', 'connectors', 'connector-token', 'plugins', 'browser-access', 'computer-access', 'stop-surfaces', 'run-report', 'schedules', 'policy', 'instructions', 'export-audit', 'resume-run', 'review-conflicts', 'discard-checkpoint', 'review-git', 'model-settings']) {
   byId(id).addEventListener('click', () => send(id));
 }
 
@@ -80,12 +139,13 @@ function renderReview(state) {
   }
   const accepted = Object.values(decisions).filter(value => value === 'accept').length;
   byId('review').hidden = !hunks.length;
-  byId('count').textContent = `${accepted} / ${hunks.length} accepted`;
+  const remaining = hunks.filter(hunk => !decisions[hunk.id]).length;
+  byId('count').textContent = remaining ? `${remaining} left to review` : `${accepted} of ${hunks.length} accepted`;
   byId('review-help').textContent = reviewMode === 'decide'
     ? 'Open each preview and choose which hunks to keep.'
     : 'Only accepted hunks are included when you apply.';
   byId('continue').hidden = reviewMode !== 'decide';
-  byId('continue').disabled = hunks.some(hunk => !decisions[hunk.id]);
+  byId('continue').disabled = remaining > 0;
   byId('apply').hidden = reviewMode !== 'apply';
   byId('apply').disabled = state.applying;
   byId('check-accepted').hidden = reviewMode !== 'apply';
@@ -155,6 +215,8 @@ function renderChecks({ checks, revision, acceptedSelection }) {
 let contextKey;
 let logKey;
 let workerKey;
+let lastPhase;
+let lastRequest;
 function renderWorkers(state) {
   const workers = state.workers ?? [];
   const key = JSON.stringify(workers);
@@ -179,9 +241,19 @@ function renderWorkers(state) {
   }));
 }
 window.addEventListener('message', ({ data }) => {
+  if (data.type === 'file-reference') {
+    insertReference(`@file:"${data.file}"`);
+    return;
+  }
   if (data.type !== 'state') return;
   const state = data.state;
+  const nearBottom = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 40;
+  const phaseChanged = lastPhase !== state.phase;
+  const requestChanged = lastRequest !== state.request;
+  lastPhase = state.phase;
+  lastRequest = state.request;
   const busy = ['running', 'plan', 'review', 'question'].includes(state.phase);
+  const canRun = !busy && state.phase !== 'ready' && !state.applying && !state.scheduledRunning;
   byId('surface-scope').textContent = state.surfaceScope || 'Browser and computer access off.';
   byId('browser-access').disabled = byId('computer-access').disabled = busy || state.phase === 'ready' || state.applying;
   byId('stop-surfaces').hidden = !state.surfacesActive && !state.surfaceScope;
@@ -195,20 +267,36 @@ window.addEventListener('message', ({ data }) => {
   byId('schedules').disabled = state.applying || Boolean(state.scheduledRunning);
   byId('surface-activity').hidden = !state.surfaceEvents?.length;
   byId('surface-events').replaceChildren(...(state.surfaceEvents ?? []).map(event => element('li', `${event.kind} · ${event.status}`)));
-  byId('activity').hidden = state.phase === 'idle' && !state.status;
-  byId('phase').textContent = state.phase;
+  byId('welcome').hidden = state.phase !== 'idle' || Boolean(state.checkpoint || state.scheduledRunning);
+  byId('activity').hidden = !state.request && !state.text;
+  byId('request-card').hidden = !state.request;
+  if (requestChanged) byId('request').textContent = state.request ?? '';
+  const setupNeeded = state.phase === 'idle' && !state.model;
+  byId('welcome-hint').textContent = setupNeeded ? 'Configure a TrueForge model below to start your first run.'
+    : 'Describe a task below. You can review the proposed edits before applying them.';
+  byId('phase').textContent = state.scheduledRunning ? 'Scheduled report' : setupNeeded ? 'Setup needed' : phaseLabels[state.phase] ?? state.phase;
   byId('phase').dataset.phase = state.phase;
-  byId('status').textContent = state.status ?? '';
+  const status = byId('status');
+  status.dataset.phase = state.phase;
+  status.hidden = !state.status;
+  if (status.textContent !== (state.status ?? '')) status.textContent = state.status ?? '';
   byId('usage').hidden = !state.usage;
   byId('usage').textContent = state.usage ? `Usage: ${state.usage}` : '';
-  byId('run').disabled = byId('plan-first').disabled = busy || state.phase === 'ready' || state.applying;
+  byId('run').disabled = byId('plan-first').disabled = !canRun;
   byId('cancel').hidden = !busy && state.phase !== 'ready' && !state.scheduledRunning;
-  byId('cancel').textContent = state.checkingAccepted ? 'Cancel check' : state.phase === 'ready' ? 'Discard' : 'Cancel';
+  byId('cancel').textContent = state.checkingAccepted ? 'Cancel check' : state.phase === 'ready' ? 'Discard draft' : 'Cancel run';
+  byId('run').hidden = byId('plan-first').hidden = !byId('cancel').hidden;
+  const modelSettings = byId('model-settings');
+  modelSettings.textContent = state.model || 'Configure model';
+  modelSettings.title = state.model ? `Model settings · ${state.model}` : 'Open model settings';
+  modelSettings.setAttribute('aria-label', modelSettings.title);
   byId('session').hidden = !state.session;
   byId('history').hidden = !state.undo;
   byId('undo').disabled = state.applying || busy;
   byId('response').hidden = !state.text;
-  byId('response').textContent = state.text;
+  const response = byId('response');
+  const responseChanged = response.textContent !== state.text;
+  if (responseChanged) response.textContent = state.text;
   byId('select-skills').disabled = busy || state.phase === 'ready' || state.applying;
   for (const id of ['memory', 'connectors', 'connector-token', 'plugins']) byId(id).disabled = busy || state.phase === 'ready' || state.applying;
   byId('plugin-summary').textContent = state.plugins?.length
@@ -216,6 +304,7 @@ window.addEventListener('message', ({ data }) => {
   byId('connector-summary').textContent = state.connectors?.length ? `Enabled connectors: ${state.connectors.join(', ')}` : 'No connectors enabled.';
   byId('skill-summary').textContent = state.skills?.length ? `Selected skills: ${state.skills.join(', ')}` : 'No skills selected.';
   byId('revoke').hidden = !busy || state.permissions?.closed;
+  byId('safety-actions').hidden = byId('revoke').hidden && byId('stop-surfaces').hidden;
   byId('permissions').hidden = !state.permissions;
   byId('permission-scope').textContent = state.permissions
     ? `${state.permissions.closed ? 'Access closed' : state.permissions.scopes.join(', ')} · ${state.permissions.workspace}` : '';
@@ -262,6 +351,21 @@ window.addEventListener('message', ({ data }) => {
   renderChecks(state);
   renderWorkers(state);
   renderReview(state);
+  const details = byId('run-details');
+  details.hidden = ['usage', 'session', 'context', 'manifest', 'permissions', 'tools', 'surface-activity', 'verification', 'workers']
+    .every(id => byId(id).hidden);
+
+  const action = { question: 'question', plan: 'plan', review: 'review', ready: 'review', applied: 'history' }[state.phase];
+  if (phaseChanged && action) {
+    byId(action).scrollIntoView({ block: 'nearest' });
+  } else if (phaseChanged && state.phase === 'done' && !state.request && state.workers?.length) {
+    details.open = byId('workers').open = true;
+    byId('workers').scrollIntoView({ block: 'nearest' });
+  } else if (phaseChanged && state.phase === 'running' && requestChanged) {
+    stream.scrollTop = 0;
+  } else if (state.phase === 'running' && responseChanged && nearBottom) {
+    stream.scrollTop = stream.scrollHeight;
+  }
 });
 
 send('ready');
