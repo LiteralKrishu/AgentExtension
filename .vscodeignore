@@ -1,4 +1,7 @@
 .vscode/**
+.github/**
+eslint.config.cjs
+jsconfig.json
 test/**
 scripts/**
 docs/plan.md

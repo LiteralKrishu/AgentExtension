@@ -1,3 +1,4 @@
+// @ts-check
 const fs = require('node:fs');
 const path = require('node:path');
 const { z } = require('zod');
@@ -29,9 +30,20 @@ const adminSchema = z.strictObject({
   userAllowRules: z.boolean().default(true),
 });
 
+/** @typedef {z.output<typeof ruleSchema>} Rule */
+/** @typedef {'administrator' | 'user' | 'workspace'} RuleSource */
+/** @typedef {Rule & { source: RuleSource }} DescribedRule */
+/** @typedef {DescribedRule & { index: number }} SourcedRule */
+/** @typedef {{ decision: Rule['decision'], source: RuleSource | 'default', rule?: DescribedRule }} Verdict */
+/** @typedef {{ rules: SourcedRule[], userAllowRules: boolean, sources: string[], digest?: string, error?: undefined }
+ * | { error: string, rules: [], sources: string[] }} AdminPolicy */
+
+/** @param {string} pattern */
 const glob = pattern => new RegExp(`^${pattern.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`, 's');
+/** @param {string} pattern @param {string} effect */
 const effectMatches = (pattern, effect) => pattern === '*' || pattern === effect || (pattern.endsWith('.*') && effect.startsWith(pattern.slice(0, -1)));
 
+/** @param {unknown} rules @param {RuleSource} source @returns {SourcedRule[]} */
 function parseRules(rules, source) {
   if (!Array.isArray(rules)) throw new Error(`${source} permission rules must be a list.`);
   if (rules.length > 200) throw new Error(`${source} permission rules are limited to 200.`);
@@ -50,15 +62,18 @@ function defaultPolicyFile(platform = process.platform, env = process.env) {
 
 // Reads the machine policy files. A missing file is no policy; an unreadable or invalid file blocks runs.
 // AGENTEXTENSION_POLICY_FILE adds a file; it never replaces the machine file.
-function loadAdminPolicy(files = [defaultPolicyFile(), process.env.AGENTEXTENSION_POLICY_FILE].filter(Boolean)) {
+/** @param {string[]} [files] @returns {AdminPolicy} */
+function loadAdminPolicy(files = [defaultPolicyFile(), process.env.AGENTEXTENSION_POLICY_FILE]
+  .filter(/** @returns {file is string} */ (file) => Boolean(file))) {
   const rules = [];
   const sources = [];
   let userAllowRules = true;
   for (const file of [...new Set(files)]) {
     let text;
     try { text = fs.readFileSync(file, 'utf8'); } catch (error) {
-      if (error.code === 'ENOENT') continue;
-      return { error: `Administrator policy ${file} could not be read: ${error.code ?? error.message}.`, rules: [], sources: [file] };
+      const code = /** @type {NodeJS.ErrnoException} */ (error).code;
+      if (code === 'ENOENT') continue;
+      return { error: `Administrator policy ${file} could not be read: ${code ?? String(error)}.`, rules: [], sources: [file] };
     }
     if (text.length > 256_000) return { error: `Administrator policy ${file} is larger than 256 KB.`, rules: [], sources: [file] };
     try {
@@ -67,7 +82,8 @@ function loadAdminPolicy(files = [defaultPolicyFile(), process.env.AGENTEXTENSIO
       userAllowRules &&= parsed.userAllowRules;
       sources.push(file);
     } catch (error) {
-      const message = error.issues?.[0] ? `${error.issues[0].path.join('.')} ${error.issues[0].message}` : error.message;
+      const issue = error instanceof z.ZodError ? error.issues[0] : undefined;
+      const message = issue ? `${issue.path.join('.')} ${issue.message}` : error instanceof Error ? error.message : String(error);
       return { error: `Administrator policy ${file} is invalid: ${message}`, rules: [], sources: [file] };
     }
   }
@@ -75,24 +91,28 @@ function loadAdminPolicy(files = [defaultPolicyFile(), process.env.AGENTEXTENSIO
 }
 
 class PolicyEngine {
+  /** @param {{ admin?: AdminPolicy, user?: unknown, workspace?: unknown }} [options] */
   constructor({ admin = { rules: [], userAllowRules: true, sources: [] }, user = [], workspace = [] } = {}) {
-    if (admin.error) throw new Error(admin.error);
+    if (admin.error !== undefined) throw new Error(admin.error);
     this.admin = admin;
     this.rules = [...admin.rules, ...parseRules(user, 'user'), ...parseRules(workspace, 'workspace')]
       .map(rule => ({ ...rule, matcher: glob(rule.target) }));
     this.digest = digest(this.rules.map(({ effect, target, decision, source }) => ({ effect, target, decision, source })));
   }
   // Administrator deny and ask come first. Then deny, ask and allow from any source. No match means ask.
+  /** @param {string} effect @param {unknown} [subject] @returns {Verdict} */
   decide(effect, subject = '*') {
     const subjectText = String(subject);
     const matches = this.rules.filter(rule => effectMatches(rule.effect, effect) && rule.matcher.test(subjectText))
       .filter(rule => rule.source === 'administrator' || rule.decision !== 'allow' || this.admin.userAllowRules);
+    /** @param {Rule['decision']} decision */
     const pick = (decision, sources = SOURCES) => matches.find(rule => rule.decision === decision && sources.includes(rule.source));
     const rule = pick('deny', ['administrator']) ?? pick('ask', ['administrator']) ?? pick('deny') ?? pick('ask')
       ?? (ALLOWABLE.includes(effect) ? pick('allow') : undefined);
     return rule ? { decision: rule.decision, source: rule.source, rule: describe(rule) } : { decision: 'ask', source: 'default' };
   }
   // A capability is off when a deny rule covers every target of its effect.
+  /** @param {string} effect */
   blocks(effect) {
     const rule = this.rules.find(item => item.decision === 'deny' && effectMatches(item.effect, effect) && /^\*+$/.test(item.target));
     return rule ? describe(rule) : undefined;
@@ -100,9 +120,13 @@ class PolicyEngine {
   list() { return this.rules.map(rule => ({ ...describe(rule), source: rule.source, index: rule.index })); }
 }
 
+/** @param {DescribedRule} rule @returns {DescribedRule} */
 const describe = rule => ({ effect: rule.effect, target: rule.target, decision: rule.decision, source: rule.source, ...(rule.note ? { note: rule.note } : {}) });
+/** @param {Verdict} verdict */
 const reason = verdict => `${verdict.decision === 'allow' ? 'Allowed' : verdict.decision === 'deny' ? 'Denied' : 'Prompt required'} by ${verdict.source} rule ${verdict.rule ? `${verdict.rule.effect} ${verdict.rule.target}` : ''}`.trim();
+/** @param {{ command: string, args?: readonly string[] }} input */
 const commandSubject = ({ command, args = [] }) => [command, ...args].join(' ');
+/** @param {{ id: string }} config @param {string} tool @param {string} target */
 const connectorSubject = (config, tool, target) => `${config.id}/${tool}/${target}`;
 
 module.exports = { PolicyEngine, loadAdminPolicy, defaultPolicyFile, parseRules, ruleSchema, GOVERNED, ALLOWABLE, reason, commandSubject, connectorSubject };

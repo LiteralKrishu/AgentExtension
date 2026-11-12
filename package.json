@@ -271,10 +271,13 @@
     }
   },
   "scripts": {
-    "check": "node --check src/extension.js && node --check media/panel.js && node --check src/permissions.js && node --check src/skills.js && node --check src/prompt.js && node --check src/memory.js && node --check src/connectors.js && node --check src/plugins.js && node --check src/workers.js && node --check src/worker-session.js && node --check src/browser.js && node --check src/computer.js && node --check src/surface-access.js && node --check src/reports.js && node --check src/schedules.js && node --check src/scheduled-run.js && node --check src/policy.js && node --check src/instructions.js && node --check src/usage.js && node --check src/audit.js && node --check src/checkpoint.js",
+    "check": "node --check src/extension.js && node --check media/panel.js && node --check src/permissions.js && node --check src/skills.js && node --check src/prompt.js && node --check src/memory.js && node --check src/connectors.js && node --check src/plugins.js && node --check src/workers.js && node --check src/worker-session.js && node --check src/browser.js && node --check src/computer.js && node --check src/surface-access.js && node --check src/reports.js && node --check src/schedules.js && node --check src/scheduled-run.js && node --check src/policy.js && node --check src/instructions.js && node --check src/usage.js && node --check src/audit.js && node --check src/checkpoint.js && node --check src/schedule-controller.js && npm run typecheck && npm run lint",
+    "typecheck": "tsc --project jsconfig.json --noEmit",
+    "lint": "eslint src",
     "test": "node --test test/*.test.js",
     "test:qwen": "node test/model/run.cjs",
     "test:ui": "node test/ui/run.cjs",
+    "package:vsix": "node scripts/package-vsix.cjs",
     "build:native": "node scripts/build-native.cjs"
   },
   "dependencies": {
@@ -284,5 +287,14 @@
     "playwright-core": "1.62.1",
     "yaml": "2.9.1",
     "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/vscode": "1.101.0",
+    "@vscode/vsce": "4.1.0",
+    "esbuild": "0.28.2",
+    "eslint": "10.14.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.62.1"
   }
 }

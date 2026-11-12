@@ -1,11 +1,19 @@
+// @ts-check
 const { diffLines } = require('diff');
 
 const MAX_TEXT = 256_000;
 
+/** @typedef {{ offset: number, line: number, before: string, after: string }} Hunk */
+/** @typedef {Hunk & { file: string, id: string, newFile: boolean }} ReviewHunk */
+/** @typedef {{ base: string | null, text: string, hunks: Hunk[] }} DraftFile */
+/** @typedef {{ file: string, base: string, start: number, end: number }} Selection */
+
+/** @param {string} value @param {string | null} base */
 function matchLineEndings(value, base) {
   return value.replace(/\r?\n/g, base?.includes('\r\n') ? '\r\n' : '\n');
 }
 
+/** @param {string} before @param {string} after @returns {Hunk[]} */
 function splitHunks(before, after) {
   const parts = diffLines(before, after, { timeout: 500 });
   if (!parts) throw new Error('The edit is too large to compare. Propose a smaller edit.');
@@ -34,6 +42,7 @@ function splitHunks(before, after) {
   return hunks;
 }
 
+/** @param {string} text @param {readonly Hunk[]} hunks */
 function applyHunks(text, hunks) {
   let result = '';
   let offset = 0;
@@ -48,13 +57,16 @@ function applyHunks(text, hunks) {
 }
 
 class Draft {
+  /** @param {(file: string, newFile?: boolean) => Promise<string | null>} read @param {Selection} [selection] */
   constructor(read, selection) {
     this.read = read;
     this.selection = selection;
+    /** @type {Map<string, DraftFile>} */
     this.files = new Map();
     this.revision = 0;
   }
 
+  /** @param {string} file @param {string} oldText @param {string} newText */
   async replace(file, oldText, newText) {
     if (!oldText) throw new Error('old_text must contain the exact text to replace.');
     const entry = this.files.get(file);
@@ -64,7 +76,8 @@ class Draft {
     if (selection && (file !== selection.file || base !== selection.base)) {
       throw new Error('Inline edits are limited to the original selection.');
     }
-    const previous = latest?.text ?? (selection ? base.slice(selection.start, selection.end) : base);
+    const previous = latest?.text ?? (selection ? selection.base.slice(selection.start, selection.end) : base);
+    if (previous === null) throw new Error('Read an existing file or create it before replacing text.');
     const old = matchLineEndings(oldText, base);
     const offset = previous.indexOf(old);
     if (offset < 0 || previous.indexOf(old, offset + 1) >= 0) {
@@ -74,6 +87,7 @@ class Draft {
     this.stage(file, base, text);
   }
 
+  /** @param {string} file @param {string} expected @param {number} start @param {number} end @param {string} replacement */
   async replaceRange(file, expected, start, end, replacement) {
     if (this.selection) throw new Error('Use propose_write to edit the original inline selection.');
     const entry = this.files.get(file);
@@ -83,6 +97,7 @@ class Draft {
     this.stage(file, base, previous.slice(0, start) + matchLineEndings(replacement, base) + previous.slice(end));
   }
 
+  /** @param {string} file @param {string} text */
   async create(file, text) {
     if (this.selection) throw new Error('Inline edits cannot create files.');
     await this.read(file, true);
@@ -90,12 +105,16 @@ class Draft {
     this.stage(file, null, text);
   }
 
+  /** @param {string} file @param {string | null} base @param {string} text */
   stage(file, base, text) {
     if (text.length > MAX_TEXT) throw new Error('The proposed file is too large.');
     if (!this.files.has(file) && this.files.size >= 24) throw new Error('A run can stage at most 24 files.');
-    const start = this.selection?.start ?? 0;
-    const before = this.selection ? base.slice(start, this.selection.end) : base ?? '';
-    const firstLine = this.selection ? base.slice(0, start).split('\n').length - 1 : 0;
+    const selection = this.selection;
+    if (selection && base === null) throw new Error('Inline edits require an existing file.');
+    const original = base ?? '';
+    const start = selection?.start ?? 0;
+    const before = selection ? original.slice(start, selection.end) : original;
+    const firstLine = selection ? original.slice(0, start).split('\n').length - 1 : 0;
     const hunks = splitHunks(before, text).map(hunk => ({
       ...hunk, offset: hunk.offset + start, line: hunk.line + firstLine,
     }));
@@ -106,19 +125,23 @@ class Draft {
     this.revision++;
   }
 
+  /** @param {string} file @param {string | null} base */
   current(file, base) {
     const entry = this.files.get(file);
     if (!entry) return base;
     if (!this.selection) return entry.text;
+    if (base === null) throw new Error('Inline edits require an existing file.');
     return base.slice(0, this.selection.start) + entry.text + base.slice(this.selection.end);
   }
 
+  /** @returns {ReviewHunk[]} */
   review() {
     return [...this.files].flatMap(([file, entry]) => entry.hunks.map((hunk, index) => ({
       ...hunk, file, id: `${this.revision}:${file}:${index}`, newFile: entry.base === null,
     })));
   }
 
+  /** @param {readonly Pick<ReviewHunk, 'id'>[]} hunks */
   changes(hunks) {
     const approved = new Set(hunks.map(hunk => hunk.id));
     return [...this.files].flatMap(([file, entry]) => {

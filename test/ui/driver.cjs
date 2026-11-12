@@ -41,7 +41,7 @@ async function driver(){
  await waitFor(()=>ui('return true'),Boolean,20000);
  return ui;
 }
-const {chromium}=require(process.env.AGENTEXTENSION_PLAYWRIGHT_MODULE || 'playwright');
+const {chromium}=require(process.env.AGENTEXTENSION_PLAYWRIGHT_MODULE || 'playwright-core');
 async function main(){
  const ui=await driver();
  assert.equal(await helper('/version'),require('../../package.json').version);
@@ -222,7 +222,9 @@ async function main(){
  await phase('done');
  say('SURFACE STOP AND DISABLED NEXT RUN PASS');
  await ui(`d.querySelector('#memory').click();return true`);
- await page.getByText('Use focused checks for this workspace.',{exact:true}).first().click();
+ const notesPicker=page.locator('.quick-input-widget');
+ await notesPicker.getByText('Use focused checks for this workspace.',{exact:true}).click();
+ await notesPicker.getByText('Remove',{exact:true}).click();
  await page.getByRole('button',{name:'Remove note',exact:true}).click();
  await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes('0 approved notes'));
  say('WORKSPACE NOTE REMOVAL PASS');

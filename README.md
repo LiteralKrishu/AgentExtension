@@ -23,6 +23,8 @@ The extension loads the checked-in agent definition when it creates a session. U
 
 You can also install the packaged extension with **Extensions: Install from VSIX** and use it in a normal VS Code window.
 
+Run `npm run package:vsix` to build the bundled VSIX. Pass an output path after `--` to choose where to save it.
+
 ## Use the extension
 
 - **Inline edit.** Select code. Press **Cmd+Alt+I** on macOS or **Ctrl+Alt+I** on Windows or Linux. Enter an instruction. The first hunk opens in a native VS Code diff.
@@ -256,14 +258,15 @@ On a model error the extension clears editor drafts, then tries the configured f
 
 ## Verify
 
-- `npm run check` checks JavaScript syntax. `npm test` checks context, edit scoping, hunk offsets, workspace boundaries, plugin pins, worker limits, schedule time zones, offline catch-up, and schedule storage. Without a test server, integration cases are skipped.
+- `npm run check` checks JavaScript syntax, checks types for permissions, policy, draft edits, and apply, and lints for unhandled promises in those modules and the schedule controller. Run `npm run typecheck` or `npm run lint` to run either check on its own. GitHub Actions runs the checks, tests, and VSIX build on Node.js 22.
+- `npm test` checks context, edit scoping, hunk offsets, workspace boundaries, plugin pins, worker limits, schedule time zones, offline catch-up, and schedule storage. Without a test server, integration cases are skipped.
 - `npm run test:qwen` runs seven scenarios against a real model through a running TrueForge server. The scenarios are edit and check, a question, a suggested note, instructions with a path rule, the fix workers, budget and audit, and a scheduled report. By default, it uses `local-lm-studio/qwen` at `http://127.0.0.1:8790`. If that provider is missing, it registers it from `trueforge/model.example.json`. It uses the model ID LM Studio lists, or a served Qwen 9B if the example ID is missing. Set `AGENTEXTENSION_TEST_MODEL`, `AGENTEXTENSION_TEST_MODEL_ID`, and `AGENTEXTENSION_TEST_FORGE_URL` to use other values. On macOS, double-click `scripts/test-qwen.command` to start TrueForge if needed, run the scenarios, and stop it afterwards. Results are written to `test-results/model-latest.md` and a dated JSON file with transcripts. Each scenario reports required and optional checks. A miss reports how the model behaved and does not by itself mean the extension has a defect.
 - Set `AGENTEXTENSION_TEST_BROWSER` to a Chrome or Chromium executable to run the real-browser tests with `AGENTEXTENSION_TEST_SURFACES=1`. On Linux, use Xvfb and a non-root user, because Chromium's sandbox does not run as root. The native-app test runs only on macOS.
 - The `test/extension-*.test.js` files load the extension in a stubbed VS Code host from `test/helpers/host.cjs` and drive it through webview messages and scripted dialogs. Most need the test server.
 - With the test server set, `test/extension-schedules.test.js` loads the extension in a stubbed VS Code host. It creates and approves a schedule through the real commands. It waits for the extension timer to run the schedule through TrueForge, then checks the saved report and history. It also checks reapproval after a credential change.
 - With TrueForge running as above, use `AGENTEXTENSION_TEST_FORGE_URL=http://127.0.0.1:8790 npm test` to check real sessions and approval with a local scripted endpoint.
 - Follow the [Flask rehearsal](docs/demo.md) to verify the three fixed tasks.
-- `npm run test:ui` runs the actual panel in a separate VS Code profile with a temporary workspace and a scripted model. Set `AGENTEXTENSION_TEST_FORGE_URL` first. It also needs Playwright. Set `AGENTEXTENSION_PLAYWRIGHT_MODULE` to its installed module path if it is outside this project. Set `AGENTEXTENSION_VSCODE_EXECUTABLE` if VS Code is outside the default macOS location. The test prints its evidence folder.
+- `npm run test:ui` runs the actual panel in a separate VS Code profile with a temporary workspace and a scripted model. Set `AGENTEXTENSION_TEST_FORGE_URL` first. The test uses the installed `playwright-core` package. Set `AGENTEXTENSION_PLAYWRIGHT_MODULE` to use a different installation. Set `AGENTEXTENSION_VSCODE_EXECUTABLE` if VS Code is outside the default macOS location. The test prints its evidence folder.
 - Set `AGENTEXTENSION_VSIX` to the package path to test an installed VSIX. The harness checks its activated version, plugin updates, worker sessions, cancellation, and the full review flow.
 - Set `AGENTEXTENSION_TEST_SURFACES=1` with the test server variable to include real Chrome and macOS app tests in `npm test`. The UI harness also uses Chrome and a temporary native test app. Building that fixture needs Xcode Command Line Tools. Run `npm run build:native` on macOS when changing the bundled helper. The package includes the helper for Apple Silicon and Intel; local execution was tested on Apple Silicon.
 

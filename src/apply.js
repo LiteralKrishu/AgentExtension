@@ -1,9 +1,17 @@
+// @ts-check
 const vscode = require('vscode');
 const fs = require('node:fs/promises');
 
+/** @typedef {{ file: string } & ({ before: null, after: string }
+ * | { before: string, after: null } | { before: string, after: string, hunks?: readonly import('./draft').Hunk[] })} WorkspaceChange */
+/** @typedef {{ uri: vscode.Uri, full: string } & ({ create: string, remove?: never } | { create?: never, remove: string })} FileOperation */
+
+/** @param {{ resolve(file: string, newFile: boolean): Promise<string> }} workspace @param {readonly WorkspaceChange[]} changes */
 async function applyWorkspaceChanges(workspace, changes) {
   const textEdit = new vscode.WorkspaceEdit();
+  /** @type {FileOperation[]} */
   const resources = [];
+  /** @type {{ doc: vscode.TextDocument, version: number }[]} */
   const versions = [];
   for (const change of changes) {
     const full = await workspace.resolve(change.file, change.before === null);
