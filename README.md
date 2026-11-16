@@ -288,6 +288,17 @@ File sync scans the workspace for saved UTF-8 changes relative to Git. It suppor
 
 The scan covers tracked files and visible unignored new files. Hidden and protected paths, symlinks, binary files, and files over 32 KB are outside its scope. Save or discard unsaved edits before syncing a file. Each project stores up to eight Git bases. Each shared snapshot holds up to 256 changed files and 2 MB of data. The local scan covers up to 12,000 eligible paths and 16 MB of changed text and Git base text.
 
+### Continue a TrueForge session on another device
+
+1. Set `"sessionContinuations": true` on the project in the organization service configuration. Enroll both devices as editors with the same stable `user` ID and separate device credentials. Use the same HTTPS origin on separate hosts. Open both checkouts at the same Git commit and keep the base text for staged files identical.
+2. On the sending device, finish a workspace run or keep its saved workspace checkpoint. Open **AgentExtension: Open Shared Project** and choose **Share a session continuation**. Select the receiving device and enter a title. Review the request, progress note, and staged text in the preview, then confirm.
+3. On the receiving device, open the continuation by its title. Choose **Import to this device**. Review the contents, then confirm. Finish or discard any existing checkpoint first.
+4. Select **Resume** to start a new session in the receiving device's local TrueForge. Approve protected actions there and review staged edits before applying them.
+
+A continuation can carry the request, recent progress, and up to 12 staged text files. The full request to the project service must fit within 128 KB. The service stores the reviewed contents in plaintext and restricts access to the two enrolled devices. Select **Remove continuation** to delete the shared copy. Access expires seven days after sharing. The editor checks access at import, at resume, during the run, and before applying the draft.
+
+The original TrueForge session, turn history, pending actions, credentials, and approvals stay on the original device. TrueForge chains native turns within the server that owns the session. [TrueForge sessions and turns](https://github.com/truefoundry/trueforge/blob/main/docs/api/use-agent.mdx)
+
 ### Sync personal preferences and workspace notes
 
 1. Set `"memorySync": true` inside the service's `collaboration` block. Use a separate device credential for each device. In every project membership for those devices, assign the same stable `user` ID to the same person. To sync workspace notes, enroll both checkouts in the same project. Use HTTPS for devices on separate hosts.

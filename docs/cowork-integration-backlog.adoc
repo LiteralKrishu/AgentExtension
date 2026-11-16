@@ -68,10 +68,10 @@ The five milestones in the research plan shipped in 0.5.0. They cover scoped per
 |Capability |Remaining work
 
 |Cross-device sessions and remote task assignment
-|The organization service supports assigning a checkpoint draft to an approved device. The recipient continues in local hunk review. Test the pilot between physical devices over HTTPS. Hosting, TrueForge session transfer, and automatic execution remain outside the pilot. link:../README.md#shared-project-pilot[Pilot setup]
+|Editors can assign drafts for local review. Devices on the same user account can share reviewed context and resume it in a new local TrueForge session. Native session transfer and separately approved remote execution remain open. Test the pilot over HTTPS on two physical devices. link:../README.md#continue-a-trueforge-session-on-another-device[Continuation setup]
 
 |Shared projects and administration
-|The pilot provides versioned notes and instructions, viewer and editor roles, device revocation, and project audit. Workspace-wide file sync remains open.
+|The pilot provides versioned shared text, reviewed workspace file sync, viewer and editor roles, device revocation, and project audit.
 
 |Editable artifacts and office files
 |Saved Markdown reports cover run evidence. Editable interactive artifacts and workflows for documents, spreadsheets, and slides remain research options.

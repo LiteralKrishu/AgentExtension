@@ -192,4 +192,10 @@ Trust your scratch workspace when VS Code asks. Open **AgentExtension: Open Shar
 
 Record the results in [remaining-work.md](remaining-work.md#verification-still-open). Include the two device operating systems, VS Code versions, and results for HTTPS reachability, conflict, assignment, offline review, revocation, Apply, and audit. Keep credential files out of the results.
 
+### Check session continuation
+
+1. Reset the scratch file on B to its original Git version. Set `sessionContinuations` to `true` in the pilot project and give both editor memberships the same `user` ID. Keep their separate device credentials. Configure local TrueForge and a model on B.
+2. Reuse the saved checkpoint on A from step 2. Share a session continuation with B and review the contents. On B, import it. Check that the editor shows a checkpoint and waits for you to select **Resume**.
+3. Select **Resume** on B. Check that a local TrueForge session starts and reads the staged text. Review any protected actions in B's editor. Revoke B's membership before Apply and confirm that the file stays unchanged. Record the two TrueForge versions and results with the HTTPS pilot. [Continuation setup](../README.md#continue-a-trueforge-session-on-another-device)
+
 When you finish, press **Ctrl+C** in the Serve terminal on A, then in the organization-service terminal. Close the two test profiles.
