@@ -278,6 +278,16 @@ Assignments wait for the recipient to open them in VS Code. An assignment can op
 
 Clients with `readAudit` and a project membership can use **View project audit**. The service records the user ID, device ID, operation, target identifier, and time for project changes. It keeps up to 500 visible entries per project within the configured audit retention window. Entries omit shared text and file paths.
 
+### Sync workspace files
+
+1. Set `"fileSync": true` on the project in the organization service configuration. Enroll each checkout with its own device credential. Use the same Git commit and a complete checkout on each device. For separate hosts, use the same HTTPS service origin and allow 2 MB request bodies through the reverse proxy.
+2. Save the files you want to publish. In **Open Shared Project**, select **Publish workspace files**. Choose the files, review the diff, and confirm. All approved project members can read the files you publish.
+3. On the other device, select **Review workspace file updates**. Choose the files, review the diff, and confirm. Save edited files after applying. An editor can publish updates. A viewer can review and apply shared files to their own checkout.
+
+File sync scans the workspace for saved UTF-8 changes relative to Git. It supports additions, edits, deletions, and reversions to the Git base. A rename appears as a deletion and an addition. Files that change on both sides start unselected. Review the destination copy before choosing to replace it. A change to the reviewed files, Git base, shared snapshot, or device access stops the operation. Use Git for commits and history. File sync works on the working tree.
+
+The scan covers tracked files and visible unignored new files. Hidden and protected paths, symlinks, binary files, and files over 32 KB are outside its scope. Save or discard unsaved edits before syncing a file. Each project stores up to eight Git bases. Each shared snapshot holds up to 256 changed files and 2 MB of data. The local scan covers up to 12,000 eligible paths and 16 MB of changed text and Git base text.
+
 ### Sync personal preferences and workspace notes
 
 1. Set `"memorySync": true` inside the service's `collaboration` block. Use a separate device credential for each device. In every project membership for those devices, assign the same stable `user` ID to the same person. To sync workspace notes, enroll both checkouts in the same project. Use HTTPS for devices on separate hosts.

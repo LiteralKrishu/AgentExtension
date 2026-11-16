@@ -33,7 +33,8 @@ const { scheduleContextCatalog: buildScheduleContextCatalog } = require('./sched
 const { RunUsage, usageSummary, costSummary } = require('./usage');
 const { AuditLog } = require('./audit');
 const { loadManagedPolicy, syncOrganizationAudit, organizationWorkspace, enrollment } = require('./organization');
-const { projectClient, prepareHandoff, materializeHandoff, handoffReceipt } = require('./collaboration');
+const { projectClient, prepareHandoff, materializeHandoff, handoffReceipt, syncLimit, syncBytes } = require('./collaboration');
+const { captureWorkspaceFiles, workspaceFilePlan, selectedWorkspaceFiles, applyWorkspaceFileReceipt, readSyncFile, resolveSyncFile } = require('./workspace-sync');
 const { CheckpointStore, snapshotRun, checkWorkspace, rebaseCheckpoint, restoreDraft, resumeBrief } = require('./checkpoint');
 const { InstructionSet, discoverInstructions, PROFILE_FILE, RULES_DIRECTORY } = require('./instructions');
 const { PolicyEngine, parseRules, ALLOWABLE, GOVERNED, commandSubject, loadAdminPolicy } = require('./policy');
@@ -1482,12 +1483,20 @@ function activate(context) {
           ...(editor && projectEdits.has(pointer(section)) ? [{ label: `Publish edited ${section}`, action: 'publish', section }] : [])];
       }),
       ...(editor && state.recipients.length ? [{ label: 'Share a saved draft', action: 'share' }] : []),
+      ...(state.fileSyncEnabled ? [
+        ...(editor ? [{ label: 'Publish workspace files', action: 'publish-files' }] : []),
+        { label: 'Review workspace file updates', action: 'receive-files' },
+      ] : []),
       ...state.handoffs.map(entry => ({ label: entry.title, description: `${entry.sender.user} → ${entry.recipient.user} · ${entry.state}`,
         detail: entry.paths.join(', '), action: 'handoff', entry })),
       ...(state.canAudit ? [{ label: 'View project audit', action: 'audit' }] : []),
     ], { title: 'Shared project', placeHolder: `${state.actor.user} · ${state.actor.device} · ${state.role}` });
     if (!selection) return;
     await ensureWorkspace();
+    if (selection.action === 'publish-files' || selection.action === 'receive-files') {
+      if (active || ready || starting || applying || schedules.runningName) return tell('Finish the current run or review before syncing workspace files.');
+      return exclusive(() => syncProjectFiles(client, workspace, ensureWorkspace, selection.action === 'publish-files' ? 'publish' : 'receive'));
+    }
     if (selection.action === 'view') {
       return panel.previewTexts(`shared-${selection.section}.txt`, '', selection.entry.text, `Shared ${selection.section}`);
     }
@@ -1557,6 +1566,77 @@ function activate(context) {
       await client.change({ action: 'remove', id: entry.id });
       tell('Shared draft removed.');
     }
+  }
+
+  async function syncProjectFiles(client, workspace, ensureWorkspace, direction) {
+    const publishing = direction === 'publish';
+    tell('Checking saved workspace files…');
+    const revision = await workspace.gitRevision();
+    const snapshot = await client.workspaceFiles(revision);
+    const key = `workspace.files.v1.${digest([workspace.root, snapshot.link, revision])}`;
+    const previous = context.globalState.get(key, { sequence: 0, files: [] });
+    if (snapshot.sequence < previous.sequence) throw new Error('The service returned an older file snapshot. Ask your administrator to check the project storage.');
+    const known = new Map(previous.files);
+    const captured = await captureWorkspaceFiles(workspace, snapshot, known);
+    const plan = workspaceFilePlan(direction, captured, known);
+    const skipped = captured.excluded ? ` ${captured.excluded} files were outside the sync scope.` : '';
+    const options = plan.map(change => ({
+      label: change.file, description: change.before === null ? 'Add' : change.after === null ? 'Delete' : 'Update',
+      detail: change.conflict ? 'Both copies changed. Select to review and replace the destination copy.' : '',
+      picked: !change.conflict, change,
+    }));
+    let selected = [];
+    if (options.length) {
+      const approved = await vscode.window.showQuickPick(options, {
+        title: publishing ? 'Select saved files to publish' : 'Select shared files to apply',
+        placeHolder: 'Select files to preview. Conflicts start unselected.', canPickMany: true,
+      });
+      if (!approved?.length) return tell('No workspace files synced.');
+      selected = approved.map(item => item.change);
+      const previewBytes = selected.reduce((sum, item) => sum + Buffer.byteLength(item.before ?? '') + Buffer.byteLength(item.after ?? ''), 0);
+      if (selected.length > syncLimit || previewBytes > syncBytes * 2) throw new Error('Select fewer files to keep this sync review within its limits.');
+      const preview = side => selected.map(change => `--- ${change.file} ---\n${change[side] ?? '(File absent)'}`).join('\n\n');
+      await panel.previewTexts('workspace-files.txt', preview('before'), preview('after'),
+        publishing ? 'Shared files and selected saved files' : 'Saved files and selected shared updates');
+      const button = publishing ? 'Publish selected files' : 'Apply selected files';
+      const detail = publishing ? 'Approved project members can read the published text.' : 'Selected updates change this workspace. Save edited files after applying.';
+      if (await vscode.window.showWarningMessage(`Sync ${selected.length} workspace files?`, {
+        modal: true, detail: `${detail}\n${selected.map(change => change.file).join('\n')}`,
+      }, button) !== button) return tell('No workspace files synced.');
+    }
+    const { files, aligned } = selectedWorkspaceFiles(direction, captured, snapshot, selected);
+    const checkLocal = async () => {
+      await ensureWorkspace();
+      if (await workspace.gitRevision() !== revision) throw new Error('The checkout Git base changed during file review.');
+      for (const { file } of selected) {
+        const full = path.join(workspace.root, file);
+        if (vscode.workspace.textDocuments.some(doc => doc.isDirty && doc.uri.fsPath === full)) {
+          throw new Error(`Save ${file} before syncing it.`);
+        }
+        const original = captured.changed.get(file);
+        if (await readSyncFile(workspace, file, original.base === null) !== original.local) throw new Error(`${file} changed during file review.`);
+      }
+      await ensureWorkspace();
+    };
+    await checkLocal();
+    let sequence = snapshot.sequence;
+    if (publishing && selected.length) sequence = (await client.publishWorkspaceFiles(snapshot, files)).sequence;
+    if (!publishing && selected.length) {
+      await approvedEdit('apply', { root: workspace.root, resolve: (file, create) => resolveSyncFile(workspace, file, create) }, selected,
+        { revision, sequence }, async () => {
+          if (digest(await client.workspaceFiles(revision)) !== digest(snapshot)) throw new Error('Shared workspace files changed after review. Review the latest files.');
+          await checkLocal();
+        });
+    }
+    // A VS Code text edit can remain unsaved. Acknowledge only file contents confirmed on disk.
+    const saved = new Set();
+    for (const [file, { text }] of aligned) {
+      try { if (await readSyncFile(workspace, file) === text) saved.add(file); }
+      catch { /* Retry a file that changed or became unavailable. */ }
+    }
+    await context.globalState.update(key, { sequence, files: applyWorkspaceFileReceipt(known, aligned, saved) });
+    if (!selected.length) return tell(`No files to ${publishing ? 'publish' : 'apply'}.${skipped}`);
+    tell(`${publishing ? 'Published' : 'Applied'} ${selected.length} workspace files.${publishing ? '' : ' Save any edited files to finish.'}${skipped}`);
   }
 
   async function reviewProjectDraft(client, entry, workspace, ensureWorkspace) {
