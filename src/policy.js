@@ -124,8 +124,12 @@ class PolicyEngine {
 const describe = rule => ({ effect: rule.effect, target: rule.target, decision: rule.decision, source: rule.source, ...(rule.note ? { note: rule.note } : {}) });
 /** @param {Verdict} verdict */
 const reason = verdict => `${verdict.decision === 'allow' ? 'Allowed' : verdict.decision === 'deny' ? 'Denied' : 'Prompt required'} by ${verdict.source} rule ${verdict.rule ? `${verdict.rule.effect} ${verdict.rule.target}` : ''}`.trim();
+// Plain arguments stay as typed so rules such as `npm run build` read naturally. An empty argument or one with
+// whitespace, a quote or a backslash is JSON-quoted, so ["a b"] and ["a", "b"] are different subjects.
+/** @param {string} arg */
+const subjectArgument = arg => arg && !/[\s"\\]/.test(arg) ? arg : JSON.stringify(arg);
 /** @param {{ command: string, args?: readonly string[] }} input */
-const commandSubject = ({ command, args = [] }) => [command, ...args].join(' ');
+const commandSubject = ({ command, args = [] }) => [command, ...args.map(subjectArgument)].join(' ');
 /** @param {{ id: string }} config @param {string} tool @param {string} target */
 const connectorSubject = (config, tool, target) => `${config.id}/${tool}/${target}`;
 

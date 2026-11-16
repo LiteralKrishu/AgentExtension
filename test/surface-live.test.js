@@ -8,7 +8,8 @@ const { startBrowserFixture } = require('./fixtures/browser.cjs');
 const { startDesktop } = require('./fixtures/desktop.cjs');
 const options = { skip: !process.env.AGENTEXTENSION_TEST_SURFACES && 'Set AGENTEXTENSION_TEST_SURFACES=1 for real browser and macOS app tests.', timeout: 90_000 };
 // The native app test needs the macOS helper. AGENTEXTENSION_TEST_BROWSER sets a Chrome or Chromium executable.
-const native = { ...options, skip: options.skip || (process.platform !== 'darwin' && 'The native app test needs macOS.') };
+const native = { ...options, skip: options.skip || (process.platform !== 'darwin' && 'The native app test needs macOS.')
+  || (!require('node:fs').existsSync(require('node:path').join(__dirname, '../native/agentextension-desktop')) && 'Run npm run build:native first.') };
 function access(ask = async () => true) {
   const controller = new AbortController();
   const permissions = new PermissionBroker({ workspace: '/fixture', signal: controller.signal });

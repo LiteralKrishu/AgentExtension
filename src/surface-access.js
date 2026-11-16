@@ -1,6 +1,16 @@
 const { digest } = require('./permissions');
 const { reason } = require('./policy');
 
+// Deny wins, then a rule that requires a prompt. Allow comes only from the detailed subject when there is one.
+function combine(broad, detailed) {
+  if (!detailed) return broad;
+  for (const decision of ['deny', 'ask']) {
+    const match = [broad, detailed].find(verdict => verdict.decision === decision && verdict.source !== 'default');
+    if (match) return match;
+  }
+  return detailed;
+}
+
 class SurfaceAccess {
   constructor({ permissions, signal, ask, onEvent = () => {}, limit = 30 }) {
     this.permissions = permissions; this.ask = ask; this.onEvent = onEvent;
@@ -12,10 +22,13 @@ class SurfaceAccess {
     this.signal.throwIfAborted();
     if (action && !this.permissions.valid(action)) throw new Error('Surface permission changed. Observe again.');
   }
-  async approve(tool, effect, target, args, scope, detail) {
+  // `subject` is the rule subject for an allow. Deny and ask rules also match the broad target, so a deny rule for
+  // an app still applies when a detailed subject is used, while an allow rule must name the detailed subject.
+  async approve(tool, effect, target, args, scope, detail, subject) {
     this.check();
     const action = this.permissions.action(tool, effect, target, args, scope);
-    const verdict = this.permissions.decide(effect, typeof target === 'string' ? target : target?.bundleId ?? JSON.stringify(target));
+    const broad = typeof target === 'string' ? target : target?.bundleId ?? JSON.stringify(target);
+    const verdict = combine(this.permissions.decide(effect, broad), subject === undefined ? undefined : this.permissions.decide(effect, subject));
     if (verdict.decision === 'deny') {
       this.permissions.record(action, 'deny', reason(verdict));
       throw new Error('A permission rule denies this action.');

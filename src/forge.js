@@ -382,15 +382,17 @@ async function approve(call, run, ui) {
   if (call.name === 'run_command') {
     const parsed = commandSchema.safeParse(call.args);
     if (!parsed.success) return false;
-    const { key, revision, scope } = commandTarget(run, parsed.data);
+    const { key, revision, scope, hunks } = commandTarget(run, parsed.data);
     const action = actionFor(run, call.name, parsed.data);
     const verdict = run.permissions.decide('command.execute', commandSubject(parsed.data));
+    // Before review the command runs code from hunks the user has not seen. Say so in the prompt.
+    const unreviewed = run.reviewed?.revision === revision ? 0 : hunks.length;
     if (verdict.decision === 'deny') {
       run.permissions.record(action, 'deny', reason(verdict));
       return false;
     }
     if (verdict.decision === 'allow') return run.permissions.grant(action, undefined, reason(verdict));
-    if (!await ui.command(parsed.data, { revision, scope, ...(verdict.source === 'default' ? {} : { rule: verdict }) })
+    if (!await ui.command(parsed.data, { revision, scope, unreviewed, ...(verdict.source === 'default' ? {} : { rule: verdict }) })
       || key !== commandTarget(run, parsed.data).key) return false;
     return run.permissions.grant(action);
   }

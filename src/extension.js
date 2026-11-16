@@ -826,13 +826,21 @@ function activate(context) {
           if (selection) void panel.preview(run.draft, [hunks[0]], `Hunk at line ${hunks[0].line}`).catch(() => {});
           return new Promise(resolve => { run.reviewReply = resolve; });
         },
-        command: ({ command, args }, { revision, scope, rule }) => new Promise(resolve => {
+        command: ({ command, args }, { revision, scope, rule, unreviewed = 0 }) => new Promise(resolve => {
           const shown = [command, ...args.map(arg => JSON.stringify(arg))].join(' ');
           signal.addEventListener('abort', () => resolve(false), { once: true });
           // A rule that requires a prompt also prevents saving an allow rule for the same command.
-          const buttons = rule ? ['Run command'] : ['Run command', 'Always allow in this workspace'];
+          // Rule targets treat * as a wildcard, so a command with * in it cannot be saved as an exact rule.
+          const exact = !commandSubject({ command, args }).includes('*');
+          const buttons = rule || !exact ? ['Run command'] : ['Run command', 'Always allow in this workspace'];
+          const detail = [
+            unreviewed ? `This runs code from ${unreviewed} staged hunk${unreviewed === 1 ? '' : 's'} you have not reviewed yet.` : '',
+            'The command cannot use the network or read your home folder or the real workspace.',
+            rule ? `A ${rule.source} rule requires approval each time.` : '',
+            !rule && !exact ? 'Contains *, so it cannot be saved as an exact rule.' : '',
+          ].filter(Boolean).join('\n');
           void vscode.window.showWarningMessage(`Run in an isolated workspace copy?\n${shown}\n${scope} · draft ${revision}`,
-            { modal: true, ...(rule ? { detail: `A ${rule.source} rule requires approval each time.` } : {}) }, ...buttons)
+            { modal: true, detail }, ...buttons)
             .then(async answer => {
               if (answer === 'Always allow in this workspace') {
                 await addWorkspaceRule(workspace.root, { effect: 'command.execute', target: commandSubject({ command, args }), decision: 'allow',

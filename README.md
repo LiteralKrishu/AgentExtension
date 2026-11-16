@@ -121,14 +121,14 @@ Rules decide whether a protected action runs without a prompt, asks first, or is
 
 | Effect | Target the rule matches | Decisions |
 | --- | --- | --- |
-| `command.execute` | Executable and arguments separated by spaces, for example `npm test` or `npm run *` | allow, ask, deny |
+| `command.execute` | Executable and arguments separated by spaces, for example `npm test` or `npm run *`. An empty argument or one containing whitespace, a quote or a backslash is written in JSON quotes, for example `node -e "console.log(1)"` | allow, ask, deny |
 | `connector.read` | `connector-id/tool/target`, for example `docs/read_doc/manual` | allow, ask, deny |
 | `browser.write` | The request or page URL | allow, ask, deny |
 | `browser.navigate` | The URL of a page outside the browser scope | allow, ask, deny |
-| `computer.write` | The selected app's bundle ID | allow, ask, deny |
+| `computer.write` | Deny and ask: the selected app's bundle ID. Allow: bundle ID, action, role and control label, for example `com.example.app press AXButton Save` | allow, ask, deny |
 | `connector.catalog`, `browser.observe`, `computer.observe`, `worker.research`, `worker.review`, `worker.diagnose`, `worker.edit`, `worker.custom`, `skill.read`, `memory.suggest` | `*` turns the capability off. Other targets have no effect. | ask, deny |
 
-Patterns such as `browser.*` and `*` can be used in ask and deny rules. An allow rule must name an exact effect from the first four rows and a target other than `*`. Rules cannot affect workspace reads, draft edits, hunk review, plan approval, or apply. Those actions always use the editor's own controls.
+Patterns such as `browser.*` and `*` can be used in ask and deny rules. **Always allow in this workspace** in a command prompt saves the exact command. It is not offered when the command contains `*`, because the saved rule would match other commands. Commands run against a copy of the workspace without network access, and cannot read your home folder or the real workspace, apart from toolchain folders on `PATH`. An allow rule must name an exact effect from the first four rows and a target other than `*`. Rules cannot affect workspace reads, draft edits, hunk review, plan approval, or apply. Those actions always use the editor's own controls.
 
 Rules come from three sources:
 
@@ -274,7 +274,7 @@ On a model error the extension clears editor drafts, then tries the configured f
 - Follow the [Flask rehearsal](docs/demo.md) to verify the three fixed tasks.
 - `npm run test:ui` runs the actual panel in a separate VS Code profile with a temporary workspace and a scripted model. Set `AGENTEXTENSION_TEST_FORGE_URL` first. The test uses the installed `playwright-core` package. Set `AGENTEXTENSION_PLAYWRIGHT_MODULE` to use a different installation. Set `AGENTEXTENSION_VSCODE_EXECUTABLE` if VS Code is outside the default macOS location. The test prints its evidence folder.
 - Set `AGENTEXTENSION_VSIX` to the package path to test an installed VSIX. The harness checks its activated version, plugin updates, worker sessions, cancellation, and the full review flow.
-- Set `AGENTEXTENSION_TEST_SURFACES=1` with the test server variable to include real Chrome and macOS app tests in `npm test`. The UI harness also uses Chrome and a temporary native test app. Building that fixture needs Xcode Command Line Tools. Run `npm run build:native` on macOS when changing the bundled helper. The package includes the helper for Apple Silicon and Intel; local execution was tested on Apple Silicon.
+- Set `AGENTEXTENSION_TEST_SURFACES=1` with the test server variable to include real Chrome and macOS app tests in `npm test`. The UI harness also uses Chrome and a temporary native test app. Building that fixture needs Xcode Command Line Tools. The helper binary is not committed. Run `npm run build:native` on macOS before running the extension or the native tests from source. `npm run package:vsix` on macOS always compiles it from `native/desktop.swift` for Apple Silicon and Intel; packages built on other platforms omit it, so native app access is unavailable in them. Local execution was tested on Apple Silicon.
 
 See [milestone results and limits](docs/milestones.md) for the release verification record. The integration suite uses real TrueForge sessions and a deterministic model endpoint. It verifies orchestration and permissions. It does not establish task quality for a general coding model. The earlier live-model Flask Task B result remains unresolved.
 

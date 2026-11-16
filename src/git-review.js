@@ -1,7 +1,7 @@
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const fs = require('node:fs/promises');
-const { safePath } = require('./workspace');
+const { safePath, GIT_HARDENING, gitEnvironment } = require('./workspace');
 const { MAX_TEXT } = require('./draft');
 
 const exec = promisify(execFile);
@@ -10,12 +10,8 @@ const decode = new TextDecoder('utf-8', { fatal: true });
 async function git(workspace, signal, args, maxBuffer = 1_000_000) {
   signal.throwIfAborted();
   if (await fs.realpath(workspace.root) !== workspace.identity) throw new Error('Workspace identity changed.');
-  const { stdout } = await exec('git', [
-    '--no-optional-locks', '--no-replace-objects', '--literal-pathspecs',
-    '-c', 'core.fsmonitor=false', '-c', 'protocol.allow=never', ...args,
-  ], {
-    cwd: workspace.root, signal, maxBuffer, timeout: 5_000, encoding: 'buffer',
-    env: { ...process.env, GIT_NO_LAZY_FETCH: '1', GIT_TERMINAL_PROMPT: '0' },
+  const { stdout } = await exec('git', [...GIT_HARDENING, ...args], {
+    cwd: workspace.root, signal, maxBuffer, timeout: 5_000, encoding: 'buffer', env: gitEnvironment(),
   });
   signal.throwIfAborted();
   return decode.decode(stdout);

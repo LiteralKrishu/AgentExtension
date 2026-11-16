@@ -25,6 +25,10 @@ function desktopRequest(input, signal, helper = path.join(__dirname, '../native/
   });
 }
 
+// Allow rules for computer.write match this subject, for example `com.example.app press AXButton Save`.
+// A rule for the bundle ID alone no longer allows every press and fill in that app.
+const computerSubject = (app, action, node) => [app.bundleId, action, node.role, String(node.title || node.description || '').replace(/\s+/g, ' ').trim()].join(' ');
+
 class ScopedComputer extends SurfaceAccess {
   constructor(options) {
     super(options); this.app = options.app; this.interactive = options.interactive === true;
@@ -53,7 +57,8 @@ class ScopedComputer extends SurfaceAccess {
       };
       await check();
       const action = await this.approve('computer_act', 'computer.write', this.app, input, { snapshot: receipt.snapshot },
-        { title: 'Allow this computer action?', detail: `${this.app.name} · ${this.app.bundleId}\n${this.app.path}\nWindow: ${receipt.window}\n${input.action} · ${node.role} · ${node.title || node.description}\n${input.action === 'fill' ? `Text: ${input.text}\n` : ''}This affects the selected app. Editor Undo cannot reverse it.` });
+        { title: 'Allow this computer action?', detail: `${this.app.name} · ${this.app.bundleId}\n${this.app.path}\nWindow: ${receipt.window}\n${input.action} · ${node.role} · ${node.title || node.description}\n${input.action === 'fill' ? `Text: ${input.text}\n` : ''}This affects the selected app. Editor Undo cannot reverse it.` },
+        computerSubject(this.app, input.action, node));
       await check(); this.check(action); this.permissions.require(action);
       this.receipt = undefined;
       const result = await this.request({ command: 'act', app: this.app, ...input }, this.signal);
@@ -63,4 +68,4 @@ class ScopedComputer extends SurfaceAccess {
   reset() { this.receipt = undefined; }
 }
 
-module.exports = { ScopedComputer, desktopRequest, computerAction };
+module.exports = { ScopedComputer, desktopRequest, computerAction, computerSubject };

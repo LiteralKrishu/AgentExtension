@@ -6,6 +6,10 @@ const { promisify } = require('node:util');
 const { MAX_TEXT } = require('./draft');
 
 const exec = promisify(execFile);
+// Repository config can name programs Git runs, such as core.fsmonitor. Every Git call turns those off.
+const GIT_HARDENING = ['--no-optional-locks', '--no-replace-objects', '--literal-pathspecs',
+  '-c', 'core.fsmonitor=false', '-c', 'protocol.allow=never'];
+const gitEnvironment = () => ({ ...process.env, GIT_NO_LAZY_FETCH: '1', GIT_TERMINAL_PROMPT: '0' });
 const EXCLUDED = /(?:^|\/)(?:\.[^/]+|node_modules|vendor|dist|build|coverage|__pycache__|venv)(?:\/|$)|(?:^|\/)(?:credentials|secrets)(?:\.[^/]+)?$|(?:^|\/)(?:id_rsa|id_ed25519)(?:\.[^/]+)?$|\.(?:pem|key|p12|pfx|lock)$/i;
 const NON_SOURCE = /\.(?:svg|map|jsonl|csv|png|jpe?g|gif|webp|pdf|zip|tgz|woff2?|ico)$/i;
 
@@ -61,8 +65,8 @@ class Workspace {
     if (this.identity && await fs.realpath(this.root) !== this.identity) throw new Error('Workspace identity changed. Start a new run.');
     let files;
     try {
-      const { stdout } = await exec('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '.'], {
-        cwd: this.root, signal, maxBuffer: 8 * 1024 * 1024,
+      const { stdout } = await exec('git', [...GIT_HARDENING, 'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '.'], {
+        cwd: this.root, signal, maxBuffer: 8 * 1024 * 1024, env: gitEnvironment(),
       });
       files = stdout.split('\0');
     } catch {
@@ -119,7 +123,7 @@ class Workspace {
         await fs.mkdir(path.dirname(target), { recursive: true });
         await fs.writeFile(target, after);
       }
-      const result = await runIsolated(command, args, directory, signal);
+      const result = await runIsolated(command, args, directory, signal, { hidden: [await fs.realpath(this.root)] });
       // Show workspace-relative paths instead of the temporary snapshot folder.
       return { ...result, output: result.output.split(`${directory}${path.sep}`).join('').split(directory).join('.') };
     } finally {
@@ -128,17 +132,57 @@ class Workspace {
   }
 }
 
-function runIsolated(command, args, cwd, signal) {
+const within = (child, parent) => child === parent || child.startsWith(parent.endsWith(path.sep) ? parent : parent + path.sep);
+
+// Folders the command may read inside a hidden folder: the toolchain bin folders on PATH. A bin folder's parent is
+// included when it sits at least two levels below the hidden folder, such as ~/.nvm/versions/node/v22, so a
+// shallow parent like ~/.local or the home folder itself stays hidden.
+async function readableToolchains(hidden, searchPath = process.env.PATH ?? '') {
+  const output = new Set();
+  for (const entry of searchPath.split(path.delimiter)) {
+    if (!path.isAbsolute(entry)) continue;
+    let real;
+    try { real = await fs.realpath(entry); } catch { continue; }
+    const owner = hidden.find(folder => within(real, folder) && real !== folder);
+    if (!owner) continue;
+    const parent = path.dirname(real);
+    const depth = path.relative(owner, parent).split(path.sep).filter(Boolean).length;
+    output.add(path.basename(real) === 'bin' && depth >= 2 ? parent : real);
+  }
+  return [...output];
+}
+
+// The command reads only the staged copy, system folders and toolchains. The home folder and the real workspace,
+// including files excluded from the copy such as .env, stay unreadable. Network and other writes are denied.
+async function sandboxArguments(command, args, cwd, { hidden = [], platform = process.platform, searchPath } = {}) {
+  let home;
+  try { home = await fs.realpath(os.homedir()); } catch { home = os.homedir(); }
+  const folders = [...new Set([home, ...hidden])].filter(folder => path.isAbsolute(folder) && folder !== path.parse(folder).root);
+  const readable = await readableToolchains(folders, searchPath);
+  if (platform === 'darwin') {
+    const quote = value => JSON.stringify(value);
+    // Later rules win: hide the folders, then allow toolchains and the staged copy again.
+    const profile = ['(version 1) (allow default) (deny network*) (deny file-write*)',
+      ...folders.map(folder => `(deny file-read* (subpath ${quote(folder)}))`),
+      ...readable.map(folder => `(allow file-read* (subpath ${quote(folder)}))`),
+      `(allow file-read* file-write* (subpath ${quote(cwd)})) (allow file-write* (literal "/dev/null"))`].join(' ');
+    return { executable: '/usr/bin/sandbox-exec', parameters: ['-p', profile, command, ...args] };
+  }
+  if (platform === 'linux') {
+    // Empty tmpfs mounts hide the folders. Toolchains and the copy are bound back on top; bind sources come from the host.
+    return { executable: 'bwrap', parameters: ['--unshare-all', '--die-with-parent', '--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc',
+      ...folders.flatMap(folder => ['--tmpfs', folder]),
+      ...readable.flatMap(folder => ['--ro-bind', folder, folder]),
+      '--bind', cwd, cwd, '--chdir', cwd, '--', command, ...args] };
+  }
+  throw new Error('Isolated command execution is available on macOS and on Linux with bubblewrap.');
+}
+
+async function runIsolated(command, args, cwd, signal, options = {}) {
   let executable;
   let parameters;
-  if (process.platform === 'darwin') {
-    executable = '/usr/bin/sandbox-exec';
-    const profile = `(version 1) (allow default) (deny network*) (deny file-write*) (allow file-write* (subpath ${JSON.stringify(cwd)}) (literal "/dev/null"))`;
-    parameters = ['-p', profile, command, ...args];
-  } else if (process.platform === 'linux') {
-    executable = 'bwrap';
-    parameters = ['--unshare-all', '--die-with-parent', '--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc',
-      '--bind', cwd, cwd, '--chdir', cwd, '--', command, ...args];
+  if (process.platform === 'darwin' || process.platform === 'linux') {
+    ({ executable, parameters } = await sandboxArguments(command, args, cwd, options));
   } else {
     throw new Error('Isolated command execution is available on macOS and on Linux with bubblewrap.');
   }
@@ -174,4 +218,4 @@ function runIsolated(command, args, cwd, signal) {
   });
 }
 
-module.exports = { Workspace, safePath, runIsolated };
+module.exports = { Workspace, safePath, runIsolated, sandboxArguments, readableToolchains, GIT_HARDENING, gitEnvironment };

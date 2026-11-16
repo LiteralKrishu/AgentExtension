@@ -10,6 +10,20 @@ const VISIT = { limit: 3, ttl: 5 * 60_000 };
 const browserAction = z.strictObject({ snapshot: z.string().length(64), element: z.string().regex(/^e\d{1,2}$/),
   action: z.enum(['click', 'fill', 'upload']), text: z.string().max(2_000).optional(), file: z.string().max(500).optional() });
 
+// A readable excerpt of an outgoing request body for the approval dialog. Control characters are shown as spaces.
+function bodyPreview(body, limit = 600) {
+  if (!body?.length) return '(empty)';
+  const text = new TextDecoder('utf-8').decode(body.subarray(0, limit * 4)).replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, ' ');
+  if (text.includes('\ufffd')) return `(binary, ${body.length} bytes)`;
+  return text.length > limit || body.length > limit * 4 ? `${text.slice(0, limit)}… (${body.length} bytes in total)` : text;
+}
+// Added as a second policy. Browsers enforce every policy, so the site's own CSP still applies in full.
+const SCOPE_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'";
+function scopedCsp(site) {
+  const own = typeof site === 'string' ? site.trim() : '';
+  return own ? `${own}, ${SCOPE_CSP}` : SCOPE_CSP;
+}
+
 function webUrl(raw) {
   const url = new URL(raw);
   if (url.username || url.password || url.hostname.includes('*') || !['https:', 'http:'].includes(url.protocol)
@@ -87,7 +101,7 @@ class ScopedBrowser extends SurfaceAccess {
         if (!this.interactive || !this.gesture) throw new Error('Unrequested browser writes are blocked.');
         const gesture = this.gesture;
         action = await this.approve('browser_request', 'browser.write', request.url(), input, { gesture, page: this.page.url() },
-          { title: 'Allow this browser request?', detail: `${method} ${request.url()}\nBody: ${body?.length ?? 0} bytes\nDigest: ${input.body}\nThis request can change remote data.` });
+          { title: 'Allow this browser request?', detail: `${method} ${request.url()}\nBody (${body?.length ?? 0} bytes): ${bodyPreview(body)}\nDigest: ${input.body}\nThis request can change remote data.` });
         if (gesture !== this.gesture) throw new Error('Browser action ended.');
         this.permissions.require(action);
       } else {
@@ -112,8 +126,8 @@ class ScopedBrowser extends SurfaceAccess {
       this.check(action); this.allowed(request.url());
       const outputHeaders = Object.fromEntries(response.headers);
       delete outputHeaders['content-encoding']; delete outputHeaders['content-length'];
-      // Prevent navigation to external protocols and unsolicited resource channels.
-      outputHeaders['content-security-policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'";
+      // Prevent navigation to external protocols and unsolicited resource channels, without weakening the site's CSP.
+      outputHeaders['content-security-policy'] = scopedCsp(outputHeaders['content-security-policy']);
       await route.fulfill({ status: response.status, headers: outputHeaders, body: Buffer.concat(chunks) });
     } catch {
       this.onEvent({ kind: 'browser request', target: digest(request.url()), status: 'blocked' });
@@ -223,4 +237,4 @@ class ScopedBrowser extends SurfaceAccess {
   close() { super.close(); return this.reset(); }
 }
 
-module.exports = { ScopedBrowser, browserOrigins, browserOpen, browserObserve, browserAction, browserVisit, VISIT };
+module.exports = { ScopedBrowser, bodyPreview, scopedCsp, browserOrigins, browserOpen, browserObserve, browserAction, browserVisit, VISIT };
