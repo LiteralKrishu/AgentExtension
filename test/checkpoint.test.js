@@ -9,6 +9,21 @@ const { PermissionBroker } = require('../src/permissions');
 const { Workspace } = require('../src/workspace');
 const { composePrompt, ContextManifest } = require('../src/prompt');
 
+test('an imported continuation cannot replace a checkpoint, including during simultaneous imports', async t => {
+  const storage = await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-ckpt-import-'));
+  t.after(() => fs.rm(storage, { recursive: true, force: true }));
+  const root = path.join(storage, 'workspace');
+  const stores = [new CheckpointStore(storage, root), new CheckpointStore(storage, root)];
+  const outcomes = await Promise.allSettled(stores.map((store, index) =>
+    store.save({ request: `Continuation ${index}`, files: [], projectContinuation: { id: String(index) } }, { exclusive: true })));
+  const accepted = outcomes.find(item => item.status === 'fulfilled');
+  const denied = outcomes.find(item => item.status === 'rejected');
+  assert.ok(accepted);
+  assert.match(denied?.reason.message, /checkpoint already exists/);
+  assert.deepEqual(await stores[0].load(), accepted.value);
+  assert.deepEqual(await fs.readdir(stores[0].directory), ['checkpoint.json']);
+});
+
 test('a checkpoint saves the plan, draft and progress without grants, and restores the draft after the workspace is checked', async t => {
   const storage = await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-ckpt-'));
   const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-ckpt-ws-')));

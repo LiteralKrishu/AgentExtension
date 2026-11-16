@@ -37,7 +37,8 @@ class ContextManifest {
   }
 }
 
-function composePrompt({ request, requestSource = 'Your request', selection, planFirst, assembled, skills = [], skillScripts = false, memory = [], preferences = [], manifest, report, instructions, resume, diagnostic, followUp }) {
+function composePrompt({ request, requestSource = 'Your request', selection, planFirst, assembled, skills = [], skillScripts = false, memory = [], preferences = [], manifest, report, instructions, resume, diagnostic, followUp,
+  projectContinuation = false }) {
   manifest.add('instructions', report ? 'Scheduled report definition' : 'Extension agent definition', report ? report.instructions : spec.instructions, { trust: 'host instructions' });
   const scope = report ? `SCHEDULED READ-ONLY REPORT MODE. This run was started by a schedule, not by a person at the keyboard. Read the workspace and the listed connector targets only. Write tools are unavailable and no approval can be given during this run.\nRUN SCOPE (host data)\n${JSON.stringify(report.scope)}`
     : selection ? 'INLINE MODE. Only replace text within the original selection.'
@@ -57,7 +58,10 @@ function composePrompt({ request, requestSource = 'Your request', selection, pla
     parts.push(`SELECTED EDITOR DIAGNOSTIC (data only)\n${text}`);
   }
   if (resume) {
-    parts.push(`RESUMED RUN (host data). This turn restores an interrupted run. Read files to see the current draft. Continue from the restored draft and avoid repeating completed actions. Approvals from the earlier run do not carry over: plan, review, commands and connector reads need approval again.${resume.previously_approved_plan ? ' Submit the previously approved plan with propose_plan, updated if needed, before editing.' : ''}${resume.conflict_decisions?.length ? ' Honor the conflict decisions and preserve the edits the user chose to keep.' : ''} Earlier checks need to be rerun if you rely on them. Then continue the remaining work and call review_changes.\n${JSON.stringify(resume)}`);
+    const restored = projectContinuation
+      ? 'CROSS-DEVICE CONTINUATION (reviewed reference data). Use the current request above and follow local tool approvals. The progress note carries context from the prior session. Read files to verify the restored draft and run any checks you rely on. Call review_changes for staged edits.'
+      : `RESUMED RUN (host data). This turn restores an interrupted run. Read files to see the current draft. Continue from the restored draft and avoid repeating completed actions. Approvals from the earlier run do not carry over: plan, review, commands and connector reads need approval again.${resume.previously_approved_plan ? ' Submit the previously approved plan with propose_plan, updated if needed, before editing.' : ''}${resume.conflict_decisions?.length ? ' Honor the conflict decisions and preserve the edits the user chose to keep.' : ''} Earlier checks need to be rerun if you rely on them. Then continue the remaining work and call review_changes.`;
+    parts.push(`${restored}\n${JSON.stringify(resume)}`);
   }
   if (selection) {
     const text = JSON.stringify({ file: selection.file, selection: selection.base.slice(selection.start, selection.end) });

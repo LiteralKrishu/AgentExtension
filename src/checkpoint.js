@@ -27,13 +27,20 @@ class CheckpointStore {
     this.file = path.join(this.directory, 'checkpoint.json');
     this.queue = Promise.resolve();
   }
-  save(state) {
+  save(state, { exclusive = false } = {}) {
     const next = this.queue.then(async () => {
       await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
       const value = { version: VERSION, workspace: this.workspace, savedAt: new Date(this.now()).toISOString(), ...state };
       const temporary = `${this.file}.${randomUUID()}.tmp`;
-      await fs.writeFile(temporary, JSON.stringify(value), { mode: 0o600 });
-      await fs.rename(temporary, this.file);
+      try {
+        await fs.writeFile(temporary, JSON.stringify(value), { mode: 0o600, flag: 'wx' });
+        if (exclusive) {
+          await fs.link(temporary, this.file).catch(error => {
+            if (error.code === 'EEXIST') throw new Error('A local checkpoint already exists. Finish or discard it before importing a continuation.');
+            throw error;
+          });
+        } else await fs.rename(temporary, this.file);
+      } finally { await fs.rm(temporary, { force: true }); }
       return value;
     });
     this.queue = next.catch(() => {});
@@ -75,6 +82,7 @@ function snapshotRun(run, { request, planFirst, phase, text = '' }) {
     runId: run.permissions.runId, request, planFirst: Boolean(planFirst), phase,
     approvedPlan: run.approvedPlan ?? null, revision: run.draft.revision, session: run.session ?? null,
     forgeSession: run.forgeSession,
+    projectContinuation: run.projectContinuation,
     selection: run.draft.selection,
     files: [...run.draft.files].map(([file, entry]) => ({ file, base: entry.base, baseDigest: entry.base === null ? null : digest(entry.base), text: entry.text })),
     checks: (run.checks ?? []).map(({ command, args, exitCode, revision, scope }) => ({ command, args, exitCode, revision, scope })),
