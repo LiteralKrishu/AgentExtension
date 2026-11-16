@@ -12,7 +12,7 @@ const { organizationWorkspace, tokenHash } = require('../../src/organization');
 const exec = promisify(execFile);
 const git = (cwd, ...args) => exec('git', args, { cwd });
 
-async function startProject(t, { now = Date.now, sameUser = false, memorySync = false, fileSync = false, publicUrl, tlsDirectory } = {}) {
+async function startProject(t, { now = Date.now, sameUser = false, memorySync = false, fileSync = false, sessionContinuations = false, publicUrl, tlsDirectory } = {}) {
   const area = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'ae-project-')));
   t.after(() => fs.rm(area, { recursive: true, force: true }));
   const first = path.join(area, 'first');
@@ -42,7 +42,7 @@ async function startProject(t, { now = Date.now, sameUser = false, memorySync = 
   const config = {
     clients: devices.map(({ device, token, workspace, readAudit }) => ({ id: device, tokenHash: tokenHash(token), workspaces: [workspace], readAudit })),
     policies: Object.fromEntries(devices.map(({ workspace }) => [workspace, { version: 1, rules: [] }])),
-    collaboration: { organization, memorySync, projects: [{ id: project, handoffs: true, fileSync, members }] },
+    collaboration: { organization, memorySync, projects: [{ id: project, handoffs: true, fileSync, sessionContinuations, members }] },
   };
   const update = async () => {
     const temporary = configFile + '.tmp';

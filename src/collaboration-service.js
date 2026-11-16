@@ -1,7 +1,8 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { z } = require('zod');
-const { principal, identity, role, commit, operation, handoffBytes, handoffReceipt, syncUpdate, syncState, syncBytes, orderedSyncFiles } = require('./collaboration');
+const { principal, identity, role, commit, operation, handoffBytes, handoffReceipt, syncUpdate, syncState, syncBytes, orderedSyncFiles,
+  continuationAge } = require('./collaboration');
 const { workspaceId } = require('./audit');
 const { digest } = require('./permissions');
 const { memoryScope, schemas } = require('./memory-sync');
@@ -9,6 +10,7 @@ const { memoryScope, schemas } = require('./memory-sync');
 const membership = identity.extend({ workspace: workspaceId, role });
 const project = z.strictObject({
   id: principal, members: z.array(membership).min(1).max(100), handoffs: z.boolean().default(false), fileSync: z.boolean().default(false),
+  sessionContinuations: z.boolean().default(false),
 }).refine(project => new Set(project.members.map(member => member.device)).size === project.members.length, 'Each device can join once per project.');
 const collaborationConfig = z.strictObject({
   organization: principal, projects: z.array(project).min(1).max(50), memorySync: z.boolean().default(false),
@@ -24,6 +26,7 @@ const matches = (member, actor, workspace) => member.device === actor.device && 
 const publicTransfer = ({ senderWorkspace, recipientWorkspace, ...handoff }) => handoff;
 const viewTransfer = entry => ({ ...publicTransfer(entry), paths: entry.files.map(file => file.file) });
 const summarize = ({ files, ...handoff }) => ({ ...publicTransfer(handoff), paths: files.map(file => file.file) });
+const continuationSummary = ({ request, progress, planFirst, ...entry }) => summarize(entry);
 const emptyContext = () => ({ revision: 0, text: '' });
 const defaultState = () => ({ context: { notes: emptyContext(), instructions: emptyContext() }, transfers: [], events: [] });
 
@@ -123,6 +126,8 @@ async function serveProject({ url, request, send, store, workspace, reload }) {
         { ...actor, action, target, receivedAt }].slice(-Math.min(config.maxEvents, 500));
       return store.save(file, state);
     };
+    const continuations = (state.continuations ?? []).filter(entry => entry.created + continuationAge > store.now());
+    const canContinue = entry => project.sessionContinuations && entry && editor && allowed(entry) && usable(entry);
     if (!input) {
       if (url.searchParams.has('audit')) {
         return client.readAudit ? send(200, { events: state.events.filter(event => event.receivedAt >= store.now() - config.retentionDays * 86_400_000) }) : denied();
@@ -133,9 +138,25 @@ async function serveProject({ url, request, send, store, workspace, reload }) {
         if (url.searchParams.has('accepted') && (entry.state !== 'accepted' || !matches(member, entry.recipient, entry.recipientWorkspace))) return denied();
         return send(200, viewTransfer(entry));
       }
+      if (url.searchParams.has('continuation')) {
+        const entry = continuations.find(item => item.id === url.searchParams.get('continuation'));
+        if (!canContinue(entry)) return denied();
+        const receipt = url.searchParams.get('receipt');
+        if (receipt !== null) {
+          if (entry.state !== 'accepted' || !matches(member, entry.recipient, entry.recipientWorkspace)
+              || handoffReceipt(viewTransfer(entry)) !== receipt) return denied();
+          return send(200, { verified: true });
+        }
+        return send(200, viewTransfer(entry));
+      }
       const recipients = editor && project.handoffs ? project.members.filter(other => eligible(other) && other.device !== member.device).map(actorOf) : [];
       return send(200, { actor, role: member.role, canAudit: client.readAudit, handoffsEnabled: project.handoffs,
         ...(url.searchParams.get('capabilities') === 'file-sync' ? { fileSyncEnabled: project.fileSync } : {}),
+        ...(url.searchParams.get('continuations') === '1' ? {
+          continuationRecipients: editor && project.sessionContinuations
+            ? project.members.filter(other => eligible(other) && other.device !== member.device && other.user === member.user).map(actorOf) : [],
+          continuations: continuations.filter(canContinue).map(continuationSummary),
+        } : {}),
         context: state.context, recipients, handoffs: editor && project.handoffs ? state.transfers.filter(allowed).map(summarize) : [] });
     }
     if (!editor) return denied();
@@ -148,6 +169,40 @@ async function serveProject({ url, request, send, store, workspace, reload }) {
       state.context[input.section] = updated;
       await record('save context', input.section);
       return send(200, updated);
+    }
+    if (input.action === 'offer-continuation') {
+      if (!project.sessionContinuations) return denied();
+      const { action: _, id, to, ...payload } = input;
+      const recipient = project.members.find(other => eligible(other) && other.device === to.device && other.user === to.user);
+      if (!recipient || recipient.device === member.device || recipient.user !== member.user) return denied();
+      const entry = { ...payload, id, sender: actor, recipient: to, senderWorkspace: workspace, recipientWorkspace: recipient.workspace };
+      const prior = continuations.find(item => item.id === id);
+      if (prior) {
+        const { state: _, created, ...saved } = prior;
+        return digest(saved) === digest(entry) ? send(200, continuationSummary(prior)) : conflict();
+      }
+      if (continuations.length >= 16) return conflict();
+      const next = { ...entry, state: 'pending', created: store.now() };
+      state.continuations = [...continuations, next];
+      await record('offer session continuation', id);
+      return send(200, continuationSummary(next));
+    }
+    if (input.action === 'accept-continuation' || input.action === 'remove-continuation') {
+      const entry = continuations.find(item => item.id === input.id);
+      if (!entry || !allowed(entry)) return denied();
+      if (input.action === 'remove-continuation') {
+        state.continuations = continuations.filter(item => item !== entry);
+        await record('remove session continuation', input.id);
+        return send(200, { removed: true });
+      }
+      if (!canContinue(entry) || !matches(member, entry.recipient, entry.recipientWorkspace)) return denied();
+      if (handoffReceipt(viewTransfer(entry)) !== input.expected) return conflict();
+      if (entry.state !== 'accepted') {
+        entry.state = 'accepted';
+        state.continuations = continuations;
+        await record('accept session continuation', input.id);
+      }
+      return send(200, { accepted: true });
     }
     const index = state.transfers.findIndex(item => item.id === input.id);
     const prior = state.transfers[index];
