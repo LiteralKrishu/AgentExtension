@@ -37,7 +37,7 @@ class OrganizationError extends Error {
   constructor(message, retryable = false, status) { super(message); this.retryable = retryable; this.status = status; }
 }
 
-async function requestOrganization(config, route, { body, signal, fetchFn = fetch } = {}) {
+async function requestOrganization(config, route, { body, signal, fetchFn = fetch, maxResponseBytes = 256_000 } = {}) {
   const endpoint = new URL(route, config.url);
   endpoint.searchParams.set('workspace', config.workspace);
   const token = await tokenFor(config.tokenFile);
@@ -57,7 +57,7 @@ async function requestOrganization(config, route, { body, signal, fetchFn = fetc
     let length = 0;
     for await (const chunk of response.body ?? []) {
       length += chunk.length;
-      if (length > 256_000) throw new OrganizationError('Organization response exceeds 256 KB.');
+      if (length > maxResponseBytes) throw new OrganizationError('Organization response exceeds its size limit.');
       chunks.push(chunk);
     }
     try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }

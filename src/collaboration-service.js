@@ -1,14 +1,14 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { z } = require('zod');
-const { principal, identity, role, operation, handoffBytes, handoffReceipt } = require('./collaboration');
+const { principal, identity, role, commit, operation, handoffBytes, handoffReceipt, syncUpdate, syncState, syncBytes, orderedSyncFiles } = require('./collaboration');
 const { workspaceId } = require('./audit');
 const { digest } = require('./permissions');
 const { memoryScope, schemas } = require('./memory-sync');
 
 const membership = identity.extend({ workspace: workspaceId, role });
 const project = z.strictObject({
-  id: principal, members: z.array(membership).min(1).max(100), handoffs: z.boolean().default(false),
+  id: principal, members: z.array(membership).min(1).max(100), handoffs: z.boolean().default(false), fileSync: z.boolean().default(false),
 }).refine(project => new Set(project.members.map(member => member.device)).size === project.members.length, 'Each device can join once per project.');
 const collaborationConfig = z.strictObject({
   organization: principal, projects: z.array(project).min(1).max(50), memorySync: z.boolean().default(false),
@@ -59,13 +59,41 @@ async function servePrivateMemory({ scope, config, project, member, input, send,
   return send(200, publicState(next));
 }
 
+async function serveWorkspaceFiles({ revision, config, project, member, input, send, store, denied }) {
+  if (!project.fileSync || input && (member.role !== 'editor' || digest(input.actor) !== digest(actorOf(member)))) return denied();
+  const directory = path.join(store.storage, 'workspace-files', digest([config.collaboration.organization, project.id]));
+  const file = path.join(directory, `${revision}.json`);
+  const actor = actorOf(member);
+  let state;
+  try { state = JSON.parse(await fs.readFile(file, 'utf8')); }
+  catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    state = { revision, sequence: 0, publishedBy: null, files: [] };
+  }
+  const current = syncState.parse({ ...state, actor });
+  if (!input) return send(200, current);
+  if (input.expected !== current.sequence) return send(409, { error: 'The shared file snapshot changed.' });
+  const files = orderedSyncFiles(input.files);
+  if (digest(files) === digest(current.files)) return send(200, current);
+  if (current.sequence === 0) {
+    const previous = await fs.readdir(directory).catch(error => { if (error.code === 'ENOENT') return []; throw error; });
+    if (previous.filter(name => name.endsWith('.json')).length >= 8) return send(409, { error: 'The project stores up to eight Git bases.' });
+  }
+  const next = { revision, sequence: current.sequence + 1, publishedBy: actor, files };
+  await store.save(file, next);
+  return send(200, { ...next, actor });
+}
+
 // Project state and its audit record are committed together by the service's single writer.
 async function serveProject({ url, request, send, store, workspace, reload }) {
   const scope = url.searchParams.get('memory');
-  if (scope !== null && !memoryScope.safeParse(scope).success) return send(400, { error: 'Invalid private memory scope.' });
+  const gitBase = url.searchParams.get('files');
+  if (scope !== null && (gitBase !== null || !memoryScope.safeParse(scope).success)) return send(400, { error: 'Invalid private memory scope.' });
+  if (gitBase !== null && !commit.safeParse(gitBase).success) return send(400, { error: 'Invalid workspace file Git base.' });
   let input;
   if (request.method === 'POST') {
-    try { input = await readOperation(request, scope ? schemas[scope].update : operation, scope ? 256_000 : handoffBytes); }
+    try { input = await readOperation(request, scope ? schemas[scope].update : gitBase ? syncUpdate : operation,
+      scope ? 256_000 : gitBase ? syncBytes : handoffBytes); }
     catch { return send(422, { error: 'Invalid project operation.' }); }
   } else if (request.method !== 'GET') return send(405, { error: 'Method unavailable.' });
   const denied = () => send(403, { error: 'Project access denied.' });
@@ -77,6 +105,7 @@ async function serveProject({ url, request, send, store, workspace, reload }) {
     const member = project?.members.find(item => item.device === client.id && item.workspace === workspace);
     if (!member) return denied();
     if (scope) return servePrivateMemory({ scope, config, project, member, input, send, store, denied });
+    if (gitBase) return serveWorkspaceFiles({ revision: gitBase, config, project, member, input, send, store, denied });
     const editor = member.role === 'editor';
     const actor = actorOf(member);
     const file = path.join(store.storage, 'projects', config.collaboration.organization, `${project.id}.json`);
@@ -106,6 +135,7 @@ async function serveProject({ url, request, send, store, workspace, reload }) {
       }
       const recipients = editor && project.handoffs ? project.members.filter(other => eligible(other) && other.device !== member.device).map(actorOf) : [];
       return send(200, { actor, role: member.role, canAudit: client.readAudit, handoffsEnabled: project.handoffs,
+        ...(url.searchParams.get('capabilities') === 'file-sync' ? { fileSyncEnabled: project.fileSync } : {}),
         context: state.context, recipients, handoffs: editor && project.handoffs ? state.transfers.filter(allowed).map(summarize) : [] });
     }
     if (!editor) return denied();

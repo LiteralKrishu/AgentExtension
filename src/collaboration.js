@@ -15,6 +15,36 @@ const sectionText = z.string().max(8_000);
 const contextEntry = z.strictObject({ revision: z.number().int().nonnegative(), text: sectionText });
 const identity = z.strictObject({ user: principal, device: principal });
 const role = z.enum(['viewer', 'editor']);
+const syncBytes = 2_000_000;
+const syncFileBytes = 32_000;
+const syncLimit = 256;
+const syncPath = z.string().max(500).refine(file => {
+  try {
+    return Boolean(safePath(file)) && !/[\x00-\x1f\x7f<>"|?*]/.test(file)
+      && file.split('/').every(part => !/[. ]$/.test(part) && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part));
+  } catch { return false; }
+});
+const syncPathKey = file => file.normalize('NFC').toLowerCase();
+function distinctSyncPaths(paths) {
+  const keys = new Set();
+  for (const file of paths.map(syncPathKey).sort()) {
+    if (keys.has(file)) return false;
+    const parts = file.split('/');
+    for (let count = 1; count < parts.length; count++) if (keys.has(parts.slice(0, count).join('/'))) return false;
+    keys.add(file);
+  }
+  return true;
+}
+const syncText = z.string().refine(value => !value.includes('\0') && Buffer.byteLength(value) <= syncFileBytes
+  && Buffer.from(value).toString('utf8') === value);
+const syncEntry = z.strictObject({ file: syncPath, baseDigest: checksum.nullable(), text: syncText.nullable() })
+  .refine(entry => (entry.baseDigest !== null || entry.text !== null)
+    && (entry.text === null || digest(entry.text) !== entry.baseDigest), 'A workspace file update must differ from its Git base.');
+const syncFiles = z.array(syncEntry).max(syncLimit).refine(entries => distinctSyncPaths(entries.map(entry => entry.file)));
+const syncVersion = z.number().int().nonnegative();
+const syncState = z.strictObject({ revision: commit, sequence: syncVersion, actor: identity, publishedBy: identity.nullable(), files: syncFiles });
+const syncUpdate = z.strictObject({ expected: syncVersion, actor: identity, files: syncFiles });
+const orderedSyncFiles = entries => [...entries].sort((a, b) => a.file < b.file ? -1 : a.file > b.file ? 1 : 0);
 const files = z.array(z.strictObject({
   file: z.string().max(500).refine(file => {
     try { return Boolean(safePath(file)) && !/[\x00-\x1f\x7f]/.test(file); } catch { return false; }
@@ -29,7 +59,7 @@ const handoffSummary = z.strictObject({
 });
 const handoff = handoffSummary.extend({ files });
 const projectState = z.strictObject({
-  actor: identity, role, handoffsEnabled: z.boolean(), canAudit: z.boolean(), recipients: z.array(identity),
+  actor: identity, role, handoffsEnabled: z.boolean(), fileSyncEnabled: z.boolean().default(false), canAudit: z.boolean(), recipients: z.array(identity),
   context: z.strictObject({ notes: contextEntry, instructions: contextEntry }), handoffs: z.array(handoffSummary),
 });
 const operation = z.discriminatedUnion('action', [
@@ -40,12 +70,15 @@ const operation = z.discriminatedUnion('action', [
 ]);
 
 function projectClient(workspace, { files, fetchFn } = {}) {
-  async function request(query, body, signal) {
+  function destination() {
     const config = enrollment(loadAdminPolicy(files), workspace);
     const binding = config?.projects?.[config.workspace];
     if (!binding) throw new Error('This workspace has no organization project enrollment.');
+    return { config, binding, link: digest([new URL(config.url).origin, binding, config.workspace]) };
+  }
+  async function request(query, body, signal, { config, binding } = destination(), maxResponseBytes) {
     const params = new URLSearchParams({ ...binding, ...query });
-    try { return await requestOrganization(config, `/v1/project?${params}`, { body, signal, fetchFn }); }
+    try { return await requestOrganization(config, `/v1/project?${params}`, { body, signal, fetchFn, maxResponseBytes }); }
     catch (error) {
       if (error.status === 403) error.message = 'Project access was denied. Check device approval and project role.';
       if (error.status === 409) error.message = 'Project state changed or its storage limit was reached.';
@@ -53,7 +86,7 @@ function projectClient(workspace, { files, fetchFn } = {}) {
     }
   }
   return {
-    async state(signal) { return projectState.parse(await request({}, undefined, signal)); },
+    async state(signal) { return projectState.parse(await request({ capabilities: 'file-sync' }, undefined, signal)); },
     async audit() { return (await request({ audit: '1' })).events; },
     async open(id, signal, accepted = false) {
       return handoff.parse(await request({ handoff: identifier.parse(id), ...(accepted ? { accepted: '1' } : {}) }, undefined, signal));
@@ -62,6 +95,23 @@ function projectClient(workspace, { files, fetchFn } = {}) {
       const body = operation.parse(input);
       if (Buffer.byteLength(JSON.stringify(body)) > handoffBytes) throw new Error('Keep a handoff under 128 KB.');
       return request({}, body, signal);
+    },
+    async workspaceFiles(revision, signal) {
+      const target = destination();
+      const state = syncState.parse(await request({ files: commit.parse(revision) }, undefined, signal, target, syncBytes + 1024));
+      if (state.revision !== revision) throw new Error('The shared files have a different Git base.');
+      return { ...state, link: target.link };
+    },
+    async publishWorkspaceFiles(snapshot, updates, signal) {
+      const target = destination();
+      if (target.link !== snapshot.link) throw new Error('Project enrollment changed during file review.');
+      const body = syncUpdate.parse({ expected: snapshot.sequence, actor: snapshot.actor, files: orderedSyncFiles(updates) });
+      if (Buffer.byteLength(JSON.stringify(body)) > syncBytes) throw new Error('Keep the shared file snapshot under 2 MB.');
+      const state = syncState.parse(await request({ files: commit.parse(snapshot.revision) }, body, signal, target, syncBytes + 1024));
+      const sequence = snapshot.sequence + (digest(snapshot.files) === digest(body.files) ? 0 : 1);
+      if (state.revision !== snapshot.revision || state.sequence !== sequence || digest(state.actor) !== digest(snapshot.actor)
+          || digest(state.files) !== digest(body.files)) throw new Error('The service returned an unexpected file sync receipt.');
+      return { ...state, link: target.link };
     },
   };
 }
@@ -95,4 +145,5 @@ async function materializeHandoff(payload, workspace, signal) {
 
 const handoffReceipt = value => digest({ ...value, state: 'accepted' });
 
-module.exports = { principal, identity, role, operation, handoffBytes, handoffReceipt, projectClient, prepareHandoff, materializeHandoff };
+module.exports = { principal, identity, role, commit, operation, handoffBytes, handoffReceipt, projectClient, prepareHandoff, materializeHandoff,
+  syncPath, syncText, syncUpdate, syncFiles, syncLimit, syncFileBytes, syncBytes, syncState, distinctSyncPaths, orderedSyncFiles };
