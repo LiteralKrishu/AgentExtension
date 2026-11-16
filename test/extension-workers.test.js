@@ -36,7 +36,7 @@ test('fix-team: a failed check is diagnosed, a worker drafts the fix separately,
     if (round === 4) { assert.match(last, /"merged":1/); return call('run_command', { command: 'node', args: ['--test', 'calc.test.js'] }); }
     if (round === 5) return call('review_changes', {});
     return say('Fixed add and the check passes.');
-  });
+  }, { costInUsd: 0.125 });
   const host = await startHost(t, { root, settings: { serverUrl: baseUrl, model: model.model, fallbackModel: '', compaction: true,
     turnTimeoutSeconds: 60, readConnectors: [], skillRoots: [], pluginRoots: [], browserOrigins: [], automaticSkills: false } });
   host.answers.push({ kind: 'pick', value: items => items.filter(item => item.label === 'fix-team') },
@@ -60,8 +60,11 @@ test('fix-team: a failed check is diagnosed, a worker drafts the fix separately,
   assert.deepEqual(Object.keys(review.usageDetail.actors).sort(), ['parent', 'worker:edit-proposal', 'worker:test-diagnosis'], 'Worker tokens count toward the run');
   for (const hunk of review.hunks) await host.send({ type: 'decision', id: hunk.id, value: 'accept' });
   await host.send({ type: 'continue' });
-  await host.waitFor(state => state.phase === 'ready', 60_000, 'ready');
+  const ready = await host.waitFor(state => state.phase === 'ready' && !state.runActive, 60_000, 'ready');
   assert.equal(parentRound, 6);
+  const cost = model.state.usage.length * 0.125;
+  assert.deepEqual(ready.usageDetail.cost, { usd: cost, unreportedTurns: 0 }, 'Parent and separate worker turns each count once');
+  assert.equal(ready.usageCost, `USD ${cost.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
   await host.send({ type: 'cancel' });
   assert.equal(await fs.readFile(path.join(root, 'calc.js'), 'utf8'), calc, 'Nothing reached disk without apply');
   assert.equal(host.answers.length, 0);

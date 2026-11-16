@@ -28,7 +28,7 @@ test('skill discovery is bounded; only selected bodies and explicit text resourc
   assert.equal(selected.length, 1);
   assert.match(selected[0].body, /Body one/);
   assert.equal(await registry.resource(catalog[0].id, 'references/read.md'), 'Reference body');
-  await assert.rejects(registry.resource(catalog[1].id, 'references/read.md'), /selected/);
+  await assert.rejects(registry.resource(catalog[1].id, 'references/read.md'), /active/);
   await assert.rejects(registry.resource(catalog[0].id, '../two/SKILL.md'));
   await assert.rejects(registry.resource(catalog[0].id, 'scripts/run.js'));
   await fs.writeFile(path.join(root, 'one', 'references', 'large.md'), 'x'.repeat(8_001));
@@ -37,6 +37,38 @@ test('skill discovery is bounded; only selected bodies and explicit text resourc
   await assert.rejects(registry.resource(catalog[0].id, 'references/linked.md'), /symlink/);
   await fs.writeFile(path.join(root, 'one', 'SKILL.md'), text('one') + ' Changed');
   await assert.rejects(registry.select([catalog[0].id]), /changed/);
+});
+
+test('runtime skill selection verifies text, explicit eligibility, cancellation and the shared budget', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ae-skill-request-'));
+  t.after(() => fs.rm(root, { force: true, recursive: true }));
+  const write = async (name, body, extra = '') => {
+    const folder = path.join(root, name);
+    await fs.mkdir(folder, { recursive: true });
+    await fs.writeFile(path.join(folder, 'SKILL.md'), `---\nname: ${name}\ndescription: Purpose\n${extra}---\n${body}`);
+  };
+  await write('manual', 'only manual', 'disable-model-invocation: true\n');
+  await write('large', 'a'.repeat(12_001));
+  await write('ordinary', 'Instructions');
+  const registry = new SkillRegistry([root]);
+  const ids = Object.fromEntries((await registry.discover()).map(entry => [entry.name, entry.id]));
+  const controller = new AbortController();
+  const signal = controller.signal;
+  assert.deepEqual(registry.eligible().map(entry => entry.name), ['large', 'ordinary']);
+  await assert.rejects(registry.activate(ids.manual, () => true, signal), /eligible/);
+  await assert.rejects(registry.activate(ids.ordinary, () => false, signal), /eligible/);
+  await assert.rejects(registry.activate(ids.large, () => true, signal), /limit/);
+  const added = await Promise.allSettled([registry.activate(ids.ordinary, () => true, signal), registry.activate(ids.ordinary, () => true, signal)]);
+  assert.equal(added.filter(item => item.status === 'fulfilled').length, 1);
+  assert.equal(registry.selected.get(ids.ordinary).body, 'Instructions');
+  registry.clearRequested();
+  assert.equal(registry.selected.size, 0);
+  await write('ordinary', 'New body');
+  await assert.rejects(registry.activate(ids.ordinary, () => true, signal), /changed/);
+  await registry.discover();
+  controller.abort();
+  await assert.rejects(registry.activate(ids.ordinary, () => true, signal), { name: 'AbortError' });
+  assert.equal(registry.selected.size, 0);
 });
 
 test('skill YAML cannot enable permissions, disabled workflows, aliases or invalid identities', () => {

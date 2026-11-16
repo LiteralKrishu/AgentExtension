@@ -183,7 +183,7 @@ async function fixture(t, mode, { fallback = false, cancel = false, cancelOnToke
       prompts.push(input);
       assert.deepEqual(input, { command: 'python3', args: ['-V'] });
       assert.equal(executed.length, 0);
-      assert.deepEqual(target, { revision: 3, scope: 'Accepted hunks' });
+      assert.deepEqual(target, { revision: 3, scope: 'Accepted hunks', unreviewed: 0 });
       return true;
     },
     connector: async request => {

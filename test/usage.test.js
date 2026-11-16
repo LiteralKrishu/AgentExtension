@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { RunUsage, usageSummary } = require('../src/usage');
+const { RunUsage, usageSummary, costSummary } = require('../src/usage');
 const { AuditLog, redactReason } = require('../src/audit');
 const { RunReport } = require('../src/reports');
 
@@ -66,16 +66,33 @@ test('the audit log is hash-chained across rotation, detects tampering, and expo
   assert.match(tampered.reason, /does not match its hash/);
 });
 
+test('reported turn costs preserve zero and mark a partial estimate without counting compaction twice', () => {
+  const run = new RunUsage();
+  assert.equal(costSummary(run.snapshot().cost), 'Unreported');
+  run.turnCost({ totalCostInUsd: 0 });
+  assert.equal(costSummary(run.snapshot().cost), 'USD 0.00');
+  run.compaction({ usage: { ...usage(10, 2), costInUsd: 0.125 } });
+  run.turnCost({ totalCostInUsd: 0.5 });
+  run.turnCost({ totalCostInUsd: 0.125 });
+  run.turnCost();
+  assert.deepEqual(run.snapshot().cost, { usd: 0.625, unreportedTurns: 1 });
+  assert.equal(costSummary(run.snapshot().cost), 'USD 0.625 (some turns unreported)');
+});
+
 test('run reports include a usage table with token sources and compactions', async t => {
   const storage = await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-usage-report-'));
   t.after(() => fs.rm(storage, { recursive: true, force: true }));
   const run = new RunUsage({ maxTokens: 5_000, maxToolCalls: 10 });
   run.model(usage(1_200, 40, { harness: 600, instructions: 200, messages: 300, skills: 50, toolDefinitions: 50 }));
   run.model(usage(300, 60), 'worker:test-diagnosis');
+  run.turnCost({ totalCostInUsd: 0.015 });
+  run.compaction({ createdAt: 't', trigger: { type: 'input_tokens' }, durationMs: 5 });
   run.tool('read_file');
   const file = await new RunReport(storage, '/w', '00000000-0000-4000-8000-000000000001').save({ phase: 'done', revision: 0, selection: '', usage: run.snapshot() });
   const text = await fs.readFile(file, 'utf8');
   assert.match(text, /\| Tokens \(input \+ output\) \| 1,600 \| 5,000 \|\n\| Tool calls \| 1 \| 10 \|/);
   assert.match(text, /- worker:test-diagnosis: 1 model calls · 300 input · 60 output tokens/);
   assert.match(text, /- Last parent input by source: harness 600 · instructions 200 · messages 300 · skills 50 · toolDefinitions 50/);
+  assert.match(text, /\| Estimated cost \| USD 0\.015 \|/);
+  assert.match(text, /Retained context sources are unavailable after compaction/);
 });

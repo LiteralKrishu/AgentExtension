@@ -8,9 +8,127 @@ const Module = require('node:module');
 const { randomBytes } = require('node:crypto');
 const { setTimeout: sleep } = require('node:timers/promises');
 const { startReadServer } = require('./fixtures/read-server.cjs');
+const { startHost, scriptedModel } = require('./helpers/host.cjs');
 
 const baseUrl = process.env.AGENTEXTENSION_TEST_FORGE_URL;
 const options = { skip: !baseUrl && 'Set AGENTEXTENSION_TEST_FORGE_URL to a local TrueForge instance.', timeout: 180_000 };
+
+test('a schedule pins selected context, uses only approved workers, and saves questions for one interactive resolution', options, async t => {
+  const { discoverInstructions } = require('../src/instructions');
+  const { ScheduleStore } = require('../src/schedules');
+  const { digest } = require('../src/permissions');
+  const area = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-schedule-context-')));
+  t.after(() => fs.rm(area, { recursive: true, force: true }));
+  const root = path.join(area, 'workspace');
+  const skills = path.join(area, 'skills');
+  await fs.mkdir(root);
+  await fs.mkdir(path.join(skills, 'report-review'), { recursive: true });
+  const skillFile = path.join(skills, 'report-review', 'SKILL.md');
+  await fs.writeFile(skillFile, '---\nname: report-review\ndescription: Review reports\n---\nSelected report workflow.');
+  await fs.writeFile(path.join(root, 'AGENTS.md'), 'Approved workspace profile.');
+  await fs.writeFile(path.join(root, 'sample.txt'), 'Snapshot for the reader.');
+  let workers = 0;
+  let followUps = 0;
+  const model = await scriptedModel(t, baseUrl, ({ input, all, tools, round, call, say }) => {
+    if (all.includes('bounded read-only subagent')) {
+      workers++;
+      assert.doesNotMatch(all, /Selected report workflow|Approved workspace profile|Approved user profile/);
+      assert.ok(!tools.some(name => /command|propose|connector/.test(name)));
+      const task = JSON.parse(input.messages.find(message => message.role === 'user').content);
+      assert.equal(task.sources[0].text, 'Snapshot for the reader.');
+      return say(JSON.stringify({ summary: 'Worker reviewed the snapshot.', findings: [] }));
+    }
+    if (all.includes('SCHEDULED REPORT QUESTION')) {
+      followUps++;
+      assert.match(all, /Use the draft summary/);
+      assert.match(all, /Which summary should I use\?/);
+      assert.doesNotMatch(all, /SCHEDULED READ-ONLY REPORT MODE/);
+      return say('Follow-up complete.');
+    }
+    assert.match(all, /Selected report workflow/);
+    assert.match(all, /Approved workspace profile/);
+    assert.match(all, /Approved user profile/);
+    assert.ok(tools.some(name => name.endsWith('research_repository')));
+    assert.ok(!tools.some(name => /review_draft|run_worker|edit|propose|command|read_skill_resource/.test(name)));
+    if (round === 0) return call('research_repository', { question: 'Read the sample', files: ['sample.txt'] });
+    assert.match(all, /Worker reviewed the snapshot/);
+    return call('ask_user_question', { question: 'Which summary should I use?', options: ['Use the draft summary', 'Use the final summary'] });
+  });
+  const host = await startHost(t, { root, settings: { serverUrl: baseUrl, model: model.model, fallbackModel: '', compaction: true,
+    turnTimeoutSeconds: 60, skillRoots: [skills], userInstructions: 'Approved user profile.', automaticSkills: false } });
+  await host.context.globalState.update(`instructions.v1.${digest(root).slice(0, 32)}`, (await discoverInstructions(root)).digest);
+  host.answers.push({ kind: 'pick', value: items => items.filter(item => item.label === 'review-team') }, { kind: 'modal', value: 'Enable plugin' });
+  await host.send({ type: 'plugins' });
+  await host.waitFor(state => state.plugins?.some(plugin => plugin.id === 'review-team'), 5_000);
+  const later = new Date(Date.now() + 5 * 3_600_000).toISOString().slice(11, 16);
+  host.answers.push(
+    { kind: 'pick', value: items => items.find(item => item.create) },
+    { kind: 'input', value: 'Report with context' }, { kind: 'input', value: 'Review the sample for a report.' },
+    { kind: 'pick', value: items => items.find(item => item.label === 'Every day') }, { kind: 'input', value: later }, { kind: 'input', value: 'UTC' },
+    { kind: 'pick', value: items => items.find(item => item.label === 'Small') },
+    { kind: 'pick', value: items => items.filter(item => ['userInstructions', 'workspaceInstructions', 'workers'].includes(item.kind) || item.label === 'report-review') },
+    { kind: 'modal', value: () => {
+      const detail = host.shown.warning.at(-1).detail;
+      for (const label of ['User instruction profile', 'Approved workspace instructions', 'report-review', 'Repository research worker']) {
+        assert.ok(detail.includes(label));
+      }
+      return 'Approve schedule';
+    } });
+  await host.command('scheduledReports');
+  const store = new ScheduleStore(host.storage, root);
+  const [schedule] = await store.list();
+  assert.equal(schedule.approval.versions.inputs.length, 4);
+  assert.ok(schedule.approval.versions.inputs.every(input => /^[a-f0-9]{64}$/.test(input.version)));
+  const runNow = async () => {
+    host.answers.push({ kind: 'pick', value: items => items.find(item => item.schedule?.id === schedule.id) },
+      { kind: 'pick', value: items => items.find(item => item.id === 'run') });
+    await host.command('scheduledReports');
+  };
+  await runNow();
+  await host.waitFor(state => state.pendingScheduleQuestions === 1, 30_000, 'deferred question');
+  assert.ifError(model.state.error);
+  const [first] = await store.pendingQuestions();
+  assert.equal(first.status, 'needs-answer');
+  assert.equal(first.usage.toolCalls, 2, 'Worker dispatch and the saved question use the tool budget');
+  const report = await fs.readFile(first.report, 'utf8');
+  assert.match(report, /## Saved question[\s\S]*Which summary should I use\?/);
+  assert.match(report, /## Read-only workers[\s\S]*repository-research · completed/);
+
+  host.answers.push({ kind: 'pick', value: items => { assert.equal(items.length, 1); return items[0]; } },
+    { kind: 'pick', value: items => items.find(item => item.answer === 'Use the draft summary') });
+  await host.send({ type: 'scheduled-questions' });
+  await host.waitFor(state => state.phase === 'done' && state.pendingScheduleQuestions === 0 && !state.runActive, 20_000);
+  assert.ifError(model.state.error);
+  assert.equal(followUps, 1);
+  assert.deepEqual(await store.pendingQuestions(), []);
+  await runNow();
+  await host.waitFor(state => state.pendingScheduleQuestions === 1, 30_000);
+  host.answers.push({ kind: 'pick', value: items => { assert.equal(items.length, 1); return items[0]; } },
+    { kind: 'pick', value: items => items.find(item => item.dismiss) });
+  await host.send({ type: 'scheduled-questions' });
+  await host.waitFor(state => state.pendingScheduleQuestions === 0, 10_000);
+  assert.equal(followUps, 1);
+  assert.equal(workers, 2);
+
+  const callsBeforeChange = model.state.requests.length;
+  await fs.appendFile(skillFile, '\nNew unapproved workflow.');
+  await runNow();
+  await host.waitFor(async () => (await store.list())[0].needsReview && (await store.history(schedule.id))[0].status === 'blocked', 10_000, 'stale scope paused');
+  assert.equal(model.state.requests.length, callsBeforeChange);
+  const [blocked] = await store.history(schedule.id);
+  assert.equal(blocked.status, 'blocked');
+  assert.match(blocked.reason, /changed after approval/);
+  host.answers.push({ kind: 'pick', value: items => items.find(item => item.schedule?.id === schedule.id) },
+    { kind: 'pick', value: items => items.find(item => item.id === 'resume') },
+    { kind: 'modal', value: 'Approve schedule' });
+  await host.command('scheduledReports');
+  const [reapproved] = await store.list();
+  assert.equal(reapproved.enabled, true);
+  assert.notEqual(reapproved.approval.digest, schedule.approval.digest);
+  assert.notEqual(reapproved.approval.versions.inputs.find(input => input.kind === 'skills').version,
+    schedule.approval.versions.inputs.find(input => input.kind === 'skills').version);
+  assert.deepEqual(host.shown.errors, []);
+});
 
 // A small VS Code host stub. It drives the real extension code: commands, quick picks, modal approvals,
 // SecretStorage, global storage, the scheduler timer, TrueForge sessions and saved reports.
@@ -136,6 +254,7 @@ test('the extension creates, approves, runs on its timer, records and re-approve
   Module._load = function (request, ...rest) { return request === 'vscode' ? host.vscode : load.call(this, request, ...rest); };
   t.after(() => { Module._load = load; for (const item of context.subscriptions) item.dispose?.(); });
   delete require.cache[require.resolve('../src/extension.js')];
+  delete require.cache[require.resolve('../src/schedule-controller.js')];
   const { activate } = require('../src/extension.js');
   const { secretKey } = require('../src/connectors');
   activate(context);
@@ -158,6 +277,7 @@ test('the extension creates, approves, runs on its timer, records and re-approve
     { kind: 'input', value: 'UTC' },
     { kind: 'pick', value: items => items.filter(item => item.label === 'docs') },
     { kind: 'pick', value: items => items.find(item => item.label === 'Small') },
+    { kind: 'pick', value: [] },
     { kind: 'modal', value: buttons => { approval = host.shown.warning.at(-1); return buttons.find(button => button === 'Approve schedule'); } });
   await scheduled();
   assert.equal(answers.length, 0);

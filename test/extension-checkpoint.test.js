@@ -46,6 +46,7 @@ test('a run interrupted at a question resumes after a restart with its draft, a 
   await second.send({ type: 'review-conflicts' });
   const review = await second.waitFor(state => state.phase === 'review', 60_000, 'review');
   assert.ifError(model.state.error);
+  assert.notEqual(review.session, waiting.session, 'A live editor connection keeps ownership of its session');
   assert.notEqual(review.permissions.runId, firstRun, 'A new broker');
   assert.equal(review.permissions.events.some(event => event.decision === 'approve' && event.tool !== 'review_changes'), false, 'No approvals carried over');
   assert.deepEqual(review.hunks.map(hunk => hunk.file), ['a.txt']);
@@ -66,6 +67,64 @@ test('a run interrupted at a question resumes after a restart with its draft, a 
   assert.deepEqual(first.shown.errors.concat(second.shown.errors), []);
   await first.send({ type: 'cancel' });
   await first.waitFor(state => state.runActive === false, 30_000, 'first host stopped');
+});
+
+test('an interrupted inline edit reconnects after the editor closes and reviews the restored selection', live, async t => {
+  const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-inline-ws-')));
+  const storage = await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-inline-storage-'));
+  t.after(() => Promise.all([fs.rm(root, { recursive: true, force: true }), fs.rm(storage, { recursive: true, force: true })]));
+  const file = path.join(root, 'a.txt');
+  const base = 'prefix [alpha] suffix\n';
+  await fs.writeFile(file, base);
+  let resumed = 0;
+  const model = await scriptedModel(t, baseUrl, async ({ round, all, call, say }) => {
+    if (/RESUMED RUN/.test(all)) {
+      assert.match(all, /INLINE MODE/);
+      switch (resumed++) {
+        case 0: return call('propose_write', { file: 'a.txt', old_text: 'suffix', new_text: 'outside selection' });
+        case 1:
+          assert.match(all, /old_text must match exactly once/, 'The outside edit is refused by the restored scope');
+          return call('read_file', { file: 'a.txt' });
+        case 2:
+          assert.match(all, /Banner.*prefix \[ALPHA\] suffix/);
+          return call('review_changes', {});
+        default: return say('Reviewed the restored inline draft.');
+      }
+    }
+    if (round === 0) return call('propose_write', { file: 'a.txt', old_text: 'alpha', new_text: 'ALPHA' });
+    if (round === 1) return call('ask_user_question', { question: 'Does this casing look right?' });
+    throw new Error('The previous question must not be resumed with an old response.');
+  });
+  const settings = { serverUrl: baseUrl, model: model.model, fallbackModel: '', compaction: true, turnTimeoutSeconds: 60,
+    readConnectors: [], skillRoots: [], pluginRoots: [], browserOrigins: [], automaticSkills: false };
+  const first = await startHost(t, { root, settings, storage });
+  first.vscode.workspace.getWorkspaceFolder = () => first.vscode.workspace.workspaceFolders[0];
+  first.vscode.window.activeTextEditor = {
+    document: { uri: first.vscode.Uri.file(file), getText: () => base, offsetAt: position => position.character },
+    selection: { isEmpty: false, start: { character: base.indexOf('alpha') }, end: { character: base.indexOf(']') } },
+  };
+  first.answers.push({ kind: 'input', value: 'Uppercase the selection.' });
+  const inlineRun = first.command('inlineEdit');
+  const waiting = await first.waitFor(state => state.phase === 'question', 60_000, 'inline question');
+  for (const item of first.context.subscriptions) item.dispose?.();
+  await inlineRun;
+  await first.waitFor(state => !state.runActive && state.checkpoint, 10_000, 'saved inline checkpoint');
+  await fs.writeFile(file, `Banner\n${base}`);
+  const second = await startHost(t, { root, settings, storage });
+  await second.waitFor(state => state.checkpoint, 10_000, 'inline recovery offered');
+  await second.send({ type: 'resume-run' });
+  const review = await second.waitFor(state => state.phase === 'review', 60_000, 'restored inline review');
+  assert.ifError(model.state.error);
+  assert.equal(review.session, waiting.session, 'Recovery reuses the original TrueForge session');
+  assert.notEqual(review.permissions.runId, waiting.permissions.runId, 'Recovery uses a fresh broker');
+  assert.equal(review.hunks.length, 1);
+  assert.equal(review.hunks[0].line, 2);
+  assert.equal(await fs.readFile(file, 'utf8'), `Banner\n${base}`);
+  await second.send({ type: 'decision', id: review.hunks[0].id, value: 'accept' });
+  await second.send({ type: 'continue' });
+  await second.waitFor(state => state.phase === 'ready' && !state.runActive, 60_000, 'restored draft ready');
+  await second.send({ type: 'cancel' });
+  await second.waitFor(state => state.phase === 'cancelled' && !state.checkpoint, 10_000, 'checkpoint cleared');
 });
 
 test('a model failure keeps the checkpoint until the user discards it', live, async t => {

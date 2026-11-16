@@ -3,20 +3,42 @@ const path = require('node:path');
 const { createTwoFilesPatch } = require('diff');
 const { createHash } = require('node:crypto');
 const { digest } = require('./permissions');
+const { costSummary } = require('./usage');
 
 const escape = value => String(value ?? '').replace(/[\\`*_[\]<>|]/g, '\\$&').replace(/[\r\n]/g, ' ').slice(0, 500);
 function patchFor(changes) {
   return changes.map(change => createTwoFilesPatch(`a/${change.file}`, `b/${change.file}`, change.before ?? '', change.after ?? '')).join('\n');
 }
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+
+function compactionLines(compactions, sources) {
+  const lines = [`- Context compactions: ${compactions.length}`];
+  if (!compactions.length) return lines;
+  lines.push('- Retained context sources are unavailable after compaction.');
+  const latest = compactions.findLast(event => event.threadId === 'main');
+  if (latest) {
+    const number = value => value.toLocaleString('en-US');
+    const details = [latest.at && escape(latest.at),
+      Number.isFinite(latest.durationMs) ? `${number(latest.durationMs)} ms` : '',
+      `${number(latest.inputTokens)} input and ${number(latest.outputTokens)} output tokens`,
+      Number.isFinite(latest.contextTokens) && Number.isFinite(latest.thresholdTokens)
+        ? `${number(latest.contextTokens)} context tokens at a ${number(latest.thresholdTokens)}-token threshold` : '',
+    ].filter(Boolean);
+    lines.push(`- Latest main-thread compaction · ${details.join(' · ')}`);
+    if (sources) lines.push(`- Context source records · ${number(sources.before)} recorded before this compaction · ${number(sources.after)} recorded after`);
+  }
+  return lines;
+}
+
 class RunReport {
   constructor(storage, workspace, runId) {
     this.parent = path.join(storage, 'reports', digest(workspace).slice(0, 24));
     this.directory = path.join(this.parent, runId);
-    this.runId = runId; this.checks = []; this.images = []; this.events = [];
+    this.runId = runId; this.checks = []; this.images = []; this.events = []; this.hooks = [];
   }
   check(check) { this.checks.push({ ...check, patch: patchFor(check.changes ?? []) }); }
   event(event) { this.events.push({ ...event, time: new Date().toISOString() }); this.events = this.events.slice(-100); }
+  hook(result) { this.hooks.push(result); this.hooks = this.hooks.slice(-32); }
   async image(bytes, state) {
     if (this.images.length >= 6) throw new Error('Screenshot limit reached: six per run.');
     await fs.mkdir(this.directory, { recursive: true });
@@ -25,7 +47,7 @@ class RunReport {
     this.images.push({ name, snapshot: state.snapshot, origin: new URL(state.url).origin, digest: sha256(bytes) });
     return name;
   }
-  async save({ phase, revision, selection, changes = [], session, workers = [], plugins = [], permissions, applied = false, instructions, policy, usage }) {
+  async save({ phase, revision, selection, changes = [], session, workers = [], plugins = [], permissions, applied = false, instructions, policy, usage, compactionSources }) {
     await fs.mkdir(this.directory, { recursive: true });
     const patch = patchFor(changes);
     await fs.writeFile(path.join(this.directory, 'draft.patch'), patch, { mode: 0o600 });
@@ -52,6 +74,12 @@ class RunReport {
     lines.push('', '## Workers and plugins', '');
     for (const worker of workers) lines.push(`- ${escape(worker.role)} · ${escape(worker.state)} · snapshot ${escape(worker.snapshot)}${worker.session ? ` · [session](${worker.session})` : ''}`);
     for (const plugin of plugins) lines.push(`- ${escape(plugin.id)} ${escape(plugin.version)} · ${escape(plugin.digest)}`);
+    if (this.hooks.length) {
+      lines.push('', '## Plugin hooks', '');
+      for (const { plugin, name, event, status, detail } of this.hooks) {
+        lines.push(`- ${escape(plugin)}/${escape(name)} · ${escape(event)} · ${escape(status)} · ${escape(detail)}`);
+      }
+    }
     if (instructions) {
       lines.push('', '## Instructions', '', `- Agent definition: ${escape(instructions.agent)}`,
         `- User instruction profile: ${instructions.user ? escape(instructions.user) : 'none'}`,
@@ -63,10 +91,11 @@ class RunReport {
       lines.push('', '## Usage', '', '| Measure | Used | Limit |', '| --- | --- | --- |',
         `| Tokens (input + output) | ${usage.tokens.total.toLocaleString('en-US')} | ${limit(usage.limits.maxTokens)} |`,
         `| Tool calls | ${usage.toolCalls} | ${limit(usage.limits.maxToolCalls)} |`,
-        `| Run time | ${usage.elapsedSeconds} s | ${usage.limits.maxMinutes ? `${usage.limits.maxMinutes * 60} s` : 'none'} |`, '');
+        `| Run time | ${usage.elapsedSeconds} s | ${usage.limits.maxMinutes ? `${usage.limits.maxMinutes * 60} s` : 'none'} |`,
+        `| Estimated cost | ${costSummary(usage.cost)} | — |`, '');
       for (const [actor, row] of Object.entries(usage.actors)) lines.push(`- ${escape(actor)}: ${row.calls} model calls · ${row.input.toLocaleString('en-US')} input · ${row.output.toLocaleString('en-US')} output tokens`);
       if (usage.breakdown) lines.push(`- Last parent input by source: ${Object.entries(usage.breakdown).map(([key, value]) => `${escape(key)} ${Number(value).toLocaleString('en-US')}`).join(' · ')}`);
-      lines.push(`- Context compactions: ${usage.compactions.length}`);
+      lines.push(...compactionLines(usage.compactions, compactionSources));
       if (usage.reached) lines.push(`- Limit reached: ${escape(usage.reached)}`);
     }
     if (policy) lines.push('', `Permission policy: ${escape(policy.slice(0, 16))}.`);
@@ -83,8 +112,11 @@ class RunReport {
 async function prune(parent, keep, limit = 20) {
   const folders = await fs.readdir(parent, { withFileTypes: true });
   const records = await Promise.all(folders.filter(item => item.isDirectory() && /^[a-f0-9-]{36}$/.test(item.name))
-    .map(async item => ({ name: item.name, time: (await fs.stat(path.join(parent, item.name))).mtimeMs })));
-  for (const old of records.sort((a, b) => b.time - a.time).slice(limit)) if (old.name !== keep) await fs.rm(path.join(parent, old.name), { recursive: true, force: true });
+    .map(async item => {
+      const stat = await fs.stat(path.join(parent, item.name)).catch(error => { if (error.code !== 'ENOENT') throw error; });
+      return stat && { name: item.name, time: stat.mtimeMs };
+    }));
+  for (const old of records.filter(Boolean).sort((a, b) => b.time - a.time).slice(limit)) if (old.name !== keep) await fs.rm(path.join(parent, old.name), { recursive: true, force: true });
 }
 
 // Model text is untrusted. Keep it inside a fence so it cannot add links, headings or HTML to the evidence section.
@@ -98,7 +130,8 @@ async function saveScheduledReport(storage, workspace, runId, record) {
   const parent = path.join(storage, 'reports', digest(workspace).slice(0, 24));
   const directory = path.join(parent, runId);
   await fs.mkdir(directory, { recursive: true });
-  const { schedule, occurrence, trigger, status, reason, text, session, usage, limits, permissions, connectors, started, finished } = record;
+  const { schedule, occurrence, trigger, status, reason, text, session, usage, limits, permissions, connectors, started, finished,
+    question, workers = [], compactions, compactionSources } = record;
   const seconds = Math.round((finished - started) / 1000);
   const lines = ['# AgentExtension scheduled report', '', `Schedule: ${escape(schedule.name)} · ${schedule.id}`, `Run: ${runId}`,
     `Scheduled for: ${escape(occurrence.slot)} ${escape(schedule.timeZone)} (${new Date(occurrence.at).toISOString()}) · trigger: ${escape(trigger)}${occurrence.adjusted ? ' · moved forward by a clock change' : ''}`,
@@ -109,14 +142,24 @@ async function saveScheduledReport(storage, workspace, runId, record) {
     ...(connectors.length ? connectors.map(config => `- Connector ${escape(config.id)} · ${escape(config.account)} · ${config.tools.map(tool => `${escape(tool.name)}: ${tool.targets.map(escape).join(', ')}`).join('; ')}`)
       : ['- Connectors: none']),
     `- Schedule approval: ${schedule.approval.digest.slice(0, 16)} · approved ${new Date(schedule.approval.at).toISOString()}`,
-    '- Writes, draft edits, commands, browser, native apps and subagents: unavailable. Any change needs a new interactive run and its own approval.', '',
+    ...(schedule.approval.versions?.inputs?.map(input => `- ${escape(input.label)}${input.description ? ` · ${escape(input.description)}` : ''} · SHA-256 ${escape(input.version)}`) ?? []),
+    '- Writes, draft edits, commands, browser and native app actions need a separate interactive run.', '',
     '## Budget', '', '| Measure | Used | Limit |', '| --- | --- | --- |',
     ...(limits.maxTokens ? [`| Model tokens | ${usage.tokens?.toLocaleString('en-US') ?? 'Unreported'} | ${limits.maxTokens.toLocaleString('en-US')} |`] : []),
+    `| Estimated cost | ${costSummary(usage.cost)} | — |`,
     `| Tool calls | ${usage.toolCalls} | ${limits.toolCalls} |`,
     `| Connector reads | ${usage.connectorReads} | ${limits.connectorReads} |`,
     `| Run time | ${seconds} s | ${limits.minutes * 60} s |`,
     `| Write tool requests refused | ${usage.writesRequested} | 0 approved |`, ''];
+  if (compactions?.length) lines.push(...compactionLines(compactions, compactionSources), '');
   if (session) lines.push(`[TrueForge session](${session})`, '');
+  if (workers.length) {
+    lines.push('## Read-only workers', '', ...workers.map(worker => `- ${escape(worker.role)} · ${escape(worker.state)} · snapshot ${escape(worker.snapshot)}`), '');
+  }
+  if (question) {
+    lines.push('## Saved question', '', fenced([question.text, ...question.options.map(option => `- ${option}`)].join('\n')),
+      '', 'Use **Review scheduled questions** in the Agent panel to answer or dismiss it.', '');
+  }
   lines.push('## Report', '', 'The text below is model output. It has not been verified.', '', fenced(text), '',
     '## Permission decisions', '', 'Targets are hashed. Arguments, connector payloads and credentials are not logged.', '');
   for (const event of permissions?.events ?? []) lines.push(`- ${escape(event.time)} · ${escape(event.tool)} · ${escape(event.effect)} · ${escape(event.decision)} · ${escape(event.reason)} · ${escape(event.target).slice(0, 16)}`);

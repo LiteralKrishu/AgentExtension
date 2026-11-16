@@ -69,7 +69,7 @@ form.addEventListener('submit', event => {
   contextMenu.open = false;
   send('run', { prompt: prompt.value, planFirst: event.submitter?.id === 'plan-first' });
 });
-for (const id of ['cancel', 'session', 'approve-plan', 'continue', 'apply', 'check-accepted', 'undo', 'select-skills', 'revoke', 'memory', 'connectors', 'connector-token', 'plugins', 'browser-access', 'computer-access', 'stop-surfaces', 'run-report', 'schedules', 'policy', 'instructions', 'export-audit', 'resume-run', 'review-conflicts', 'discard-checkpoint', 'review-git', 'model-settings']) {
+for (const id of ['cancel', 'session', 'approve-plan', 'continue', 'apply', 'check-accepted', 'undo', 'select-skills', 'revoke', 'memory', 'connectors', 'connector-token', 'plugins', 'import-plugin', 'plugin-workflow', 'browser-access', 'computer-access', 'stop-surfaces', 'run-report', 'schedules', 'scheduled-questions', 'policy', 'instructions', 'export-audit', 'resume-run', 'review-conflicts', 'discard-checkpoint', 'review-git', 'model-settings']) {
   byId(id).addEventListener('click', () => send(id));
 }
 
@@ -260,6 +260,10 @@ window.addEventListener('message', ({ data }) => {
   byId('run-report').disabled = state.applying;
   byId('review-git').disabled = busy || state.phase === 'ready' || state.applying || Boolean(state.scheduledRunning);
   byId('schedule-summary').textContent = state.scheduleSummary || 'No scheduled reports.';
+  const pendingQuestions = state.pendingScheduleQuestions ?? 0;
+  byId('scheduled-question-inbox').hidden = !pendingQuestions;
+  byId('scheduled-question-summary').textContent = `${pendingQuestions} scheduled question${pendingQuestions === 1 ? '' : 's'} waiting.`;
+  byId('scheduled-questions').disabled = !canRun;
   byId('policy-summary').textContent = state.policySummary || 'Every protected action asks first.';
   byId('memory-summary').textContent = state.memorySummary || '';
   byId('instruction-summary').textContent = state.instructionSummary || 'No instruction profiles in use.';
@@ -281,10 +285,11 @@ window.addEventListener('message', ({ data }) => {
   status.hidden = !state.status;
   if (status.textContent !== (state.status ?? '')) status.textContent = state.status ?? '';
   byId('usage').hidden = !state.usage;
-  byId('usage').textContent = state.usage ? `Usage: ${state.usage}` : '';
+  byId('usage').textContent = state.usage ? `Usage: ${state.usage} · Estimated cost ${state.usageCost ?? 'Unreported'}` : '';
   byId('run').disabled = byId('plan-first').disabled = !canRun;
   byId('cancel').hidden = !busy && state.phase !== 'ready' && !state.scheduledRunning;
-  byId('cancel').textContent = state.checkingAccepted ? 'Cancel check' : state.phase === 'ready' ? 'Discard draft' : 'Cancel run';
+  byId('cancel').textContent = state.validatingApply ? 'Cancel validation'
+    : state.checkingAccepted ? 'Cancel check' : state.phase === 'ready' ? 'Discard draft' : 'Cancel run';
   byId('run').hidden = byId('plan-first').hidden = !byId('cancel').hidden;
   const modelSettings = byId('model-settings');
   modelSettings.textContent = state.model || 'Configure model';
@@ -298,7 +303,7 @@ window.addEventListener('message', ({ data }) => {
   const responseChanged = response.textContent !== state.text;
   if (responseChanged) response.textContent = state.text;
   byId('select-skills').disabled = busy || state.phase === 'ready' || state.applying;
-  for (const id of ['memory', 'connectors', 'connector-token', 'plugins']) byId(id).disabled = busy || state.phase === 'ready' || state.applying;
+  for (const id of ['memory', 'connectors', 'connector-token', 'plugins', 'import-plugin', 'plugin-workflow']) byId(id).disabled = busy || state.phase === 'ready' || state.applying;
   byId('plugin-summary').textContent = state.plugins?.length
     ? `Enabled plugins: ${state.plugins.map(plugin => `${plugin.id} ${plugin.version} · ${plugin.digest.slice(0, 12)}`).join(', ')}` : 'No plugins enabled.';
   byId('connector-summary').textContent = state.connectors?.length ? `Enabled connectors: ${state.connectors.join(', ')}` : 'No connectors enabled.';
@@ -311,14 +316,17 @@ window.addEventListener('message', ({ data }) => {
   byId('permission-list').replaceChildren(...(state.permissions?.events ?? []).slice(-30).reverse()
     .map(event => element('li', `${event.decision} · ${event.tool} · ${event.reason}`)));
   byId('manifest').hidden = !state.manifest?.length;
+  byId('manifest-retention').hidden = !state.manifest?.some(entry => entry.compactionTiming);
   const totals = Object.entries(state.manifestTotals ?? {});
   const characters = totals.reduce((sum, [, value]) => sum + value.characters, 0);
   byId('manifest-summary').textContent = `Context sources · ${state.manifest?.length ?? 0}${characters ? ` · ${characters.toLocaleString()} characters, about ${Math.ceil(characters / 4).toLocaleString()} tokens` : ''}`;
   byId('manifest-totals').replaceChildren(...totals.map(([kind, value]) => element('li', `${kind} · ${value.sources} · ${value.characters.toLocaleString()} characters · ~${value.estimatedTokens.toLocaleString()} tokens`)));
   byId('manifest-list').replaceChildren(...(state.manifest ?? []).map(entry => {
     const row = element('li');
+    const timing = entry.compactionTiming === 'before' ? 'Recorded before compaction'
+      : entry.compactionTiming === 'after' ? 'Recorded after compaction' : '';
     row.append(element('strong', `${entry.kind} · ${entry.source}`),
-      element('div', `${entry.trust} · ${entry.characters.toLocaleString()} characters · ${entry.reason}`, 'hint'));
+      element('div', [entry.trust, `${entry.characters.toLocaleString()} characters`, entry.reason, timing].filter(Boolean).join(' · '), 'hint'));
     return row;
   }));
 

@@ -38,8 +38,9 @@ async function packageExtension(output) {
     await fs.writeFile(path.join(staging, 'package.json'), JSON.stringify(packaged, null, 2) + '\n');
     await build({
       absWorkingDir: root,
-      entryPoints: [manifest.main],
-      outfile: path.join(staging, main),
+      entryPoints: { 'extension.bundle': manifest.main, 'background-cli': './src/background-cli.js', 'organization-service': './src/organization-service.js' },
+      outdir: path.join(staging, 'src'),
+      outExtension: { '.js': '.cjs' },
       bundle: true,
       minify: true,
       platform: 'node',

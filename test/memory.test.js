@@ -47,6 +47,28 @@ test('notes are edited in place, keep their id and source, and preferences are a
   assert.deepEqual(notes.list().map(item => item.text), ['Legacy note', 'Use node --test.']);
 });
 
+test('a shorter approved summary frees space and replaces only unchanged notes from the selected store', async () => {
+  const state = storage();
+  const workspace = new WorkspaceMemory(state, '/a');
+  const preferences = new UserPreferences(state);
+  const preference = await preferences.save('Keep answers short.');
+  const source = { kind: 'agent', references: [{ file: 'README.md', start: 2 }] };
+  const first = await workspace.save('a'.repeat(2_000), source);
+  const other = await workspace.save('b'.repeat(2_000));
+  const third = await workspace.save('c'.repeat(2_000), source);
+  const last = await workspace.save('d'.repeat(2_000));
+  await assert.rejects(workspace.save('A new note'), /full/);
+  await assert.rejects(workspace.combine([first, preference], 'Different store'), /selected notes changed/);
+  await workspace.edit(first.id, 'e'.repeat(2_000));
+  await assert.rejects(workspace.combine([first, third], 'Stale selection'), /selected notes changed/);
+  const [edited] = workspace.list();
+  const combined = await workspace.combine([edited, third], 'Reviewed project summary.');
+  assert.deepEqual(combined.source, { kind: 'user', references: source.references });
+  assert.deepEqual(workspace.list().map(note => note.id), [combined.id, other.id, last.id]);
+  assert.deepEqual(preferences.list(), [preference]);
+  await workspace.save('A new note');
+});
+
 test('agent suggestions wait for approval, validate source references, and land in the chosen store with their source', async () => {
   const store = storage();
   const suggestions = new SuggestedNotes(store, '/a');

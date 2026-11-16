@@ -2,6 +2,7 @@ const path = require('node:path');
 const { z } = require('zod');
 const { digest } = require('./permissions');
 const { SurfaceAccess } = require('./surface-access');
+const { safePath } = require('./workspace');
 
 const browserOpen = z.strictObject({ url: z.string().min(1).max(2_000) });
 const browserObserve = z.strictObject({ screenshot: z.boolean().default(false) });
@@ -9,6 +10,11 @@ const browserVisit = z.strictObject({ url: z.string().min(1).max(2_000), reason:
 const VISIT = { limit: 3, ttl: 5 * 60_000 };
 const browserAction = z.strictObject({ snapshot: z.string().length(64), element: z.string().regex(/^e\d{1,2}$/),
   action: z.enum(['click', 'fill', 'upload']), text: z.string().max(2_000).optional(), file: z.string().max(500).optional() });
+const browserDownload = z.strictObject({ snapshot: z.string().length(64), element: z.string().regex(/^e\d{1,2}$/),
+  file: z.string().min(1).max(500) });
+const DOWNLOAD_LIMIT = 64_000;
+const DOWNLOAD_TYPES = new Map([['.txt', 'text/plain'], ['.md', 'text/markdown'], ['.csv', 'text/csv'], ['.json', 'application/json']]);
+const isAttachment = headers => /^attachment(?:\s*;|\s*$)/i.test(headers.get('content-disposition') ?? '');
 
 // A readable excerpt of an outgoing request body for the approval dialog. Control characters are shown as spaces.
 function bodyPreview(body, limit = 600) {
@@ -47,6 +53,7 @@ class ScopedBrowser extends SurfaceAccess {
     this.origins = browserOrigins(options.origins); this.interactive = options.interactive === true;
     this.executablePath = options.executablePath || undefined;
     this.workspace = options.workspace; this.onImage = options.onImage ?? (async () => undefined);
+    this.stageDownload = options.stageDownload;
     this.requests = new Set(); this.requestCount = 0; this.responseBytes = 0; this.visits = 0; this.now = options.now ?? Date.now;
     this.signal.addEventListener('abort', () => { void this.browser?.close().catch(() => {}); }, { once: true });
   }
@@ -116,6 +123,9 @@ class ScopedBrowser extends SurfaceAccess {
         signal: AbortSignal.any([this.signal, AbortSignal.timeout(15_000)]) });
       if (response.status >= 300 && response.status < 400) {
         await response.body?.cancel(); throw new Error('Redirect blocked. Open the destination explicitly within the approved scope.');
+      }
+      if (isAttachment(response.headers)) {
+        await response.body?.cancel(); throw new Error('Use the approved browser download action for attachments.');
       }
       const chunks = []; let size = 0;
       if (response.body) for await (const chunk of response.body) {
@@ -233,8 +243,70 @@ class ScopedBrowser extends SurfaceAccess {
       } finally { this.gesture = undefined; }
     });
   }
+  download(raw, requestSignal = this.signal) {
+    const input = browserDownload.parse(raw);
+    return this.operation('browser download', input.file, async () => {
+      const receipt = this.receipt;
+      if (!this.interactive || !this.stageDownload || !receipt) throw new Error('Browser downloads are unavailable.');
+      if (this.onVisit()) throw new Error('Downloads are blocked on pages outside the selected origins.');
+      const index = Number(input.element.slice(1));
+      const node = receipt.state.elements[index];
+      if (receipt.snapshot !== input.snapshot || node?.tag !== 'a' || !node.href || node.disabled) {
+        throw new Error('Observe a current browser link to the attachment.');
+      }
+      const source = this.allowed(new URL(node.href, receipt.state.url).href, { write: true });
+      if (source.origin !== new URL(receipt.state.url).origin || source.hash) throw new Error('Use a direct attachment link from the current page origin.');
+      const file = safePath(input.file);
+      const mediaType = DOWNLOAD_TYPES.get(path.extname(file).toLowerCase());
+      if (!mediaType) throw new Error('Choose a new .txt, .md, .csv or .json workspace file.');
+      const checkLink = async () => {
+        requestSignal.throwIfAborted();
+        if ((await this.readState()).snapshot !== receipt.snapshot || !await receipt.handles[index].isVisible()
+            || !await receipt.handles[index].evaluate((link, url) => link.isConnected && link.href === url
+              && !link.closest('[inert], [aria-disabled="true"]'), source.href)) {
+          throw new Error('Browser download link changed. Observe again.');
+        }
+      };
+      await this.workspace.resolve(file, true);
+      await checkLink();
+      const action = await this.approve('browser_download', 'browser.download', source.href, input,
+        { snapshot: receipt.snapshot, source: source.href, file },
+        { title: 'Allow this browser download?', detail: `${source.href}\nWorkspace file: ${file}\nUp to 64,000 bytes of UTF-8 text. The file will be staged for hunk review before it is written.` },
+        undefined, requestSignal);
+      await checkLink();
+      const signal = AbortSignal.any([this.signal, requestSignal, this.permissions.revocation.signal, AbortSignal.timeout(15_000)]);
+      const check = () => { signal.throwIfAborted(); this.check(action); };
+      check(); this.permissions.require(action);
+      if (++this.requestCount > 100) throw new Error('Browser request limit reached.');
+      // The host reads the exact approved URL. It does not forward browser cookies or use server-provided filenames.
+      const response = await fetch(source.href, { redirect: 'manual', signal });
+      const type = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
+      const length = response.headers.get('content-length');
+      if (response.status !== 200 || !response.body || !isAttachment(response.headers) || type !== mediaType
+          || (length !== null && Number(length) > DOWNLOAD_LIMIT)) {
+        await response.body?.cancel();
+        throw new Error('Use a direct attachment with the destination file type and a size of at most 64,000 bytes.');
+      }
+      const chunks = [];
+      let bytes = 0;
+      for await (const chunk of response.body) {
+        check();
+        bytes += chunk.length; this.responseBytes += chunk.length;
+        if (bytes > DOWNLOAD_LIMIT || this.responseBytes > 16_000_000) throw new Error('Browser download size limit exceeded.');
+        chunks.push(chunk);
+      }
+      let text;
+      try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(Buffer.concat(chunks)); }
+      catch { throw new Error('The browser download must be UTF-8 text.'); }
+      if (!text || text.includes('\0')) throw new Error('The browser download must be non-empty UTF-8 text.');
+      await checkLink();
+      await this.permissions.refreshPolicy();
+      check();
+      return this.stageDownload(file, text, bytes, check);
+    });
+  }
   async reset() { await this.browser?.close().catch(() => {}); this.browser = this.page = this.context = this.receipt = undefined; }
   close() { super.close(); return this.reset(); }
 }
 
-module.exports = { ScopedBrowser, bodyPreview, scopedCsp, browserOrigins, browserOpen, browserObserve, browserAction, browserVisit, VISIT };
+module.exports = { ScopedBrowser, bodyPreview, scopedCsp, browserOrigins, browserOpen, browserObserve, browserAction, browserVisit, browserDownload, VISIT };

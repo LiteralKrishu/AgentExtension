@@ -4,9 +4,47 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { startHost, scriptedModel } = require('./helpers/host.cjs');
+const { WorkspaceMemory, UserPreferences } = require('../src/memory');
 
 const baseUrl = process.env.AGENTEXTENSION_TEST_FORGE_URL;
 const live = { skip: !baseUrl && 'Set AGENTEXTENSION_TEST_FORGE_URL to a local TrueForge instance.', timeout: 150_000 };
+
+test('the notes picker searches full text and sources and asks before replacing selected notes', async t => {
+  const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-note-picker-')));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const host = await startHost(t, { root, settings: {} });
+  const notes = new WorkspaceMemory(host.context.globalState, root);
+  const preferences = new UserPreferences(host.context.globalState);
+  const first = await notes.save(`${'Background '.repeat(12)}Uncommon search term`, { kind: 'agent', references: [{ file: 'guide.md' }] });
+  const second = await notes.save('Keep build examples current.');
+  await preferences.save('Use concise responses.');
+  const pick = host.vscode.window.showQuickPick;
+  host.vscode.window.showQuickPick = (items, options) => {
+    if (options.placeHolder?.startsWith('Search notes')) {
+      assert.equal(options.matchOnDescription, true);
+      assert.equal(options.matchOnDetail, true);
+      const item = items.find(item => item.note?.id === first.id);
+      assert.match(item.label, /Uncommon search term$/);
+      assert.match(item.detail, /guide\.md/);
+    }
+    return pick(items, options);
+  };
+  async function summarize(confirm) {
+    host.answers.push({ kind: 'pick', value: items => items.find(item => item.combine === 'workspace') },
+      { kind: 'pick', value: items => {
+        assert.deepEqual(items.map(item => item.note.id), [first.id, second.id]);
+        return items;
+      } }, { kind: 'input', value: 'Keep the project guide current.' }, { kind: 'modal', value: confirm });
+    await host.send({ type: 'memory' });
+    await host.waitFor(() => host.answers.length === 0, 5_000, 'summary reviewed');
+  }
+  await summarize(undefined);
+  assert.deepEqual(notes.list(), [first, second]);
+  await summarize('Replace selected notes');
+  await host.waitFor(() => notes.list().length === 1, 5_000, 'summary saved');
+  assert.equal(notes.list()[0].text, 'Keep the project guide current.');
+  assert.equal(preferences.list()[0].text, 'Use concise responses.');
+});
 
 test('the agent suggests notes during a run; only notes the user approves enter the next run, with their sources', live, async t => {
   const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-mem-ws-')));

@@ -51,6 +51,8 @@ flask --help
 
 Run the command against an app with test values. Check that a key such as `DEMO_TOKEN` appears with the value `***` and a key such as `DEMO_LABEL` retains its value. Use **Undo last apply** to show that the edit can be reverted.
 
+To collect a draft through the automated live-model harness, set `AGENTEXTENSION_TEST_FLASK_ROOT` to the clean Flask 3.1.3 checkout and run `npm run test:qwen -- --only flask-task-b` from AgentExtension. The harness drives hunk review and records the staged file contents in its JSON result. Inspect that draft and run the CLI checks above in a disposable checkout before recording Task B as passed. [Live-model harness](../test/model/run.cjs)
+
 ## C. Model failure
 
 Start from a clean checkout at the same tag so the original inline task still applies. Configure a separate TrueForge model with an unreachable loopback endpoint. Select it as the primary model. Clear the fallback if you want to show the error path, or keep a working fallback to show automatic recovery.

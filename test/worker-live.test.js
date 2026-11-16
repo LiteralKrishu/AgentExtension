@@ -96,3 +96,42 @@ test('cancelling a parent stops both active TrueForge child turns', options, asy
   }
   assert.ifError(f.failure());
 });
+
+test('a repository worker reads named snapshot lines and is denied a tool outside its role', options, async t => {
+  const { scriptedModel } = require('./helpers/host.cjs');
+  const model = await scriptedModel(t, baseUrl, ({ input, tools, round, call, say, results }) => {
+    assert.ok(!tools.some(name => name.endsWith('run_command')));
+    const request = JSON.parse(input.messages.find(message => message.role === 'user').content);
+    if (request.previous_reply_rejected) {
+      assert.match(request.previous_reply_rejected, /tool call outside its role/);
+      assert.ok(!tools.some(name => name.endsWith('read_file')));
+      return say(JSON.stringify({ summary: 'No tool used on retry.', findings: [] }));
+    }
+    assert.ok(tools.some(name => name.endsWith('read_file')));
+    if (request.question === 'Try an unavailable tool') return call('get_current_datetime', {});
+    if (round === 0) return call('read_file', { file: 'outside.js', start_line: 1 });
+    if (round === 1) {
+      assert.match(results.at(-1).content, /explicitly named/);
+      return call('read_file', { file: 'main.js', start_line: 55, end_line: 55 });
+    }
+    assert.match(results.at(-1).content, /line 55/);
+    return say(JSON.stringify({ summary: 'Line read.', findings: [{ file: 'main.js', line: 55, severity: 'info', message: 'Read only.' }] }));
+  });
+  const signal = new AbortController().signal;
+  const permissions = new PermissionBroker({ workspace: '/fixture', signal });
+  for (const effect of ['workspace.read', 'worker.custom', 'worker.read']) permissions.allowScope(effect);
+  const run = { permissions, signal, workspace: { read: async () => Array.from({ length: 80 }, (_, index) => `// line ${index + 1}`).join('\n') } };
+  const role = { id: 'test/read', name: 'read', instructions: 'Inspect the named file.', snapshot: 'repository', tools: ['read_file'] };
+  const pool = new WorkerPool({ run, settings: { serverUrl: baseUrl, model: model.model }, roles: [], customRoles: [role] });
+  try {
+    const result = await pool.execute(role.id, { question: 'Read extra lines', files: ['main.js'] })
+      .catch(error => { throw model.state.error ?? error; });
+    assert.equal(result.findings[0].line, 55);
+    assert.ok(permissions.events.some(event => event.effect === 'worker.read' && event.decision === 'allow'));
+    assert.ok(permissions.events.some(event => event.effect === 'worker.read' && event.decision === 'deny'));
+    const retried = await pool.execute(role.id, { question: 'Try an unavailable tool', files: ['main.js'] });
+    assert.equal(retried.summary, 'No tool used on retry.');
+    assert.match(pool.reports.at(-1).retried, /tool call outside its role/);
+    assert.ifError(model.state.error);
+  } finally { await pool.close(); }
+});

@@ -29,11 +29,13 @@ test('a run tracks model tokens and tool calls, stops tools at its limit, and th
   const providerTokens = model.state.usage.reduce((sum, item) => sum + item.total_tokens, 0);
   assert.equal(done.usageDetail.tokens.total, providerTokens, 'Totals match what the provider reported');
   assert.equal(done.usageDetail.toolCalls, 2);
+  assert.equal(done.usageCost, 'Unreported');
   assert.ok(done.usageDetail.breakdown.harness > 0 && done.usageDetail.breakdown.messages > 0);
   assert.match(done.usage, new RegExp(`^${providerTokens.toLocaleString('en-US')} / 500,000 tokens · 2 / 2 tool calls · 0:\\d\\d / 10:00 · limit reached: tool-call limit of 2$`));
   await host.send({ type: 'run-report' });
   const report = await fs.readFile(host.shown.documents.at(-1), 'utf8');
   assert.match(report, new RegExp(`\\| Tokens \\(input \\+ output\\) \\| ${providerTokens.toLocaleString('en-US')} \\| 500,000 \\|`));
+  assert.match(report, /\| Estimated cost \| Unreported \|/);
   // Export: all events, saved where the user chooses.
   const target = path.join(out, 'audit.json');
   host.answers.push({ kind: 'pick', value: items => items[0] }, { kind: 'save', value: { fsPath: target } });

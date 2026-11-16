@@ -14,7 +14,7 @@ const { startReadServer } = require('./fixtures/read-server.cjs');
 const baseUrl = process.env.AGENTEXTENSION_TEST_FORGE_URL;
 const options = { skip: !baseUrl && 'Set AGENTEXTENSION_TEST_FORGE_URL to a local TrueForge instance.', timeout: 90_000 };
 const WRITE_TOOLS = ['propose_write', 'propose_lines', 'create_file', 'review_changes', 'run_command', 'propose_plan',
-  'research_repository', 'review_draft', 'browser_open', 'browser_act', 'computer_act', 'read_skill_resource'];
+  'research_repository', 'review_draft', 'browser_open', 'browser_act', 'browser_download', 'computer_act', 'read_skill_resource'];
 
 function respond(res, req, message, usage) {
   const chunk = (delta, finish_reason) => ({ id: 'scheduled', object: 'chat.completion.chunk', created: 1, model: req.model,

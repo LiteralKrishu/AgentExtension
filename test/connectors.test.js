@@ -1,16 +1,23 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const http = require('node:http');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { z } = require('zod');
 const { ReadConnectors, validateConnector, secretKey } = require('../src/connectors');
 const { PermissionBroker } = require('../src/permissions');
 const { approve } = require('../src/forge');
+const { PolicyEngine } = require('../src/policy');
+const { startHost, scriptedModel } = require('./helpers/host.cjs');
 
 const base = { id: 'docs', account: 'test-reader', url: 'https://example.com/mcp',
   tools: [{ name: 'read_doc', targetArgument: 'document', targets: ['manual'] }] };
 const input = { connector: 'docs', tool: 'read_doc', arguments: { document: 'manual' } };
+const writeTools = [{ name: 'update_label', targetArgument: 'document', targets: ['manual'], extraArguments: ['label'] }];
+const writeInput = { connector: 'docs', tool: 'update_label', arguments: { document: 'manual', label: 'Reviewed' } };
 
 test('connector configuration rejects credentials, redirects-in-URL and unsupported transports', () => {
   for (const url of ['http://example.com/mcp', 'file:///etc/passwd', 'https://user:secret@example.com/mcp',
@@ -41,7 +48,7 @@ test('tool, target and extra arguments are checked before credentials; account a
 
 const network = { skip: !process.env.AGENTEXTENSION_TEST_FORGE_URL && 'Enable the local integration suite.', timeout: 20_000 };
 
-async function fixture(t) {
+async function fixture(t, options = {}) {
   let calls = 0;
   let token = 'private-fixture-credential';
   let afterAuth;
@@ -55,6 +62,11 @@ async function fixture(t) {
       return { content: [{ type: 'text', text: `Read ${args.document}. Echo ${token}` }] };
     });
     mcp.registerTool('delete_doc', { inputSchema: {}, annotations: { readOnlyHint: true } }, async () => { calls++; return { content: [] }; });
+    mcp.registerTool('update_label', { inputSchema: { document: z.string(), label: z.string() } }, async args => {
+      calls++;
+      if (options.disconnectOnWrite) { req.socket.destroy(); return { content: [] }; }
+      return { content: [{ type: 'text', text: `Updated ${args.document} to ${args.label}.` }] };
+    });
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     res.once('close', () => { void mcp.close().catch(() => {}); });
     await mcp.connect(transport);
@@ -64,8 +76,8 @@ async function fixture(t) {
   t.after(() => { server.close(); server.closeAllConnections(); });
   const controller = new AbortController();
   const broker = new PermissionBroker({ workspace: '/a', signal: controller.signal });
-  const config = { ...base, url: `http://127.0.0.1:${server.address().port}/mcp` };
-  const registry = new ReadConnectors({ configs: [config], permissions: broker, signal: controller.signal,
+  const config = { ...base, url: `http://127.0.0.1:${server.address().port}/mcp`, ...(options.allowWrites ? { writeTools } : {}) };
+  const registry = new ReadConnectors({ configs: [config], permissions: broker, signal: controller.signal, ...options,
     secrets: { get: async key => { assert.equal(key, secretKey(config)); return token; } } });
   return { broker, registry, config, controller, calls: () => calls,
     afterAuth: fn => { afterAuth = fn; }, rotate: () => { token = 'rotated-token'; } };
@@ -86,6 +98,80 @@ test('authenticated MCP read uses exact approval and redacts a server-echoed cre
   await assert.rejects(f.registry.read(input), /Permission denied/);
   await assert.rejects(f.registry.read({ ...input, tool: 'delete_doc' }), /scope/);
   assert.equal(f.calls(), 1);
+});
+
+test('connector writes require exact approval, recheck policy, and are unavailable to scheduled runs', network, async t => {
+  const f = await fixture(t, { allowWrites: true });
+  const run = { connectors: f.registry, permissions: f.broker };
+  assert.equal(f.registry.catalog()[0].writeTools[0].name, writeInput.tool);
+  assert.equal(f.registry.catalog({ readOnly: true })[0].writeTools, undefined);
+  await assert.rejects(f.registry.read(writeInput), /read scope/);
+  await assert.rejects(f.registry.write(writeInput), /Permission denied/);
+  await assert.rejects(f.registry.prepare({ ...writeInput, arguments: { ...writeInput.arguments, unlisted: 1 } }, 'write'), /write scope/);
+  const call = { name: 'connector_write', args: writeInput };
+  const ui = { connector: async proposal => {
+    assert.deepEqual([proposal.operation, proposal.account, proposal.target, proposal.arguments],
+      ['write', f.config.account, 'manual', writeInput.arguments]);
+    assert.equal(f.calls(), 0);
+    return true;
+  } };
+  assert.equal(await approve(call, { ...run, readOnly: true }, ui), false);
+  assert.equal(await approve(call, { ...run, planFirst: true }, ui), false);
+  assert.equal(await approve(call, run, ui), true);
+  await assert.rejects(f.registry.write({ ...writeInput, arguments: { ...writeInput.arguments, label: 'Changed' } }), /Permission denied/);
+  f.broker.policy = new PolicyEngine({ user: [{ effect: 'connector.write', target: 'docs/update_label/manual', decision: 'deny' }] });
+  await assert.rejects(f.registry.write(writeInput), /access changed/);
+  assert.equal(f.calls(), 0);
+  f.broker.policy = new PolicyEngine();
+  assert.equal(await approve(call, run, ui), true);
+  assert.match((await f.registry.write(writeInput)).text, /Updated manual to Reviewed/);
+  assert.equal(f.calls(), 1);
+  await assert.rejects(f.registry.write(writeInput), /Permission denied/);
+  assert.equal(f.calls(), 1);
+});
+
+test('a dropped connector write returns an uncertain outcome and does not retransmit the write', network, async t => {
+  const events = [];
+  const f = await fixture(t, { allowWrites: true, disconnectOnWrite: true,
+    onWriteDispatch: () => events.push('dispatched'), onUncertainWrite: message => events.push(message) });
+  f.broker.grant((await f.registry.prepare(writeInput, 'write')).action);
+  await assert.rejects(f.registry.write(writeInput), /may have taken effect/);
+  assert.equal(f.calls(), 1);
+  assert.equal(events.length, 2);
+  assert.equal(events[0], 'dispatched');
+  assert.match(events[1], /Check the target before retrying/);
+});
+
+test('the VS Code run shows the exact connector write before TrueForge can dispatch it', network, async t => {
+  const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-connector-write-')));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const f = await fixture(t, { allowWrites: true });
+  const baseUrl = process.env.AGENTEXTENSION_TEST_FORGE_URL;
+  const model = await scriptedModel(t, baseUrl, async ({ round, all, call, say }) => {
+    assert.doesNotMatch(all, /private-fixture-credential/);
+    if (round === 0) return call('list_connector_tools', {});
+    if (round === 1) { assert.match(all, /update_label/); return call('connector_write', writeInput); }
+    assert.match(all, /Updated manual to Reviewed/);
+    return say('Label updated.');
+  });
+  const host = await startHost(t, { root, settings: { serverUrl: baseUrl, model: model.model, fallbackModel: '', readConnectors: [f.config] } });
+  await host.context.secrets.store(secretKey(f.config), 'private-fixture-credential');
+  host.answers.push({ kind: 'pick', value: items => items }, { kind: 'modal', value: (_buttons, title) => {
+    assert.equal(title, 'Allow this connector write?');
+    assert.equal(f.calls(), 0);
+    const detail = host.shown.warning.at(-1).detail;
+    assert.match(detail, /Account: test-reader\nTool: update_label\nTarget: manual/);
+    assert.match(detail, /"label": "Reviewed"/);
+    return 'Allow write';
+  } });
+  await host.send({ type: 'connectors' });
+  await host.waitFor(state => state.connectors?.includes('docs'), 5_000, 'connector selected');
+  await host.send({ type: 'run', prompt: 'Update the label for the manual.' });
+  const done = await host.waitFor(state => state.phase === 'done' && !state.runActive, 15_000, 'write run completed');
+  assert.ifError(model.state.error);
+  assert.equal(f.calls(), 1);
+  assert.equal(done.permissions.events.filter(event => event.tool === 'connector_write' && event.decision === 'allow').length, 1);
+  assert.equal(host.answers.length, 0);
 });
 
 test('revocation after authentication withholds results and blocks the next request', network, async t => {

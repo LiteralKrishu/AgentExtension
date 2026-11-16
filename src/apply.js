@@ -6,8 +6,9 @@ const fs = require('node:fs/promises');
  * | { before: string, after: null } | { before: string, after: string, hunks?: readonly import('./draft').Hunk[] })} WorkspaceChange */
 /** @typedef {{ uri: vscode.Uri, full: string } & ({ create: string, remove?: never } | { create?: never, remove: string })} FileOperation */
 
-/** @param {{ resolve(file: string, newFile: boolean): Promise<string> }} workspace @param {readonly WorkspaceChange[]} changes */
-async function applyWorkspaceChanges(workspace, changes) {
+/** @param {{ resolve(file: string, newFile: boolean): Promise<string> }} workspace @param {readonly WorkspaceChange[]} changes
+ * @param {() => Promise<void>} [beforeWrite] */
+async function applyWorkspaceChanges(workspace, changes, beforeWrite) {
   const textEdit = new vscode.WorkspaceEdit();
   /** @type {FileOperation[]} */
   const resources = [];
@@ -41,6 +42,7 @@ async function applyWorkspaceChanges(workspace, changes) {
     if (versions.some(({ doc, version }) => doc.version !== version)) throw new Error('A file changed during apply. Review the current files and try again.');
   }
   try {
+    await beforeWrite?.();
     checkVersions();
     for (const item of resources) {
       const edit = new vscode.WorkspaceEdit();

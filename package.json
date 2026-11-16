@@ -58,12 +58,32 @@
         "title": "AgentExtension: Export Audit Log"
       },
       {
+        "command": "agentextension.syncAudit",
+        "title": "AgentExtension: Sync Organization Audit"
+      },
+      {
+        "command": "agentextension.project",
+        "title": "AgentExtension: Open Shared Project"
+      },
+      {
         "command": "agentextension.instructions",
         "title": "AgentExtension: Manage Instructions"
       },
       {
         "command": "agentextension.permissionRules",
         "title": "AgentExtension: Manage Permission Rules"
+      },
+      {
+        "command": "agentextension.importPlugin",
+        "title": "AgentExtension: Import Plugin Package"
+      },
+      {
+        "command": "agentextension.exportPlugin",
+        "title": "AgentExtension: Export Plugin Package"
+      },
+      {
+        "command": "agentextension.pluginWorkflow",
+        "title": "AgentExtension: Run Plugin Workflow"
       }
     ],
     "keybindings": [
@@ -143,14 +163,20 @@
           "default": [],
           "maxItems": 7,
           "scope": "machine",
-          "description": "Approved local folders containing skill-name/SKILL.md directories. Skills load only when selected. Scripts never run."
+          "description": "Approved local folders containing skill-name/SKILL.md directories. Each declared script needs separate approval to run."
+        },
+        "agentextension.scriptNodeExecutable": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Absolute path to the Node.js executable for isolated skill scripts and custom plugin hooks. Requires desktop macOS or Linux with bubblewrap."
         },
         "agentextension.readConnectors": {
           "type": "array",
           "default": [],
           "scope": "machine",
           "maxItems": 8,
-          "description": "User-reviewed read-only MCP tools. Enable them per workspace in the panel. Use HTTPS or loopback HTTP. Store credentials with the Connector credential button.",
+          "description": "Workspace MCP connections. Configure exact read targets and optional approval-only write tools. Use HTTPS or loopback HTTP and manage accounts with the Connector credential button.",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -169,6 +195,32 @@
               },
               "account": {
                 "type": "string"
+              },
+              "oauth": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["issuer", "clientId", "scopes"],
+                "description": "Optional OpenID Connect sign-in using a registered public desktop client and a loopback redirect.",
+                "properties": {
+                  "issuer": { "type": "string" },
+                  "clientId": { "type": "string" },
+                  "scopes": { "type": "array", "items": { "type": "string" } }
+                }
+              },
+              "writeTools": {
+                "type": "array",
+                "description": "Each write needs fresh approval for its connector, account, target and arguments.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "targetArgument", "targets"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "targetArgument": { "type": "string" },
+                    "targets": { "type": "array", "items": { "type": "string" } },
+                    "extraArguments": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
               },
               "tools": {
                 "type": "array",
@@ -193,6 +245,39 @@
                         "type": "string"
                       }
                     }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "agentextension.localReadConnectors": {
+          "type": "array",
+          "default": [],
+          "maxItems": 8,
+          "scope": "machine",
+          "description": "Isolated local MCP servers for interactive reads. Each call requires approval. Configure a Node.js executable, a standalone server file, its SHA-256, and exact read tools and targets.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "node", "entryPoint", "sha256", "tools"],
+            "properties": {
+              "id": { "type": "string" },
+              "node": { "type": "string", "description": "Absolute path to the installed Node.js executable." },
+              "entryPoint": { "type": "string", "description": "Absolute path to a self-contained .cjs server file." },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "tools": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "targetArgument", "targets"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "targetArgument": { "type": "string" },
+                    "targets": { "type": "array", "items": { "type": "string" } }
                   }
                 }
               }
@@ -260,14 +345,14 @@
         "agentextension.automaticSkills": {
           "type": "boolean",
           "default": true,
-          "description": "Load up to two skills from approved roots when their name and description match the request. Skills marked disable-model-invocation or allow_implicit_invocation: false are never matched. The run shows each matched skill and the terms that matched."
+          "description": "Match up to two approved skills at run start and let the agent request eligible skills during a run. Skills marked disable-model-invocation or allow_implicit_invocation: false require manual selection."
         },
         "agentextension.permissionRules": {
           "type": "array",
           "default": [],
           "scope": "application",
           "maxItems": 200,
-          "markdownDescription": "User permission rules for every workspace. Each rule has an `effect`, a `target` with `*` wildcards, and a `decision` of `allow`, `ask` or `deny`. Administrator rules apply first. Allow rules are limited to `command.execute`, `connector.read`, `browser.write` and `computer.write`, and need a specific target. Workspace settings cannot set this value.",
+          "markdownDescription": "User permission rules for every workspace. Each rule has an `effect`, a `target` with `*` wildcards, and a `decision` of `allow`, `ask` or `deny`. Administrator rules apply first. Allow rules are limited to `command.execute`, `connector.read`, `browser.write`, `browser.navigate` and `computer.write`, and need a specific target. Workspace settings cannot set this value.",
           "items": {
             "type": "object",
             "required": [
@@ -282,11 +367,14 @@
                   "*",
                   "command.execute",
                   "connector.read",
+                  "connector.write",
+                  "connector.account",
                   "connector.catalog",
                   "connector.*",
                   "browser.observe",
                   "browser.write",
                   "browser.navigate",
+                  "browser.download",
                   "browser.*",
                   "computer.observe",
                   "computer.write",
@@ -298,6 +386,9 @@
                   "worker.custom",
                   "worker.*",
                   "skill.read",
+                  "skill.script",
+                  "skill.*",
+                  "hook.run",
                   "memory.suggest"
                 ]
               },
@@ -325,7 +416,7 @@
           "type": "boolean",
           "default": true,
           "scope": "machine",
-          "description": "Run approved read-only scheduled reports while VS Code is open with their trusted workspace. Turn off to stop all schedules on this machine. Schedules are created and approved in the Agent panel."
+          "description": "Enable the VS Code schedule timer and schedule controls. Separately approved background schedules are managed by the local runner."
         },
         "agentextension.browserExecutable": {
           "type": "string",
@@ -337,7 +428,7 @@
     }
   },
   "scripts": {
-    "check": "node --check src/extension.js && node --check media/panel.js && node --check src/permissions.js && node --check src/skills.js && node --check src/prompt.js && node --check src/memory.js && node --check src/connectors.js && node --check src/plugins.js && node --check src/workers.js && node --check src/worker-session.js && node --check src/browser.js && node --check src/computer.js && node --check src/surface-access.js && node --check src/reports.js && node --check src/schedules.js && node --check src/scheduled-run.js && node --check src/policy.js && node --check src/instructions.js && node --check src/usage.js && node --check src/audit.js && node --check src/checkpoint.js && node --check src/schedule-controller.js && npm run typecheck && npm run lint",
+    "check": "node --check src/extension.js && node --check media/panel.js && node --check src/permissions.js && node --check src/skills.js && node --check src/prompt.js && node --check src/memory.js && node --check src/memory-sync.js && node --check src/connectors.js && node --check src/connector-oauth.js && node --check src/connector-local.js && node --check src/isolated-node.js && node --check src/script-runner.js && node --check src/skill-script.js && node --check src/plugins.js && node --check src/plugin-packages.js && node --check src/plugin-hooks.js && node --check src/workers.js && node --check src/worker-session.js && node --check src/browser.js && node --check src/computer.js && node --check src/surface-access.js && node --check src/reports.js && node --check src/schedules.js && node --check src/scheduled-run.js && node --check src/schedule-scope.js && node --check src/schedule-notifications.js && node --check src/background-runner.js && node --check src/background-cli.js && node --check src/policy.js && node --check src/instructions.js && node --check src/usage.js && node --check src/audit.js && node --check src/organization.js && node --check src/organization-service.js && node --check src/collaboration.js && node --check src/collaboration-service.js && node --check src/checkpoint.js && node --check src/schedule-controller.js && npm run typecheck && npm run lint",
     "typecheck": "tsc --project jsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "node --test test/*.test.js",
@@ -350,6 +441,7 @@
     "@modelcontextprotocol/sdk": "1.32.1",
     "@truefoundry/trueforge-sdk": "0.184.1",
     "diff": "8.0.4",
+    "jose": "6.2.16",
     "playwright-core": "1.62.1",
     "yaml": "2.9.1",
     "zod": "4.6.7"

@@ -226,7 +226,32 @@ test('custom roles from approved plugins use their declared snapshot and instruc
   } finally { await f.pool.close(); }
 });
 
-test('plugin custom roles must declare an empty tool list and matching capabilities', async t => {
+test('worker reads use a bounded snapshot, honor parent scope, and expire when the worker ends', async () => {
+  const role = { id: 'review/files', name: 'files', instructions: 'Read the named file.', snapshot: 'repository', tools: ['read_file'] };
+  const input = { question: 'Check the file', files: ['calc.js'] };
+  let read;
+  const f = roleFixture(async (_, options) => {
+    read = options.read;
+    if (read) {
+      f.disk.set('calc.js', 'changed after the snapshot\n');
+      assert.match((await read({ file: 'calc.js', start_line: 1 })).text, /export const add/);
+      await assert.rejects(read({ file: 'calc.test.js', start_line: 1 }), /explicitly named/);
+      assert.equal((await read({ file: 'calc.js', start_line: 2, end_line: 2 })).end, 2);
+      await assert.rejects(read({ file: 'calc.js', start_line: 1 }), /limit reached/);
+    }
+    return JSON.stringify({ summary: 'Checked.', findings: [] });
+  }, { customRoles: [role] });
+  try {
+    f.run.permissions.allowScope('worker.read');
+    await f.pool.execute(role.id, input);
+    assert.equal(read, undefined, 'The worker cannot gain a parent workspace scope');
+    f.run.permissions.allowScope('workspace.read');
+    await f.pool.execute(role.id, input);
+    await assert.rejects(read({ file: 'calc.js', start_line: 1 }), /access ended/);
+  } finally { await f.pool.close(); }
+});
+
+test('plugin custom roles declare only repository read tools and matching capabilities', async t => {
   const fs = require('node:fs/promises');
   const os = require('node:os');
   const path = require('node:path');
@@ -239,7 +264,12 @@ test('plugin custom roles must declare an empty tool list and matching capabilit
     description: 'd', capabilities: ['worker.custom'], ...manifest }));
   await write({ roles: [role] });
   assert.equal((await loadPlugin(root)).roles[0].name, 'r');
-  for (const [manifest, message] of [[{ roles: [{ ...role, tools: ['run_command'] }] }, /too_big|at most 0|Array must contain at most/],
+  const withRead = { ...role, tools: ['read_file'] };
+  await write({ roles: [withRead], capabilities: ['worker.custom', 'worker.read'] });
+  assert.deepEqual((await loadPlugin(root)).roles[0].tools, ['read_file']);
+  for (const [manifest, message] of [[{ roles: [{ ...role, tools: ['run_command'] }] }, /read_file/],
+    [{ roles: [withRead] }, /Capabilities must match/],
+    [{ roles: [{ ...withRead, snapshot: 'diff' }], capabilities: ['worker.custom', 'worker.read'] }, /Only repository snapshots/],
     [{ roles: [role], capabilities: [] }, /Capabilities must match/], [{ roles: [{ ...role, snapshot: 'edit' }] }, /Invalid/],
     [{ roles: [role, role] }, /Duplicate/], [{ roles: [{ ...role, extra: 1 }] }, /Unrecognized/]]) {
     await write(manifest);

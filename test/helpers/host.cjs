@@ -9,7 +9,7 @@ const { setTimeout: sleep } = require('node:timers/promises');
 
 // A small VS Code host stub. It loads the real extension and drives it through registered commands, the webview
 // message channel, quick picks, input boxes and modal dialogs. Answers are scripted in order.
-async function startHost(t, { root, settings, env = {}, storage: shared }) {
+async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, storage: shared, storedSecrets = [] }) {
   const answers = [];
   const listeners = { config: [], folders: [], trust: [] };
   const commands = new Map();
@@ -41,14 +41,16 @@ async function startHost(t, { root, settings, env = {}, storage: shared }) {
     },
     WorkspaceEdit: class { constructor() { this.edits = []; } replace(...args) { this.edits.push(['replace', ...args]); } createFile(...args) { this.edits.push(['create', ...args]); } },
     env: { openExternal: async () => true },
-    commands: { registerCommand: (name, handler) => { commands.set(name, handler); return disposable; }, executeCommand: async (...args) => { shown.info.push(`command:${args[0]}`); } },
+    commands: { registerCommand: (name, handler) => {
+      commands.set(name, handler); return { dispose: () => commands.delete(name) };
+    }, executeCommand: async (...args) => { shown.info.push(`command:${args[0]}`); } },
     window: {
       createOutputChannel: () => ({ info() {}, error(message) { shown.errors.push(message); }, dispose() {} }),
       createStatusBarItem: () => ({ show() {}, hide() {}, dispose() {} }),
       registerWebviewViewProvider: (_, value) => { provider = value; return disposable; },
       showQuickPick: async (items, config = {}) => { shown.picks.push(config.placeHolder ?? config.title); return answer('pick', config.placeHolder ?? config.title, await items); },
       showInputBox: async config => {
-        const value = await answer('input', config.title ?? config.prompt);
+        const value = await answer('input', config.title ?? config.prompt, config.value);
         if (value !== undefined && config.validateInput) assert.equal(await config.validateInput(value), undefined, `Invalid scripted input ${value}`);
         return value;
       },
@@ -65,13 +67,17 @@ async function startHost(t, { root, settings, env = {}, storage: shared }) {
       showErrorMessage: async message => { shown.errors.push(message); },
       showTextDocument: async file => { shown.documents.push(file.fsPath ?? file); },
       showSaveDialog: async config => answer('save', config.title),
+      showOpenDialog: async config => answer('open', config.title),
       activeTextEditor: undefined,
     },
     workspace: {
       isTrusted: true,
       workspaceFolders: [{ uri: uri(root), name: path.basename(root), index: 0 }],
       textDocuments: [],
-      getConfiguration: () => ({ get: (key, fallback) => key in settings ? settings[key] : fallback }),
+      getConfiguration: () => ({
+        get: (key, fallback) => key in workspaceSettings ? workspaceSettings[key] : key in settings ? settings[key] : fallback,
+        inspect: key => ({ globalValue: settings[key], workspaceValue: workspaceSettings[key] }),
+      }),
       onDidChangeConfiguration: listener => { listeners.config.push(listener); return disposable; },
       onDidChangeWorkspaceFolders: listener => { listeners.folders.push(listener); return disposable; },
       onDidGrantWorkspaceTrust: listener => { listeners.trust.push(listener); return disposable; },
@@ -85,7 +91,7 @@ async function startHost(t, { root, settings, env = {}, storage: shared }) {
   };
   // Pass `storage` to start a second host on the same extension storage, as after a restart.
   const storage = shared ?? await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-host-storage-'));
-  const secrets = new Map();
+  const secrets = new Map(storedSecrets);
   const stateValues = new Map();
   const secretListeners = [];
   const context = {
@@ -115,7 +121,7 @@ async function startHost(t, { root, settings, env = {}, storage: shared }) {
     onDidReceiveMessage: handler => { receive = handler; return disposable; } } });
   const state = () => states.at(-1) ?? {};
   return host = {
-    vscode, context, storage, answers, shown, listeners, settings, secrets,
+    vscode, context, storage, answers, shown, listeners, settings, secrets, commands,
     command: (name, ...args) => commands.get(`agentextension.${name}`)(...args),
     codeActions,
     // Sends a webview message and waits for the extension's handler to finish.
@@ -131,7 +137,7 @@ async function startHost(t, { root, settings, env = {}, storage: shared }) {
 }
 
 // A scripted OpenAI-compatible model registered as a TrueForge custom provider.
-async function scriptedModel(t, baseUrl, script) {
+async function scriptedModel(t, baseUrl, script, { costInUsd } = {}) {
   const { TrueForge } = await import('@truefoundry/trueforge-sdk');
   const forge = new TrueForge({ baseUrl, maxRetries: 0 });
   const name = `agentextension-host-${randomBytes(5).toString('hex')}`;
@@ -145,25 +151,26 @@ async function scriptedModel(t, baseUrl, script) {
       const tools = input.tools?.map(tool => tool.function.name) ?? [];
       const round = input.messages.filter(message => message.role === 'tool').length;
       state.requests.push({ round, tools, all });
-      // Reports usage like an OpenAI-compatible server: input grows with the conversation, output is fixed.
-      const usage = { prompt_tokens: Math.ceil(raw.length / 4), completion_tokens: 25, total_tokens: Math.ceil(raw.length / 4) + 25 };
-      state.usage.push(usage);
-      const send = message => {
+      const send = (message, promptTokens = Math.ceil(raw.length / 4)) => {
+        const usage = { prompt_tokens: promptTokens, completion_tokens: 25, total_tokens: promptTokens + 25 };
+        if (costInUsd !== undefined) usage.costInUSD = costInUsd;
+        state.usage.push(usage);
+        const finish = message.tool_calls ? 'tool_calls' : 'stop';
         const chunk = (delta, finish) => ({ id: 'host', object: 'chat.completion.chunk', created: 1, model: input.model, choices: [{ index: 0, delta, finish_reason: finish }] });
         res.writeHead(200, { 'content-type': 'text/event-stream' });
         res.write(`data: ${JSON.stringify(chunk({ role: 'assistant', ...message }, null))}\n\n`);
-        res.write(`data: ${JSON.stringify(chunk({}, message.tool_calls ? 'tool_calls' : 'stop'))}\n\n`);
+        res.write(`data: ${JSON.stringify(chunk({}, finish))}\n\n`);
         res.end(`data: ${JSON.stringify({ id: 'host', object: 'chat.completion.chunk', created: 1, model: input.model, choices: [], usage })}\n\ndata: [DONE]\n\n`);
       };
       const server = all.match(/agentextension-[a-f0-9]{16}/)?.[0];
       const find = suffix => tools.find(tool => tool.endsWith(suffix));
-      const call = (tool, args) => {
+      const call = (tool, args, promptTokens) => {
         const direct = find(tool);
         const name = direct ?? find('call_tool');
         const payload = direct ? args : { mcp_server: server, tool_name: tool, input: args };
-        return send({ tool_calls: [{ index: 0, id: `c${round}`, type: 'function', function: { name, arguments: JSON.stringify(payload) } }] });
+        return send({ tool_calls: [{ index: 0, id: `c${round}`, type: 'function', function: { name, arguments: JSON.stringify(payload) } }] }, promptTokens);
       };
-      await script({ round, tools, all, input, call, say: content => send({ content }), results: input.messages.filter(message => message.role === 'tool') });
+      await script({ round, tools, all, input, call, say: (content, promptTokens) => send({ content }, promptTokens), results: input.messages.filter(message => message.role === 'tool') });
     } catch (error) { state.error ??= error; res.writeHead(500).end(); }
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));

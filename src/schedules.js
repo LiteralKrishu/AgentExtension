@@ -1,8 +1,10 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
+const { performance } = require('node:perf_hooks');
 const { z } = require('zod');
 const { digest } = require('./permissions');
+const { webhookUrl } = require('./schedule-notifications');
 
 const MAX_SCHEDULES = 8;
 const HISTORY_PER_SCHEDULE = 50;
@@ -18,6 +20,12 @@ const budgetSchema = z.strictObject({
   connectorReads: z.number().int().min(0).max(10).default(5),
   maxTokens: z.number().int().min(1_000).max(1_000_000).optional(),
 });
+const scheduleContext = z.strictObject({
+  userInstructions: z.boolean().default(false),
+  workspaceInstructions: z.boolean().default(false),
+  skills: z.array(z.string().regex(/^[a-f0-9]{16}$/)).max(3).default([]),
+  workers: z.array(z.string().regex(/^(?:built-in:[a-z0-9-]+|custom:[a-z0-9-]+\/[a-z0-9-]+)$/).max(150)).max(3).default([]),
+});
 const scheduleInput = z.strictObject({
   name: z.string().trim().min(1).max(80),
   prompt: z.string().trim().min(1).max(2_000),
@@ -27,6 +35,8 @@ const scheduleInput = z.strictObject({
   connectors: z.array(identifier).max(8).default([]),
   budget: budgetSchema.default({ minutes: 5, toolCalls: 20, connectorReads: 5 }),
   catchUpMinutes: z.number().int().min(0).max(1_440).default(360),
+  context: scheduleContext.optional(),
+  background: z.strictObject({ webhook: z.string().max(1_000).optional() }).optional(),
 });
 
 function validateTimeZone(value) {
@@ -43,6 +53,12 @@ const scheduleFields = input => Object.fromEntries(Object.entries(input ?? {}).f
 function normalizeSchedule(input) {
   const parsed = scheduleInput.parse(input);
   validateTimeZone(parsed.timeZone);
+  if (parsed.background?.webhook) parsed.background.webhook = webhookUrl(parsed.background.webhook);
+  if (parsed.context) {
+    parsed.context.skills = [...new Set(parsed.context.skills)].sort();
+    parsed.context.workers = [...new Set(parsed.context.workers)].sort();
+    if (!hasScheduleContext(parsed.context)) delete parsed.context;
+  }
   return { ...parsed, days: [...new Set(parsed.days)].sort(), times: [...new Set(parsed.times)].sort(),
     connectors: [...new Set(parsed.connectors)].sort() };
 }
@@ -127,11 +143,18 @@ function describeCadence(schedule) {
 }
 
 // Everything an unattended run may use. A change to any input requires a new approval.
-function schedulePin({ workspace, schedule, connectors = [], credentials = [], model, fallbackModel = '', serverUrl }) {
-  const { name, prompt, days, times, timeZone, budget, catchUpMinutes, connectors: ids } = normalizeSchedule(scheduleFields(schedule));
+function hasScheduleContext(context) {
+  return Boolean(context?.userInstructions || context?.workspaceInstructions || context?.skills?.length || context?.workers?.length);
+}
+
+function schedulePin({ workspace, schedule, connectors = [], credentials = [], model, fallbackModel = '', serverUrl, versions, backgroundProfile }) {
+  const { name, prompt, days, times, timeZone, budget, catchUpMinutes, connectors: ids, context, background } = normalizeSchedule(scheduleFields(schedule));
+  if (context && !versions) throw new Error('Review the selected context before approving this schedule.');
+  if (background && !backgroundProfile) throw new Error('Review the background runner scope before approving this schedule.');
   return digest({ version: 1, workspace, schedule: { name, prompt, days, times, timeZone, budget, catchUpMinutes, connectors: ids },
     connectors: connectors.map(config => digest(config)).sort(), credentials: [...credentials].sort(),
-    model: String(model ?? '').trim(), fallbackModel: String(fallbackModel ?? '').trim(), serverUrl });
+    model: String(model ?? '').trim(), fallbackModel: String(fallbackModel ?? '').trim(), serverUrl,
+    ...(context ? { context, versions } : {}), ...(background ? { background, backgroundProfile: digest(backgroundProfile) } : {}) });
 }
 
 class RunBudget {
@@ -160,6 +183,7 @@ class ScheduleStore {
     this.directory = path.join(storage, 'schedules', digest(workspace).slice(0, 24));
     this.file = path.join(this.directory, 'schedules.json');
     this.historyFile = path.join(this.directory, 'history.jsonl');
+    this.recordsDirectory = path.join(this.directory, 'history');
     this.queue = Promise.resolve();
   }
   serial(work) {
@@ -167,16 +191,17 @@ class ScheduleStore {
     this.queue = next.catch(() => {});
     return next;
   }
-  async read() {
+  async read(withRuntime = true) {
     let value;
     try { value = JSON.parse(await fs.readFile(this.file, 'utf8')); } catch { return []; }
     if (!Array.isArray(value)) return [];
-    return value.filter(item => {
+    const schedules = value.filter(item => {
       try {
         normalizeSchedule(scheduleFields(item));
         return item.workspace === this.workspace && typeof item.id === 'string' && typeof item.approval?.digest === 'string';
       } catch { return false; }
     }).slice(0, MAX_SCHEDULES);
+    return withRuntime ? Promise.all(schedules.map(schedule => this.withRuntime(schedule))) : schedules;
   }
   list() { return this.serial(() => this.read()); }
   async write(list) {
@@ -185,17 +210,18 @@ class ScheduleStore {
   }
   create(input, approval, now = Date.now()) {
     return this.serial(async () => {
-      const list = await this.read();
+      const list = await this.read(false);
       if (list.length >= MAX_SCHEDULES) throw new Error(`A workspace can have at most ${MAX_SCHEDULES} scheduled reports.`);
       const schedule = { ...normalizeSchedule(input), id: randomUUID(), workspace: this.workspace, enabled: true,
-        createdAt: new Date(now).toISOString(), cursor: now, approval: { digest: approval, at: now } };
+        createdAt: new Date(now).toISOString(), cursor: now, approval: typeof approval === 'string'
+          ? { digest: approval, at: now } : { ...approval, at: now } };
       await this.write([...list, schedule]);
       return schedule;
     });
   }
   update(id, change) {
     return this.serial(async () => {
-      const list = await this.read();
+      const list = await this.read(false);
       const index = list.findIndex(item => item.id === id);
       if (index < 0) throw new Error('This scheduled report no longer exists.');
       const next = { ...list[index], ...(typeof change === 'function' ? change(list[index]) : change), id, workspace: this.workspace };
@@ -206,28 +232,104 @@ class ScheduleStore {
     });
   }
   remove(id) {
-    return this.serial(async () => this.write((await this.read()).filter(item => item.id !== id)));
+    return this.serial(async () => this.write((await this.read(false)).filter(item => item.id !== id)));
+  }
+  runtimePrefix(schedule) {
+    const approval = schedule.approval;
+    return path.join(this.directory, 'runtime', digest([schedule.id, approval.at, approval.digest, ...(approval.oauthEpoch ? [approval.oauthEpoch] : [])]));
+  }
+  async withRuntime(schedule) {
+    const prefix = this.runtimePrefix(schedule);
+    const [cursor, paused, blocked, revoked] = await Promise.all(['cursor', 'paused', 'blocked', 'revoked'].map(suffix =>
+      fs.readFile(`${prefix}.${suffix}`, 'utf8').catch(error => { if (error.code !== 'ENOENT') throw error; })));
+    return { ...schedule, cursor: Math.max(schedule.cursor ?? schedule.approval.at, Number(cursor) || 0),
+      enabled: schedule.enabled && !paused && !blocked && !revoked, needsReview: Boolean(schedule.needsReview || blocked || revoked),
+      ...(revoked ? { backgroundRevoked: true } : {}) };
+  }
+  async recordRuntime(schedule, key, value) {
+    const prefix = this.runtimePrefix(schedule);
+    await fs.mkdir(path.dirname(prefix), { recursive: true, mode: 0o700 });
+    await atomicWrite(`${prefix}.${key}`, String(value));
+  }
+  pauseForReview(schedule) { return this.recordRuntime(schedule, 'blocked', 1); }
+  suspend(schedule, revoke = false) { return this.recordRuntime(schedule, revoke ? 'revoked' : 'paused', 1); }
+  advance(schedule, at) { return this.recordRuntime(schedule, 'cursor', at); }
+  async notification(id, value) {
+    if (!/^[a-f0-9-]{36}$/.test(id)) throw new Error('Invalid scheduled occurrence ID.');
+    const directory = path.join(this.directory, 'notifications');
+    await fs.mkdir(directory, { recursive: true, mode: 0o700 });
+    await atomicWrite(path.join(directory, `${id}.json`), JSON.stringify(value));
   }
   async record(entry) {
-    const value = { id: entry.id ?? randomUUID(), ...entry, recordedAt: new Date().toISOString() };
-    await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
-    // One append per record. O_APPEND keeps small records whole when two windows write.
-    await fs.appendFile(this.historyFile, `${JSON.stringify(value)}\n`, { mode: 0o600 });
-    if ((await fs.stat(this.historyFile)).size > 512_000) await this.history();
+    const id = entry.id ?? randomUUID();
+    if (!/^[a-f0-9-]{36}$/.test(id)) throw new Error('Invalid scheduled occurrence ID.');
+    const value = { ...entry, id, recordedAt: new Date().toISOString(), recordedOrder: performance.timeOrigin + performance.now() };
+    await fs.mkdir(this.recordsDirectory, { recursive: true, mode: 0o700 });
+    // Publish each immutable row independently so editor history pruning cannot race a runner's append.
+    await atomicWrite(path.join(this.recordsDirectory, `${id}.json`), JSON.stringify(value));
+    if ((await fs.readdir(this.recordsDirectory)).length > 512) await this.history();
     return value;
   }
   async history(scheduleId) {
-    let text = '';
-    try { text = await fs.readFile(this.historyFile, 'utf8'); } catch { return []; }
-    const rows = text.split('\n').filter(Boolean).flatMap(line => { try { return [JSON.parse(line)]; } catch { return []; } });
+    const text = await fs.readFile(this.historyFile, 'utf8').catch(() => '');
+    const legacy = text.split('\n').filter(Boolean).flatMap(line => { try { return [JSON.parse(line)]; } catch { return []; } });
+    const names = (await fs.readdir(this.recordsDirectory).catch(() => [])).filter(name => /^[a-f0-9-]{36}\.json$/.test(name));
+    const records = new Map();
+    for (const row of legacy) if (row?.id) records.set(row.id, { row });
+    for (let index = 0; index < names.length; index += 32) {
+      const batch = await Promise.all(names.slice(index, index + 32).map(async name => {
+        const row = await fs.readFile(path.join(this.recordsDirectory, name), 'utf8').then(JSON.parse).catch(() => undefined);
+        return { name, row };
+      }));
+      for (const item of batch) if (`${item.row?.id}.json` === item.name) records.set(item.row.id, item);
+    }
+    const order = ({ row }) => row.recordedOrder ?? Date.parse(row.recordedAt);
+    const rows = [...records.values()].reverse().sort((left, right) => order(right) - order(left));
     const counts = new Map();
-    const kept = rows.reverse().filter(row => {
+    const kept = [];
+    for (const { name, row } of rows) {
       const count = (counts.get(row.scheduleId) ?? 0) + 1;
       counts.set(row.scheduleId, count);
-      return count <= HISTORY_PER_SCHEDULE;
-    });
-    if (kept.length < rows.length) await this.serial(() => atomicWrite(this.historyFile, `${[...kept].reverse().map(row => JSON.stringify(row)).join('\n')}\n`)).catch(() => {});
-    return scheduleId ? kept.filter(row => row.scheduleId === scheduleId) : kept;
+      if (count <= HISTORY_PER_SCHEDULE) kept.push(row);
+      else if (name) {
+        for (const directory of [this.recordsDirectory, path.join(this.directory, 'notifications'), path.join(this.directory, 'question-resolutions')]) {
+          await fs.rm(path.join(directory, name), { force: true }).catch(() => {});
+        }
+      }
+    }
+    const result = scheduleId ? kept.filter(row => row.scheduleId === scheduleId) : kept;
+    if (!scheduleId) return result;
+    return Promise.all(result.map(async row => {
+      if (!/^[a-f0-9-]{36}$/.test(row.id)) return row;
+      const notification = await fs.readFile(path.join(this.directory, 'notifications', `${row.id}.json`), 'utf8')
+        .then(JSON.parse).catch(() => undefined);
+      return notification ? { ...row, notification } : row;
+    }));
+  }
+  async pendingQuestions() {
+    const directory = path.join(this.directory, 'question-resolutions');
+    const resolved = new Set(await fs.readdir(directory).catch(error => {
+      if (error.code === 'ENOENT') return [];
+      throw error;
+    }));
+    return (await this.history()).filter(row => row.status === 'needs-answer' && row.question?.text
+      && /^[a-f0-9-]{36}$/.test(row.id) && !resolved.has(`${row.id}.json`));
+  }
+  async resolveQuestion(id, resolution) {
+    if (!['answered', 'dismissed'].includes(resolution) || !/^[a-f0-9-]{36}$/.test(id)) throw new Error('Invalid scheduled question.');
+    if (!(await this.pendingQuestions()).some(row => row.id === id)) return false;
+    const directory = path.join(this.directory, 'question-resolutions');
+    await fs.mkdir(directory, { recursive: true, mode: 0o700 });
+    const temporary = path.join(directory, `${randomUUID()}.tmp`);
+    await fs.writeFile(temporary, JSON.stringify({ resolution, at: new Date().toISOString() }), { flag: 'wx', mode: 0o600 });
+    try {
+      // Publish a complete marker exactly once, including when two editor windows act together.
+      await fs.link(temporary, path.join(directory, `${id}.json`));
+      return true;
+    } catch (error) {
+      if (error.code === 'EEXIST') return false;
+      throw error;
+    } finally { await fs.rm(temporary, { force: true }); }
   }
   // Claims an occurrence across windows that share this storage. Only one window runs it.
   async claim(scheduleId, at) {
@@ -252,8 +354,8 @@ class ScheduleStore {
 const OFFLINE = /did not respond|Could not connect to local TrueForge|could not start a session|connection to TrueForge ended|ECONNREFUSED|fetch failed/i;
 
 class Scheduler {
-  constructor({ store, execute, pinFor, isBusy = () => false, onChange = () => {}, now = Date.now, intervalMs = 30_000 }) {
-    Object.assign(this, { store, execute, pinFor, isBusy, onChange, now, intervalMs });
+  constructor({ store, execute, pinFor, owns = () => true, isBusy = () => false, onChange = () => {}, onRecorded, now = Date.now, intervalMs = 30_000 }) {
+    Object.assign(this, { store, execute, pinFor, owns, isBusy, onChange, onRecorded, now, intervalMs });
     this.ticking = undefined;
     this.running = undefined;
   }
@@ -274,7 +376,7 @@ class Scheduler {
   }
   async evaluate() {
     for (const schedule of await this.store.list()) {
-      if (!schedule.enabled) continue;
+      if (!schedule.enabled || !this.owns(schedule)) continue;
       const now = this.now();
       const due = occurrencesBetween(schedule, schedule.cursor ?? schedule.approval.at, now);
       if (!due.length) continue;
@@ -287,7 +389,7 @@ class Scheduler {
         // Keep the latest occurrence pending while another run holds the editor.
         if (missed.length) {
           await this.missed(schedule, missed, due.truncated, 'Superseded by a later occurrence while VS Code was closed or busy.');
-          await this.store.update(schedule.id, { cursor: missed.at(-1).at });
+          await this.store.advance(schedule, missed.at(-1).at);
         }
         continue;
       }
@@ -295,11 +397,12 @@ class Scheduler {
         ? 'VS Code, the device, or this workspace was unavailable. Only the latest occurrence ran.'
         : `The catch-up window of ${schedule.catchUpMinutes} minutes had passed when VS Code next evaluated this schedule.`);
       // Advance before running so a restart cannot repeat this occurrence.
-      const current = await this.store.update(schedule.id, { cursor: now });
-      if (runnable) await this.fire(current, runnable, missed.length || now - runnable.at > this.intervalMs * 4 ? 'catch-up' : 'schedule');
+      await this.store.advance(schedule, now);
+      if (runnable) await this.fire(schedule, runnable, missed.length || now - runnable.at > this.intervalMs * 4 ? 'catch-up' : 'schedule');
     }
   }
   async missed(schedule, list, truncated, reason) {
+    if (!await this.store.claim(`${schedule.id}-missed`, list.at(-1).at)) return;
     const record = await this.store.record({ scheduleId: schedule.id, name: schedule.name, trigger: 'missed', status: 'missed',
       count: list.length, countIsMinimum: Boolean(truncated), firstAt: list[0].at, lastAt: list.at(-1).at,
       firstLocal: list[0].slot, lastLocal: list.at(-1).slot, timeZone: schedule.timeZone, reason });
@@ -308,6 +411,8 @@ class Scheduler {
   async runNow(id) {
     const schedule = (await this.store.list()).find(item => item.id === id);
     if (!schedule) throw new Error('This scheduled report no longer exists.');
+    if (!schedule.enabled) throw new Error('Resume this schedule before running it.');
+    if (!this.owns(schedule)) throw new Error('This schedule is owned by the background runner.');
     if (this.isBusy() || this.running) throw new Error('Finish the current run before starting a scheduled report.');
     const at = this.now();
     return this.fire(schedule, { at, slot: localLabel(at, schedule.timeZone), manual: true }, 'manual');
@@ -315,14 +420,17 @@ class Scheduler {
   async fire(schedule, occurrence, trigger) {
     const base = { scheduleId: schedule.id, name: schedule.name, trigger, scheduledFor: occurrence.at,
       local: `${occurrence.slot}${occurrence.adjusted ? ' (moved forward by a clock change)' : ''}`, timeZone: schedule.timeZone };
+    const current = (await this.store.list()).find(item => item.id === schedule.id);
+    if (!current?.enabled || !this.owns(current) || current.approval.digest !== schedule.approval.digest || current.approval.at !== schedule.approval.at) return undefined;
     if (trigger !== 'manual' && !await this.store.claim(schedule.id, occurrence.at)) return undefined;
     let pin;
     try { pin = await this.pinFor(schedule); } catch (error) { pin = `unavailable: ${error.message}`; }
     if (pin !== schedule.approval.digest) {
-      await this.store.update(schedule.id, { enabled: false, needsReview: true });
+      await this.store.pauseForReview(schedule);
       const record = await this.store.record({ ...base, status: 'blocked',
-        reason: pin.startsWith?.('unavailable:') ? `Scope check failed: ${pin.slice(13)}` : 'The workspace, prompt, connectors, credentials, model or schedule changed after approval. Review and approve the schedule again.' });
+        reason: pin.startsWith?.('unavailable:') ? `Scope check failed: ${pin.slice(13)}` : 'The schedule or its inputs changed after approval. Review and approve the schedule again.' });
       this.onChange(record);
+      await this.onRecorded?.(record, schedule);
       return record;
     }
     const started = this.now();
@@ -333,11 +441,13 @@ class Scheduler {
     } catch (error) {
       result = { status: OFFLINE.test(error.message) ? 'offline' : 'failed', reason: error.message };
     } finally { this.running = undefined; }
+    if (result.status === 'blocked') await this.store.pauseForReview(schedule);
     const record = await this.store.record({ ...base, ...result, startedAt: started, finishedAt: this.now() });
     this.onChange(record);
+    await this.onRecorded?.(record, schedule);
     return record;
   }
 }
 
-module.exports = { Scheduler, ScheduleStore, RunBudget, normalizeSchedule, validateTimeZone, schedulePin, zonedInstant, wallTime,
+module.exports = { Scheduler, ScheduleStore, RunBudget, normalizeSchedule, validateTimeZone, schedulePin, hasScheduleContext, zonedInstant, wallTime,
   occurrencesBetween, nextOccurrence, localLabel, describeCadence, scheduleInput, budgetSchema, OFFLINE, MAX_SCHEDULES, DEFAULT_SCHEDULE_TOKENS };

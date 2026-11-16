@@ -3,6 +3,7 @@ const path = require('node:path');
 const { constants } = require('node:fs');
 const { parseDocument } = require('yaml');
 const { digest } = require('./permissions');
+const { SCRIPT_BYTES } = require('./script-runner');
 
 const MAX_SKILL = 24_000;
 const MAX_RESOURCE = 8_000;
@@ -15,17 +16,25 @@ async function readWithin(root, relative, limit) {
     full = path.join(full, part);
     if ((await fs.lstat(full)).isSymbolicLink()) throw new Error('Skill symlinks are not allowed.');
   }
-  const handle = await fs.open(full, constants.O_RDONLY | constants.O_NOFOLLOW);
+  const handle = await fs.open(full, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
     const stat = await handle.stat();
     if (!stat.isFile() || stat.size > limit) throw new Error('Skill file exceeds its size limit.');
-    const bytes = await handle.readFile();
-    if (bytes.length > limit) throw new Error('Skill file exceeds its size limit.');
-    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const bytes = Buffer.alloc(stat.size + 1);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const { bytesRead } = await handle.read(bytes, offset, bytes.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    if (offset !== stat.size) throw new Error('Skill file changed while it was being read.');
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, offset));
     if (text.includes('\0')) throw new Error('Skill resources must be text.');
     return text;
   } finally { await handle.close(); }
 }
+
+const scriptName = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function parseSkill(text, folder) {
   const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
@@ -37,8 +46,14 @@ function parseSkill(text, folder) {
       || meta.name.length > 64 || meta.name !== folder || typeof meta.description !== 'string'
       || !meta.description.trim() || meta.description.length > 1024) throw new Error('Invalid skill name or description.');
   if (meta.enabled === false) throw new Error('Skill is disabled.');
+  const scripts = meta.scripts === undefined ? [] : meta.scripts;
+  if (!Array.isArray(scripts) || scripts.length > 4 || new Set(scripts).size !== scripts.length
+      || scripts.some(name => typeof name !== 'string' || name.length > 64 || !scriptName.test(name))) {
+    throw new Error('Declare up to four distinct skill script names.');
+  }
   return { name: meta.name, description: meta.description, body: text.slice(match[0].length),
-    explicitOnly: meta['disable-model-invocation'] === true || meta.allow_implicit_invocation === false };
+    explicitOnly: meta['disable-model-invocation'] === true || meta.allow_implicit_invocation === false,
+    ...(scripts.length ? { scripts } : {}) };
 }
 
 const STOP = new Set(('the and for with this that from into your you are was were will can not but all any its our out use using '
@@ -92,7 +107,24 @@ class SkillRegistry {
   }
 
   catalog() {
-    return [...this.entries.values()].map(({ root, relative, digest: hash, ...meta }) => meta);
+    return [...this.entries.values()].map(({ id, name, description, explicitOnly, source }) => ({ id, name, description, explicitOnly, source }));
+  }
+
+  eligible(allow = () => true) {
+    if (this.selected.size >= 3) return [];
+    return this.catalog().filter(entry => !entry.explicitOnly && !this.selected.has(entry.id) && allow(entry))
+      .map(({ id, name, description }) => ({ id, name, description }));
+  }
+
+  registerPinned(skills) {
+    for (const skill of skills) this.entries.set(skill.id, skill);
+  }
+
+  async load(entry) {
+    if (entry.resources) return entry;
+    const text = await readWithin(entry.root, entry.relative, MAX_SKILL);
+    if (digest(text) !== entry.digest) throw new Error('This skill changed. Refresh and select it again.');
+    return { ...entry, body: parseSkill(text, entry.name).body };
   }
 
   async select(ids) {
@@ -102,27 +134,35 @@ class SkillRegistry {
     for (const id of new Set(ids)) {
       const entry = this.entries.get(id);
       if (!entry) throw new Error('Select a skill from an approved root.');
-      const text = await readWithin(entry.root, entry.relative, MAX_SKILL);
-      if (digest(text) !== entry.digest) throw new Error('This skill changed. Refresh and select it again.');
-      const { body } = parseSkill(text, entry.name);
-      size += body.length;
+      const skill = await this.load(entry);
+      size += skill.body.length;
       if (size > MAX_SKILL) throw new Error('Selected skill bodies exceed 24,000 characters.');
-      this.selected.set(id, { ...entry, body });
+      this.selected.set(id, skill);
     }
     return [...this.selected.values()];
   }
 
   async resource(id, file) {
     const entry = this.selected.get(id);
-    if (!entry) throw new Error('Only user-selected skills can load resources.');
+    if (!entry) throw new Error('Only active skills can load resources.');
     if (!/^(references|assets)\/.+\.(md|txt|rst|json|yaml|yml|csv)$/.test(file)) {
-      throw new Error('Read a text resource under references/ or assets/. Skill scripts do not run.');
+      throw new Error('Read a text resource under references/ or assets/.');
     }
     if (entry.resources) {
       if (!entry.resources.has(file)) throw new Error('This resource is outside the approved plugin content.');
       return entry.resources.get(file);
     }
     return readWithin(entry.root, `${entry.name}/${file}`, MAX_RESOURCE);
+  }
+
+  async script(id, name) {
+    const entry = this.selected.get(id);
+    if (!entry?.scripts?.includes(name)) throw new Error('Select a declared script from an active skill.');
+    const file = `scripts/${name}.cjs`;
+    const relative = path.join(path.dirname(entry.source), file);
+    if (entry.resources) return { file, path: relative, source: entry.scriptSources.get(name) };
+    await this.load(entry);
+    return { file, path: relative, source: await readWithin(entry.root, `${entry.name}/${file}`, SCRIPT_BYTES) };
   }
 
   // Scores eligible skills against the request. A name term counts three times a description term, weighted by rarity.
@@ -146,31 +186,52 @@ class SkillRegistry {
     for (const match of matches) {
       if (this.selected.size >= 3 || added.length >= AUTOMATIC.limit) break;
       const entry = this.entries.get(match.id);
-      if (!entry || this.selected.has(entry.id)) continue;
-      let body;
-      try {
-        const text = await readWithin(entry.root, entry.relative, MAX_SKILL);
-        if (digest(text) !== entry.digest) continue;
-        body = parseSkill(text, entry.name).body;
-      } catch { continue; }
+      if (!entry || entry.explicitOnly || this.selected.has(entry.id)) continue;
+      let skill;
+      try { skill = await this.load(entry); } catch { continue; }
+      const { body } = skill;
       const used = [...this.selected.values()].reduce((sum, skill) => sum + skill.body.length, 0);
       if (automatic + body.length > AUTOMATIC.characters || used + body.length > MAX_SKILL) continue;
       automatic += body.length;
-      const skill = { ...entry, body, matched: { score: match.score, terms: match.terms } };
-      this.selected.set(entry.id, skill);
-      added.push(skill);
+      const matched = { ...skill, matched: { score: match.score, terms: match.terms } };
+      this.selected.set(entry.id, matched);
+      added.push(matched);
     }
     return added;
   }
 
   addPinned(skills) {
-    const combined = [...this.selected.values(), ...skills];
+    const combined = [...this.selected.values(), ...skills.filter(skill => !this.selected.has(skill.id))];
     if (combined.length > 3 || combined.reduce((sum, skill) => sum + skill.body.length, 0) > MAX_SKILL) {
       throw new Error('Select at most three skills across direct selection and plugins, with at most 24,000 body characters.');
     }
     for (const skill of skills) this.selected.set(skill.id, skill);
     return [...this.selected.values()];
   }
+
+  async activate(id, allow, signal) {
+    signal.throwIfAborted();
+    const entry = this.entries.get(id);
+    if (!entry || entry.explicitOnly || !allow(entry)) throw new Error('Select an eligible skill from the run catalog.');
+    if (this.selected.has(id)) throw new Error('This skill is already active.');
+    const skill = await this.load(entry);
+    signal.throwIfAborted();
+    if (!allow(entry)) throw new Error('Skill access changed.');
+    if (this.selected.has(id)) throw new Error('This skill is already active.');
+    const active = [...this.selected.values()];
+    const sum = skills => skills.reduce((total, item) => total + item.body.length, 0);
+    if (active.length >= 3 || sum(active) + skill.body.length > MAX_SKILL
+        || sum(active.filter(item => item.requested || item.matched)) + skill.body.length > AUTOMATIC.characters) {
+      throw new Error('Active skills reached their count or text limit.');
+    }
+    const selected = { ...skill, requested: true };
+    this.selected.set(id, selected);
+    return selected;
+  }
+
+  clearRequested() {
+    for (const [id, skill] of this.selected) if (skill.requested) this.selected.delete(id);
+  }
 }
 
-module.exports = { SkillRegistry, parseSkill, readWithin, terms, AUTOMATIC };
+module.exports = { SkillRegistry, parseSkill, readWithin, terms, AUTOMATIC, scriptName };

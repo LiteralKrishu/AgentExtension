@@ -61,6 +61,18 @@ class Workspace {
     return text;
   }
 
+  async gitRevision(signal) {
+    const options = { cwd: this.root, signal, timeout: 5_000, maxBuffer: 16_000, env: gitEnvironment() };
+    try {
+      const { stdout: root } = await exec('git', [...GIT_HARDENING, 'rev-parse', '--show-toplevel'], options);
+      if (await fs.realpath(root.replace(/\r?\n$/, '')) !== this.root) throw new Error('Select the repository root.');
+      const { stdout } = await exec('git', [...GIT_HARDENING, 'rev-parse', '--verify', 'HEAD^{commit}'], options);
+      const revision = stdout.trim();
+      if (/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(revision)) return revision;
+    } catch (error) { signal?.throwIfAborted(); }
+    throw new Error('Open the root of a Git repository with a commit.');
+  }
+
   async paths(signal) {
     if (this.identity && await fs.realpath(this.root) !== this.identity) throw new Error('Workspace identity changed. Start a new run.');
     let files;
@@ -71,7 +83,7 @@ class Workspace {
       files = stdout.split('\0');
     } catch {
       signal?.throwIfAborted();
-      files = await this.findPaths();
+      files = await this.findPaths(signal);
     }
     return [...new Set(files)].filter(file => {
       try { return Boolean(safePath(file)); } catch { return false; }

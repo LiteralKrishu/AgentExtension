@@ -76,6 +76,19 @@ test('schedule input is bounded and the approval pin covers every input an unatt
   }
 });
 
+test('two windows can resolve a saved question only once', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-schedule-questions-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const first = new ScheduleStore(root, '/workspace');
+  const second = new ScheduleStore(root, '/workspace');
+  const row = await first.record({ scheduleId: 'report', status: 'needs-answer', question: { text: 'Proceed?', options: ['Yes'] } });
+  assert.equal((await second.pendingQuestions())[0].id, row.id);
+  const resolved = await Promise.all([first.resolveQuestion(row.id, 'answered'), second.resolveQuestion(row.id, 'dismissed')]);
+  assert.equal(resolved.filter(Boolean).length, 1);
+  assert.deepEqual(await new ScheduleStore(root, '/workspace').pendingQuestions(), []);
+  assert.equal((await second.history('report'))[0].question.text, 'Proceed?');
+});
+
 test('the store keeps schedules per workspace, limits size, trims history and writes private files', async t => {
   const storage = await temp(t);
   const a = new ScheduleStore(storage, '/workspace/a');
@@ -97,7 +110,9 @@ test('the store keeps schedules per workspace, limits size, trims history and wr
   assert.equal(history.length, 50);
   assert.equal(history[0].index, 54, 'Newest first');
   assert.equal((await a.history()).length, 51);
-  assert.equal((await fs.readFile(a.historyFile, 'utf8')).trim().split('\n').length, 51, 'Trimmed on disk');
+  assert.equal((await fs.readdir(a.recordsDirectory)).length, 51, 'Trimmed on disk');
+  await fs.writeFile(a.historyFile, JSON.stringify({ id: 'legacy', scheduleId: 'two', status: 'completed', recordedAt: new Date(0).toISOString() }) + '\n');
+  assert.equal((await a.history('two')).at(-1).id, 'legacy', 'Previously stored history is still readable');
   const tampered = JSON.parse(await fs.readFile(a.file, 'utf8'));
   tampered[0].workspace = '/workspace/b';
   tampered[1].approval = undefined;

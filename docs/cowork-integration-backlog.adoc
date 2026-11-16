@@ -68,10 +68,10 @@ The five milestones in the research plan shipped in 0.5.0. They cover scoped per
 |Capability |Remaining work
 
 |Cross-device sessions and remote task assignment
-|Use checkpoints as the basis for continuing a run on another device. Remote control needs device identity, revocation, and a defined offline recovery path. This needs a hosted service.
+|The organization service supports assigning a checkpoint draft to an approved device. The recipient continues in local hunk review. Test the pilot between physical devices over HTTPS. Hosting, TrueForge session transfer, and automatic execution remain outside the pilot. link:../README.md#shared-project-pilot[Pilot setup]
 
 |Shared projects and administration
-|Add shared instructions, files, and memory with roles for viewing and editing. Add organization controls for tool access, network access, trusted devices, and audit visibility. This needs a hosted service.
+|The pilot provides versioned notes and instructions, viewer and editor roles, device revocation, and project audit. Workspace-wide file sync remains open.
 
 |Editable artifacts and office files
 |Saved Markdown reports cover run evidence. Editable interactive artifacts and workflows for documents, spreadsheets, and slides remain research options.
@@ -85,4 +85,4 @@ The five milestones in the research plan shipped in 0.5.0. They cover scoped per
 
 == Verification still open
 
-The latest Qwen run passed the required checks in seven scenarios. The edit-proposal worker did not merge its patch in that run. A successful live-model run of the original Flask Task B remains open. Continue to test panel controls and model choices independently. link:milestones.md#real-model-verification-with-qwen-35-9b[Qwen verification] · link:demo.md[Flask rehearsal]
+The post-implementation Qwen run verified a worker proposal merge and local hunk review. The live Flask Task B rerun reached its six-minute limit before staging a draft. The remaining-work list tracks that acceptance check, the hosted trial, and Linux runner verification. link:milestones.md#post-implementation-verification[Verification record] · link:remaining-work.md[Remaining work]

@@ -23,8 +23,9 @@ const digest = value => createHash('sha256').update(JSON.stringify(stable(value)
 // Host-owned grants never enter model messages or restored conversation history.
 class PermissionBroker {
   /** @param {{ workspace: string, signal?: AbortSignal, onChange?: (snapshot: PermissionSnapshot) => void,
-   * audit?: (event: PermissionEvent) => void, now?: () => number, policy?: import('./policy').PolicyEngine }} options */
-  constructor({ workspace, signal, onChange = () => {}, audit = () => {}, now = Date.now, policy }) {
+   * audit?: (event: PermissionEvent) => void, now?: () => number, policy?: import('./policy').PolicyEngine,
+   * loadPolicy?: () => Promise<import('./policy').PolicyEngine> }} options */
+  constructor({ workspace, signal, onChange = () => {}, audit = () => {}, now = Date.now, policy, loadPolicy }) {
     if (!workspace) throw new Error('A canonical workspace identity is required.');
     this.workspace = workspace;
     this.runId = randomUUID();
@@ -33,7 +34,10 @@ class PermissionBroker {
     this.audit = audit;
     this.now = now;
     this.policy = policy;
+    this.loadPolicy = loadPolicy;
+    this.policyQueue = Promise.resolve();
     this.epoch = 0;
+    this.revocation = new AbortController();
     /** @type {Map<string, Grant & { count?: number }>} */
     this.grants = new Map();
     /** @type {Set<string>} */
@@ -66,7 +70,27 @@ class PermissionBroker {
   valid(action) {
     return !this.closed && !this.signal?.aborted && action.workspace === this.workspace
       && action.runId === this.runId && action.policy === 1 && action.epoch === this.epoch
-      && !this.denied.has(action.effect) && !this.denied.has(action.tool);
+      && !this.denied.has(action.effect) && !this.denied.has(action.tool) && !this.policy?.blocks(action.effect);
+  }
+
+  /** @param {import('./policy').PolicyEngine} policy */
+  setPolicy(policy) {
+    const changed = this.policy?.digest !== policy.digest || (!this.policy?.admin.error && this.policy?.admin.userAllowRules !== policy.admin.userAllowRules);
+    this.policy = policy;
+    if (changed && !this.closed) this.reset();
+  }
+
+  refreshPolicy() {
+    const load = this.loadPolicy;
+    if (!load) return Promise.resolve();
+    const next = this.policyQueue.then(async () => {
+      this.signal?.throwIfAborted();
+      const policy = await load();
+      this.signal?.throwIfAborted();
+      this.setPolicy(policy);
+    });
+    this.policyQueue = next.catch(() => {});
+    return next;
   }
 
   // Returns false when a permission rule turns the capability off for every target.
@@ -118,6 +142,8 @@ class PermissionBroker {
 
   reset() {
     this.epoch++;
+    this.revocation.abort(new Error('Surface permission changed. Observe again.'));
+    this.revocation = new AbortController();
     for (const key of this.grants.keys()) if (!key.startsWith('scope:')) this.grants.delete(key);
     this.onChange(this.snapshot());
   }
@@ -132,13 +158,14 @@ class PermissionBroker {
     this.closed = true;
     this.grants.clear();
     this.epoch++;
+    this.revocation.abort(new Error('Surface access was revoked.'));
     this.record({ tool: 'host', effect: 'all', target: this.workspace }, 'revoke', reason);
   }
 
   /** @returns {PermissionSnapshot} */
   snapshot() {
     return { runId: this.runId, workspace: this.workspace, closed: this.closed,
-      scopes: [...this.grants.entries()].filter(([key, value]) => key.startsWith('scope:') && value.expires > this.now())
+      scopes: [...this.grants.entries()].filter(([key, value]) => key.startsWith('scope:') && value.expires > this.now() && !this.policy?.blocks(value.effect))
         .map(([, value]) => value.effect), pending: [...this.grants.keys()].filter(key => !key.startsWith('scope:')).length,
       events: this.events };
   }

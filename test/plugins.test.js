@@ -65,12 +65,12 @@ test('plugin connector references pin endpoints and need separate enablement', a
   await assert.rejects(registry.verify([pin], ['docs']), /changed/);
 });
 
-test('plugin loader rejects scripts, symlinks, traversal, duplicate IDs and mismatched capability declarations', async t => {
+test('plugin loader rejects unsupported scripts, symlinks, traversal, duplicate IDs and mismatched capability declarations', async t => {
   const f = await fixture(t);
   const file = path.join(f.plugin, 'plugin.json');
   const original = await fs.readFile(file, 'utf8');
   await fs.writeFile(path.join(f.plugin, 'hook.js'), 'throw Error("must not run")');
-  await assert.rejects(loadPlugin(f.plugin), /Scripts and hooks/);
+  await assert.rejects(loadPlugin(f.plugin), /Unsupported plugin file/);
   await fs.unlink(path.join(f.plugin, 'hook.js'));
   await fs.symlink(path.join(f.plugin, 'skills'), path.join(f.plugin, 'linked'));
   await assert.rejects(loadPlugin(f.plugin), /symlinks/);

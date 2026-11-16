@@ -1,7 +1,8 @@
 // @ts-check
-const { diffLines } = require('diff');
+const { diffChars, diffLines } = require('diff');
 
 const MAX_TEXT = 256_000;
+const MAX_SELECTION_TEXT = 12_000;
 
 /** @typedef {{ offset: number, line: number, before: string, after: string }} Hunk */
 /** @typedef {Hunk & { file: string, id: string, newFile: boolean }} ReviewHunk */
@@ -13,9 +14,10 @@ function matchLineEndings(value, base) {
   return value.replace(/\r?\n/g, base?.includes('\r\n') ? '\r\n' : '\n');
 }
 
-/** @param {string} before @param {string} after @returns {Hunk[]} */
-function splitHunks(before, after) {
-  const parts = diffLines(before, after, { timeout: 500 });
+/** @param {string} before @param {string} after @param {'line' | 'character'} granularity @returns {Hunk[]} */
+function splitHunks(before, after, granularity = 'line') {
+  const options = { timeout: 500 };
+  const parts = granularity === 'line' ? diffLines(before, after, options) : diffChars(before, after, options);
   if (!parts) throw new Error('The edit is too large to compare. Propose a smaller edit.');
   const hunks = [];
   let offset = 0;
@@ -26,14 +28,14 @@ function splitHunks(before, after) {
       if (current) hunks.push(current);
       current = undefined;
       offset += part.value.length;
-      line += part.count;
+      line += granularity === 'line' ? part.count : part.value.split('\n').length - 1;
       continue;
     }
     current ??= { offset, line, before: '', after: '' };
     if (part.removed) {
       current.before += part.value;
       offset += part.value.length;
-      line += part.count;
+      line += granularity === 'line' ? part.count : part.value.split('\n').length - 1;
     } else {
       current.after += part.value;
     }
@@ -97,11 +99,12 @@ class Draft {
     this.stage(file, base, previous.slice(0, start) + matchLineEndings(replacement, base) + previous.slice(end));
   }
 
-  /** @param {string} file @param {string} text */
-  async create(file, text) {
+  /** @param {string} file @param {string} text @param {() => void} [beforeStage] */
+  async create(file, text, beforeStage) {
     if (this.selection) throw new Error('Inline edits cannot create files.');
     await this.read(file, true);
     if (this.files.has(file)) throw new Error('The file is already staged.');
+    beforeStage?.();
     this.stage(file, null, text);
   }
 
@@ -110,7 +113,9 @@ class Draft {
     if (text.length > MAX_TEXT) throw new Error('The proposed file is too large.');
     if (!this.files.has(file) && this.files.size >= 24) throw new Error('A run can stage at most 24 files.');
     const selection = this.selection;
-    if (selection && base === null) throw new Error('Inline edits require an existing file.');
+    if (selection && (file !== selection.file || base !== selection.base)) {
+      throw new Error('Inline edits are limited to the original selection.');
+    }
     const original = base ?? '';
     const start = selection?.start ?? 0;
     const before = selection ? original.slice(start, selection.end) : original;
@@ -151,4 +156,4 @@ class Draft {
   }
 }
 
-module.exports = { Draft, applyHunks, splitHunks, MAX_TEXT };
+module.exports = { Draft, applyHunks, splitHunks, MAX_TEXT, MAX_SELECTION_TEXT };

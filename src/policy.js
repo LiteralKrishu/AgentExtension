@@ -6,8 +6,8 @@ const { digest } = require('./permissions');
 
 // Effects a rule may name. Workspace reads, draft edits, hunk review, plan approval and apply stay with the
 // editor's own controls: a rule cannot skip them.
-const GOVERNED = ['command.execute', 'connector.read', 'connector.catalog', 'browser.observe', 'browser.write', 'browser.navigate',
-  'computer.observe', 'computer.write', 'worker.research', 'worker.review', 'worker.diagnose', 'worker.edit', 'worker.custom', 'skill.read', 'memory.suggest'];
+const GOVERNED = ['command.execute', 'connector.read', 'connector.write', 'connector.account', 'connector.catalog', 'browser.observe', 'browser.write', 'browser.navigate', 'browser.download',
+  'computer.observe', 'computer.write', 'worker.research', 'worker.review', 'worker.diagnose', 'worker.edit', 'worker.custom', 'worker.read', 'skill.read', 'skill.script', 'hook.run', 'memory.suggest'];
 // Only exact actions with a reviewable target can be allowed without a prompt.
 const ALLOWABLE = ['command.execute', 'connector.read', 'browser.write', 'browser.navigate', 'computer.write'];
 const SOURCES = ['administrator', 'user', 'workspace'];
@@ -28,6 +28,22 @@ const adminSchema = z.strictObject({
   version: z.literal(1),
   rules: z.array(ruleSchema).max(200).default([]),
   userAllowRules: z.boolean().default(true),
+  organization: z.strictObject({
+    url: z.string().max(500).refine(value => {
+      try {
+        const url = new URL(value);
+        return (url.protocol === 'https:' || (url.protocol === 'http:' && ['127.0.0.1', '[::1]', 'localhost'].includes(url.hostname)))
+          && url.pathname === '/' && !url.username && !url.password && !url.search && !url.hash;
+      } catch { return false; }
+    }, 'Use an HTTPS service origin or a loopback HTTP origin.'),
+    tokenFile: z.string().max(1_000).refine(value => path.isAbsolute(value), 'Use an absolute credential path.'),
+    workspaces: z.array(z.string().regex(/^[a-f0-9]{16}$/)).min(1).max(64),
+    audit: z.boolean().default(false),
+    projects: z.record(z.string().regex(/^[a-f0-9]{16}$/), z.strictObject({
+      organization: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),
+      project: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),
+    })).optional(),
+  }).refine(config => Object.keys(config.projects ?? {}).every(key => config.workspaces.includes(key)), 'Project bindings must name enrolled workspaces.').optional(),
 });
 
 /** @typedef {z.output<typeof ruleSchema>} Rule */
@@ -35,7 +51,8 @@ const adminSchema = z.strictObject({
 /** @typedef {Rule & { source: RuleSource }} DescribedRule */
 /** @typedef {DescribedRule & { index: number }} SourcedRule */
 /** @typedef {{ decision: Rule['decision'], source: RuleSource | 'default', rule?: DescribedRule }} Verdict */
-/** @typedef {{ rules: SourcedRule[], userAllowRules: boolean, sources: string[], digest?: string, error?: undefined }
+/** @typedef {NonNullable<z.output<typeof adminSchema>['organization']>} OrganizationConfig */
+/** @typedef {{ rules: SourcedRule[], userAllowRules: boolean, sources: string[], digest?: string, organization?: OrganizationConfig, error?: undefined }
  * | { error: string, rules: [], sources: string[] }} AdminPolicy */
 
 /** @param {string} pattern */
@@ -60,6 +77,26 @@ function defaultPolicyFile(platform = process.platform, env = process.env) {
   return '/etc/agentextension/policy.json';
 }
 
+/** @param {unknown} value @param {boolean} [bootstrap] */
+function validateAdminDocument(value, bootstrap = false) {
+  const parsed = adminSchema.parse(value);
+  if (parsed.organization && !bootstrap) throw new Error('Managed policy cannot change its organization enrollment.');
+  parseRules(parsed.rules, 'administrator');
+  return parsed;
+}
+
+/** @param {SourcedRule[]} rules @param {boolean} userAllowRules */
+const adminDigest = (rules, userAllowRules) => digest({ rules: rules.map(({ effect, target, decision }) => ({ effect, target, decision })), userAllowRules });
+
+/** @param {AdminPolicy} local @param {unknown} document @returns {AdminPolicy} */
+function mergeOrganizationPolicy(local, document) {
+  if (local.error !== undefined) return local;
+  const managed = validateAdminDocument(document);
+  const rules = [...local.rules, ...parseRules(managed.rules, 'administrator')];
+  const userAllowRules = local.userAllowRules && managed.userAllowRules;
+  return { ...local, rules, userAllowRules, sources: [...local.sources, 'organization service'], digest: adminDigest(rules, userAllowRules) };
+}
+
 // Reads the machine policy files. A missing file is no policy; an unreadable or invalid file blocks runs.
 // AGENTEXTENSION_POLICY_FILE adds a file; it never replaces the machine file.
 /** @param {string[]} [files] @returns {AdminPolicy} */
@@ -68,6 +105,8 @@ function loadAdminPolicy(files = [defaultPolicyFile(), process.env.AGENTEXTENSIO
   const rules = [];
   const sources = [];
   let userAllowRules = true;
+  /** @type {OrganizationConfig | undefined} */
+  let organization;
   for (const file of [...new Set(files)]) {
     let text;
     try { text = fs.readFileSync(file, 'utf8'); } catch (error) {
@@ -77,7 +116,11 @@ function loadAdminPolicy(files = [defaultPolicyFile(), process.env.AGENTEXTENSIO
     }
     if (text.length > 256_000) return { error: `Administrator policy ${file} is larger than 256 KB.`, rules: [], sources: [file] };
     try {
-      const parsed = adminSchema.parse(JSON.parse(text));
+      const parsed = validateAdminDocument(JSON.parse(text), true);
+      if (parsed.organization) {
+        if (organization && digest(organization) !== digest(parsed.organization)) throw new Error('Conflicting organization enrollment.');
+        organization = parsed.organization;
+      }
       rules.push(...parseRules(parsed.rules, 'administrator').map(rule => ({ ...rule, file })));
       userAllowRules &&= parsed.userAllowRules;
       sources.push(file);
@@ -87,7 +130,7 @@ function loadAdminPolicy(files = [defaultPolicyFile(), process.env.AGENTEXTENSIO
       return { error: `Administrator policy ${file} is invalid: ${message}`, rules: [], sources: [file] };
     }
   }
-  return { rules, userAllowRules, sources, digest: digest({ rules: rules.map(({ effect, target, decision }) => ({ effect, target, decision })), userAllowRules }) };
+  return { rules, userAllowRules, sources, digest: adminDigest(rules, userAllowRules), ...(organization ? { organization } : {}) };
 }
 
 class PolicyEngine {
@@ -133,4 +176,5 @@ const commandSubject = ({ command, args = [] }) => [command, ...args.map(subject
 /** @param {{ id: string }} config @param {string} tool @param {string} target */
 const connectorSubject = (config, tool, target) => `${config.id}/${tool}/${target}`;
 
-module.exports = { PolicyEngine, loadAdminPolicy, defaultPolicyFile, parseRules, ruleSchema, GOVERNED, ALLOWABLE, reason, commandSubject, connectorSubject };
+module.exports = { PolicyEngine, loadAdminPolicy, defaultPolicyFile, parseRules, ruleSchema, GOVERNED, ALLOWABLE, reason, commandSubject, connectorSubject,
+  validateAdminDocument, mergeOrganizationPolicy };

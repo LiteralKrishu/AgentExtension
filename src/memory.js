@@ -18,6 +18,12 @@ function cleanReferences(references = []) {
   });
 }
 
+const memoryLimits = Object.freeze({
+  workspace: { notes: 20, text: 2_000, total: 8_000, label: 'workspace note' },
+  preferences: { notes: 10, text: 1_000, total: 4_000, label: 'user preference' },
+});
+const pendingUpdates = new WeakMap();
+
 // Approved notes in VS Code global state. Agent text reaches a store only after the user approves it.
 class NoteStore {
   constructor(storage, key, { notes, text, total, label }) {
@@ -26,9 +32,22 @@ class NoteStore {
     this.limits = { notes, text, total };
     this.label = label;
   }
+  record() {
+    const value = this.storage.get(this.key, []);
+    return Array.isArray(value) ? { notes: value } : value && Array.isArray(value.notes) ? value : { notes: [] };
+  }
+  write(notes, sync = this.record().sync) {
+    return this.storage.update(this.key, sync ? { notes, sync } : notes);
+  }
+  locked(operation) {
+    let queue = pendingUpdates.get(this.storage);
+    if (!queue) pendingUpdates.set(this.storage, queue = new Map());
+    const result = (queue.get(this.key) ?? Promise.resolve()).catch(() => {}).then(operation);
+    queue.set(this.key, result);
+    return result.finally(() => { if (queue.get(this.key) === result) queue.delete(this.key); });
+  }
   list() {
-    const notes = this.storage.get(this.key, []);
-    if (!Array.isArray(notes)) return [];
+    const { notes } = this.record();
     let size = 0;
     return notes.filter(note => {
       if (typeof note?.id !== 'string' || typeof note.text !== 'string' || note.text.length > this.limits.text) return false;
@@ -42,40 +61,71 @@ class NoteStore {
       throw new Error(`${this.label[0].toUpperCase()}${this.label.slice(1)}s are full. Remove one first.`);
     }
   }
-  async save(text, source = { kind: 'user' }) {
+  save(text, source = { kind: 'user' }) { return this.locked(() => this.saveNote(text, source)); }
+  async saveNote(text, source) {
     const notes = this.list();
     const value = typeof text === 'string' ? text.trim() : '';
     if (notes.length >= this.limits.notes) throw new Error(`${this.label[0].toUpperCase()}${this.label.slice(1)}s are full. Remove one first.`);
     this.check(notes, value);
     const note = { id: randomUUID(), text: value, savedAt: new Date().toISOString(), source };
-    await this.storage.update(this.key, [...notes, note]);
+    await this.write([...notes, note]);
     return note;
   }
-  async edit(id, text) {
+  edit(id, text, expected) { return this.locked(() => this.editNote(id, text, expected)); }
+  async editNote(id, text, expected) {
     const notes = this.list();
     const index = notes.findIndex(note => note.id === id);
     if (index < 0) throw new Error(`This ${this.label} no longer exists.`);
+    if (expected && digest(notes[index]) !== digest(expected)) throw new Error(`This ${this.label} changed. Open Notes and try again.`);
     const value = typeof text === 'string' ? text.trim() : '';
     this.check(notes, value, notes[index].text.length);
     notes[index] = { ...notes[index], text: value, editedAt: new Date().toISOString() };
-    await this.storage.update(this.key, notes);
+    await this.write(notes);
     return notes[index];
   }
-  async remove(id) {
-    await this.storage.update(this.key, this.list().filter(note => note.id !== id));
+  summaryLimit(notes) {
+    return Math.min(this.limits.text, notes.reduce((size, note) => size + note.text.length, 0) - 1);
+  }
+  combine(selected, text) { return this.locked(() => this.combineNotes(selected, text)); }
+  async combineNotes(selected, text) {
+    const expected = new Map(selected.map(note => [note.id, digest(note)]));
+    if (expected.size < 2) throw new Error('Select at least two notes to summarize.');
+    const notes = this.list();
+    const originals = notes.filter(note => expected.has(note.id));
+    if (originals.length !== expected.size || originals.some(note => digest(note) !== expected.get(note.id))) {
+      throw new Error('The selected notes changed. Open Notes and select them again.');
+    }
+    const remaining = notes.filter(note => !expected.has(note.id));
+    const value = typeof text === 'string' ? text.trim() : '';
+    if (value.length > this.summaryLimit(originals)) throw new Error('Write a shorter summary to free storage space.');
+    this.check(remaining, value);
+    const references = new Map(originals.flatMap(note => note.source?.references ?? []).map(ref => [digest(ref), ref]));
+    const source = { kind: 'user', ...(references.size ? { references: [...references.values()].slice(0, 5) } : {}) };
+    const summary = { id: randomUUID(), text: value, savedAt: new Date().toISOString(), source };
+    remaining.splice(notes.indexOf(originals[0]), 0, summary);
+    await this.write(remaining);
+    return summary;
+  }
+  remove(id, expected) {
+    return this.locked(() => {
+      const notes = this.list();
+      const current = notes.find(note => note.id === id);
+      if (expected && (!current || digest(current) !== digest(expected))) throw new Error(`This ${this.label} changed. Open Notes and try again.`);
+      return this.write(notes.filter(note => note.id !== id));
+    });
   }
 }
 
 class WorkspaceMemory extends NoteStore {
   constructor(storage, workspace) {
-    super(storage, `memory.v1.${digest(workspace)}`, { notes: 20, text: 2_000, total: 8_000, label: 'workspace note' });
+    super(storage, `memory.v1.${digest(workspace)}`, memoryLimits.workspace);
   }
 }
 
 // Preferences about the user that apply in every workspace.
 class UserPreferences extends NoteStore {
   constructor(storage) {
-    super(storage, 'preferences.v1', { notes: 10, text: 1_000, total: 4_000, label: 'user preference' });
+    super(storage, 'preferences.v1', memoryLimits.preferences);
   }
 }
 
@@ -119,4 +169,4 @@ class SuggestedNotes {
   }
 }
 
-module.exports = { WorkspaceMemory, UserPreferences, SuggestedNotes, NoteStore, cleanReferences };
+module.exports = { WorkspaceMemory, UserPreferences, SuggestedNotes, NoteStore, cleanReferences, memoryLimits };

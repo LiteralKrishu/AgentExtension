@@ -3,7 +3,8 @@ const path = require('node:path');
 const { z } = require('zod');
 const { digest } = require('./permissions');
 const { safePath } = require('./workspace');
-const { runWorkerSession } = require('./worker-session');
+const { runWorkerSession, workerReadInput, WORKER_READ_LIMIT } = require('./worker-session');
+const { reason } = require('./policy');
 const { Draft } = require('./draft');
 
 const workerInput = z.strictObject({ question: z.string().trim().min(1).max(1_000),
@@ -47,7 +48,7 @@ async function excerpt(run, file, line, current) {
   return { file, start, end: start + body.split('\n').length - 1, text: body, truncated: start > 1 || body.length < text.length };
 }
 
-async function snapshotFor(run, role, input, kind = ROLES[role]?.snapshot ?? 'repository') {
+async function snapshotFor(run, role, input, kind = ROLES[role]?.snapshot ?? 'repository', readableFiles) {
   for (const file of input.files) safePath(file);
   let sources = [];
   let target;
@@ -93,6 +94,7 @@ async function snapshotFor(run, role, input, kind = ROLES[role]?.snapshot ?? 're
       safePath(candidate.file);
       seen.add(candidate.file);
       const text = await run.workspace.read(candidate.file);
+      if (readableFiles) readableFiles.set(candidate.file, text.slice(0, 12_000).split('\n').slice(0, 240));
       const lines = text.split('\n');
       const start = Math.max(1, candidate.line - 5);
       const excerpt = lines.slice(start - 1, start + 39).join('\n').slice(0, 1_800);
@@ -186,6 +188,7 @@ class WorkerPool {
     const custom = this.custom.get(role);
     const definition = custom ? { effect: 'worker.custom', snapshot: custom.snapshot, output: 'report', instructions: custom.instructions } : ROLES[role];
     if (this.closed || !definition || (!custom && !this.roles.has(role))) throw new Error('This worker role is not enabled by an approved plugin.');
+    if (this.run.readOnly && definition.snapshot !== 'repository') throw new Error('Scheduled reports can use only read-only repository workers.');
     this.run.signal.throwIfAborted();
     if (definition.snapshot === 'edit' && !input.files.length) throw new Error('Name the files the worker may edit.');
     if (this.active.size >= 2 || this.count >= 4) throw new Error('Worker limit reached: two concurrent workers and four calls per run.');
@@ -203,22 +206,67 @@ class WorkerPool {
       try {
         await this.run.validateCapabilities?.();
         signal.throwIfAborted();
-        const snapshot = await snapshotFor(this.run, role, input, definition.snapshot);
+        const scopes = this.run.permissions.snapshot().scopes;
+        const readableFiles = definition.snapshot === 'repository' && custom?.tools?.includes('read_file') && input.files.length
+          && scopes.includes('workspace.read') && scopes.includes('worker.read') ? new Map() : undefined;
+        const snapshot = await snapshotFor(this.run, role, input, definition.snapshot, readableFiles);
         if (generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker permission changed.');
         signal.throwIfAborted();
         Object.assign(row, { state: 'running', snapshot: snapshot.digest, target: snapshot.target,
           sources: snapshot.sources.map(({ file, start, end, truncated }) => ({ file, start, end, truncated })) });
         this.run.manifest?.add('worker input', `${role} · ${id}`, JSON.stringify(snapshot), { reason: 'Isolated snapshot. No parent chat, notes, credentials or grants.', limit: 16_200 });
         this.publish();
+        let reads = 0;
+        let readOpen = true;
+        const read = readableFiles && (async (raw, toolSignal, sources) => {
+          signal.throwIfAborted();
+          toolSignal?.throwIfAborted();
+          if (!readOpen || generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker read access ended.');
+          if (++reads > WORKER_READ_LIMIT) throw new Error('Worker read limit reached.');
+          const input = workerReadInput.parse(raw);
+          const { file, start_line: start, end_line: end } = input;
+          const target = this.run.permissions.action('worker.read_file', 'worker.read', file, input, { worker: id, snapshot: snapshot.digest });
+          const lines = readableFiles.get(file);
+          if (!lines) {
+            this.run.permissions.record(target, 'deny', 'File is outside the named worker snapshot');
+            throw new Error('Read a file explicitly named in this worker snapshot.');
+          }
+          const verdict = this.run.permissions.decide('worker.read', file);
+          if (verdict.rule && verdict.decision !== 'allow') {
+            this.run.permissions.record(target, 'deny', reason(verdict));
+            throw new Error('Worker read denied by policy.');
+          }
+          await this.run.validateCapabilities?.();
+          signal.throwIfAborted();
+          toolSignal?.throwIfAborted();
+          if (!readOpen || generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker read access ended.');
+          this.run.permissions.require(this.run.permissions.action('worker.read_file', 'workspace.read', file, input));
+          this.run.permissions.require(target);
+          this.run.budget?.spend('worker.read_file');
+          this.run.usage?.tool('worker.read_file');
+          if (start > lines.length) throw new Error('That line is outside the captured worker input.');
+          const text = lines.slice(start - 1, Math.min(start + 39, end ?? start + 39)).join('\n').slice(0, 1_800);
+          const source = { file, start, end: start + text.split('\n').length - 1, text };
+          sources.push(source);
+          this.run.manifest?.add('worker tool result', file, text, { reason: `Read from the snapshot for ${role}`, limit: 1_800 });
+          return source;
+        });
         const attempt = async retry => {
           // A retry sends the same snapshot with a fixed note naming the rejected reply. It counts as the same worker call.
           const task = retry ? { ...snapshot, previous_reply_rejected: `${retry} Reply with only the JSON object your instructions describe. Do not call any tool.` } : snapshot;
-          const text = await this.invoke(this.settings, task, signal, session => { row.session = session; this.publish(); },
-            { output: definition.output, instructions: definition.instructions, role: custom ? custom.name : role,
-              onUsage: usage => this.run.usage?.model(usage, `worker:${role}`) });
+          const readSources = [];
+          let text;
+          try {
+            text = await this.invoke(this.settings, task, signal, session => { row.session = session; this.publish(); },
+              { output: definition.output, instructions: definition.instructions, role: custom ? custom.name : role,
+                ...(read && !retry ? { read: (input, signal) => read(input, signal, readSources) } : {}),
+                onUsage: usage => this.run.usage?.model(usage, `worker:${role}`),
+                onTurnCost: metrics => this.run.usage?.turnCost(metrics) });
+          } finally { readOpen = false; }
           this.run.onUsage?.();
           signal.throwIfAborted();
-          return definition.output === 'edits' ? parseEdits(text, snapshot) : parseReport(text, snapshot);
+          return definition.output === 'edits' ? parseEdits(text, snapshot)
+            : parseReport(text, { sources: [...snapshot.sources, ...readSources] });
         };
         let parsed;
         try { parsed = await attempt(); } catch (error) {

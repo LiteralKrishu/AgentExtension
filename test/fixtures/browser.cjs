@@ -1,12 +1,33 @@
 const http = require('node:http');
 async function startBrowserFixture() {
-  const calls = { writes: 0, escaped: 0, uploads: 0 };
+  const calls = { writes: 0, escaped: 0, uploads: 0, downloads: 0, slowDownloads: 0, closedDownloads: 0 };
   const outside = http.createServer((req, res) => { calls.escaped++; res.end('Outside approved scope'); });
   await new Promise(resolve => outside.listen(0, '127.0.0.1', resolve));
   const outsideUrl = `http://127.0.0.1:${outside.address().port}`;
   const server = http.createServer(async (req, res) => {
     if (req.url === '/slow') { calls.slow = (calls.slow ?? 0) + 1; return; }
     if (req.url === '/redirect') return res.writeHead(302, { location: outsideUrl }).end();
+    if (req.url === '/transfers') return res.setHeader('content-type', 'text/html').end(`<body>
+      <a href="/attachment/text">Text</a><a href="/attachment/large">Large</a>
+      <a href="/attachment/slow">Slow</a><a href="/attachment/invalid">Invalid</a>
+      <a href="/redirect">Redirect</a><a href="${outsideUrl}">External</a>
+      </body>`);
+    if (req.url?.startsWith('/attachment/')) {
+      calls.downloads++;
+      res.setHeader('content-type', 'text/plain; charset=utf-8');
+      res.setHeader('content-disposition', 'attachment; filename="../../ignored.txt"');
+      if (req.url.endsWith('/large')) {
+        res.write('a'.repeat(40_000)); return res.end('b'.repeat(30_000));
+      }
+      if (req.url.endsWith('/invalid')) return res.end(Buffer.from([255]));
+      if (req.url.endsWith('/slow')) {
+        calls.slowDownloads++;
+        res.on('close', () => { calls.closedDownloads++; });
+        res.write('First chunk');
+        return;
+      }
+      return res.end('Approved attachment\n');
+    }
     if (req.method === 'POST') {
       let body = ''; for await (const chunk of req) body += chunk;
       if (req.url === '/upload') { calls.uploads++; calls.uploadBody = body; }

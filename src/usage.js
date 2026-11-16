@@ -14,6 +14,7 @@ class RunUsage {
     this.modelCalls = 0;
     this.breakdown = undefined;
     this.compactions = [];
+    this.cost = { usd: null, unreportedTurns: 0 };
   }
   get total() { return this.tokens.input + this.tokens.output; }
   elapsedMs() { return this.now() - this.started; }
@@ -31,9 +32,16 @@ class RunUsage {
     if (actor === 'parent' && usage.inputTokensBreakdown) this.breakdown = { ...usage.inputTokensBreakdown };
   }
   compaction(event) {
-    this.compactions.push({ at: event.createdAt, trigger: event.trigger?.type ?? 'unknown', durationMs: event.durationMs,
+    this.compactions.push({ at: event.createdAt, threadId: event.threadId, trigger: event.trigger?.type ?? 'unknown', durationMs: event.durationMs,
+      contextTokens: event.trigger?.contextTokens, thresholdTokens: event.trigger?.thresholdTokens,
       inputTokens: event.usage?.inputTokens ?? 0, outputTokens: event.usage?.outputTokens ?? 0 });
     this.model(event.usage, 'compaction');
+  }
+  turnCost(metrics) {
+    // TrueForge turn totals include the cost of compaction. Extension workers run separate turns.
+    const usd = metrics?.totalCostInUsd;
+    if (!Number.isFinite(usd) || usd < 0) this.cost.unreportedTurns++;
+    else this.cost.usd = (this.cost.usd ?? 0) + usd;
   }
   exceeded() {
     const { maxTokens, maxMinutes, maxToolCalls } = this.limits;
@@ -57,7 +65,7 @@ class RunUsage {
   snapshot() {
     return { limits: this.limits, tokens: { ...this.tokens, total: this.total }, actors: structuredClone(this.actors), toolCalls: this.toolCalls,
       modelCalls: this.modelCalls, elapsedSeconds: Math.round(this.elapsedMs() / 1000), breakdown: this.breakdown, compactions: [...this.compactions],
-      reached: this.exceeded() };
+      cost: { ...this.cost }, reached: this.exceeded() };
   }
 }
 
@@ -71,4 +79,11 @@ function usageSummary(snapshot) {
     + (snapshot.reached ? ` · limit reached: ${snapshot.reached}` : '');
 }
 
-module.exports = { RunUsage, usageSummary };
+function costSummary(cost) {
+  if (!Number.isFinite(cost?.usd)) return 'Unreported';
+  const amount = cost.usd > 0 && cost.usd < 0.00000001 ? '<0.00000001'
+    : cost.usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+  return `USD ${amount}${cost.unreportedTurns ? ' (some turns unreported)' : ''}`;
+}
+
+module.exports = { RunUsage, usageSummary, costSummary };

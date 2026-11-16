@@ -7,10 +7,13 @@
 //
 // Environment: AGENTEXTENSION_TEST_FORGE_URL (default http://127.0.0.1:8790), AGENTEXTENSION_TEST_MODEL
 // (default local-lm-studio/qwen), AGENTEXTENSION_TEST_MODEL_URL (default from trueforge/model.example.json),
-// AGENTEXTENSION_TEST_MODEL_ID (default: the example's id when served, otherwise a served Qwen 9B).
+// AGENTEXTENSION_TEST_MODEL_ID (default: the example's id when served, otherwise a served Qwen 9B),
+// AGENTEXTENSION_TEST_RESULTS_DIR (default: test-results in the repository).
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { execFile } = require('node:child_process');
+const { promisify } = require('node:util');
 const { setTimeout: sleep } = require('node:timers/promises');
 const { startHost } = require('../helpers/host.cjs');
 
@@ -23,6 +26,7 @@ const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf
 const calc = 'exports.add = (a, b) => a - b;\nexports.sub = (a, b) => a - b;\n';
 const calcTest = "const test = require('node:test');\nconst assert = require('node:assert');\nconst { add, sub } = require('./calc.js');\n\ntest('add', () => assert.equal(add(1, 2), 3));\ntest('sub', () => assert.equal(sub(5, 2), 3));\n";
 const staged = (result, file) => result.hunks.filter(hunk => hunk.file === file);
+const git = promisify(execFile);
 
 const scenarios = [
   {
@@ -90,7 +94,8 @@ const scenarios = [
     evaluate: r => [
       { name: 'Called diagnose_failure', ok: r.workers.some(worker => worker.role === 'test-diagnosis') },
       { name: 'Diagnosis completed', ok: r.workers.some(worker => worker.role === 'test-diagnosis' && worker.state === 'completed') },
-      { name: 'Worker proposal merged', ok: r.workers.some(worker => worker.role === 'edit-proposal' && worker.state === 'merged') },
+      { name: 'Worker proposal merged', required: true, ok: r.workers.some(worker => worker.role === 'edit-proposal' && worker.state === 'merged') },
+      { name: 'Merged file reached hunk review', required: true, ok: r.phase === 'ready' && staged(r, 'calc.js').length > 0 },
       { name: 'Staged add uses +', required: true, ok: /a \+ b/.test(r.draft['calc.js'] ?? '') },
       { name: 'The last check passed', ok: r.checks.at(-1)?.exitCode === 0 },
     ],
@@ -122,6 +127,27 @@ const scenarios = [
     ],
   },
 ];
+
+async function flaskScenario() {
+  if (!process.env.AGENTEXTENSION_TEST_FLASK_ROOT) throw new Error('Set AGENTEXTENSION_TEST_FLASK_ROOT to a clean Flask 3.1.3 checkout.');
+  const workspace = await fs.realpath(process.env.AGENTEXTENSION_TEST_FLASK_ROOT);
+  const command = async (...args) => (await git('git', args, { cwd: workspace, timeout: 5_000 })).stdout.trimEnd();
+  if (await command('rev-parse', '--show-toplevel') !== workspace
+      || await command('rev-parse', 'HEAD') !== '22d924701a6ae2e4cd01e9a15bbaf3946094af65'
+      || await command('status', '--porcelain')) {
+    throw new Error('Use the root of a clean Flask 3.1.3 checkout at 22d92470.');
+  }
+  return {
+    name: 'flask-task-b', workspace, files: {},
+    purpose: 'Collect and review the draft for the original Flask Task B. Run the CLI acceptance checks separately.',
+    prompt: 'Add a new built-in CLI command flask config that prints the loaded application\'s configuration as JSON, masking the values of any key containing SECRET, PASSWORD, TOKEN or KEY as "***". It must appear in flask --help, be covered by a test, and be documented alongside the other built-in commands.',
+    evaluate: r => [
+      { name: 'Reached hunk review', required: true, ok: r.reviewed && r.phase === 'ready' },
+      { name: 'Staged CLI, test and documentation changes', required: true, ok: staged(r, 'src/flask/cli.py').length > 0
+        && r.hunks.some(hunk => /^tests\/test_.*\.py$/.test(hunk.file)) && staged(r, 'docs/cli.rst').length > 0 },
+    ],
+  };
+}
 
 async function preflight() {
   const { TrueForge } = await import('@truefoundry/trueforge-sdk');
@@ -157,7 +183,7 @@ async function preflight() {
 
 async function runScenario(scenario) {
   const started = Date.now();
-  const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), `agentextension-model-${scenario.name}-`)));
+  const root = scenario.workspace ?? await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), `agentextension-model-${scenario.name}-`)));
   const cleanups = [];
   const t = { after: fn => cleanups.push(fn) };
   const result = { name: scenario.name, purpose: scenario.purpose, model: MODEL, hunks: [], draft: {}, checks: [], questions: [], suggestions: [],
@@ -234,7 +260,7 @@ async function runScenario(scenario) {
     result.errors.push(error.stack ?? error.message);
   } finally {
     for (const fn of cleanups.reverse()) await Promise.resolve(fn()).catch(() => {});
-    await fs.rm(root, { recursive: true, force: true });
+    if (!scenario.workspace) await fs.rm(root, { recursive: true, force: true });
   }
   return finish(scenario, result, started);
 }
@@ -271,11 +297,14 @@ function finish(scenario, result, started) {
 }
 
 async function main() {
+  if (only?.includes('flask-task-b')) scenarios.push(await flaskScenario());
+  const selected = scenarios.filter(item => !only || only.includes(item.name));
+  if (!selected.length || only?.some(name => !selected.some(item => item.name === name))) throw new Error('Unknown real-model scenario.');
   await preflight();
   console.log(`AgentExtension real-model checks · ${MODEL} via ${FORGE}\n`);
   const results = [];
-  for (const scenario of scenarios.filter(item => !only || only.includes(item.name))) results.push(await runScenario(scenario));
-  const directory = path.join(ROOT, 'test-results');
+  for (const scenario of selected) results.push(await runScenario(scenario));
+  const directory = process.env.AGENTEXTENSION_TEST_RESULTS_DIR ?? path.join(ROOT, 'test-results');
   await fs.mkdir(directory, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const summary = { model: MODEL, forge: FORGE, node: process.version, platform: `${process.platform} ${os.release()}`, startedAt: stamp, results };
@@ -286,7 +315,7 @@ async function main() {
     '', '`*` marks a required check. Full transcripts are in the JSON file next to this one.', ''];
   await fs.writeFile(path.join(directory, 'model-latest.md'), lines.join('\n'));
   await fs.writeFile(path.join(directory, 'model-latest.json'), JSON.stringify(summary, null, 2));
-  console.log(`\nResults: test-results/model-latest.md and test-results/model-${stamp}.json`);
+  console.log(`\nResults in ${directory}: model-latest.md and model-${stamp}.json`);
   process.exitCode = results.every(item => item.outcome.startsWith('pass')) ? 0 : 1;
   // TrueForge client streams can keep the event loop open after the last scenario.
   setTimeout(() => process.exit(), 1_000).unref();

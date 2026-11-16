@@ -24,7 +24,9 @@ class SurfaceAccess {
   }
   // `subject` is the rule subject for an allow. Deny and ask rules also match the broad target, so a deny rule for
   // an app still applies when a detailed subject is used, while an allow rule must name the detailed subject.
-  async approve(tool, effect, target, args, scope, detail, subject) {
+  async approve(tool, effect, target, args, scope, detail, subject, requestSignal = this.signal) {
+    await this.permissions.refreshPolicy?.();
+    requestSignal.throwIfAborted();
     this.check();
     const action = this.permissions.action(tool, effect, target, args, scope);
     const broad = typeof target === 'string' ? target : target?.bundleId ?? JSON.stringify(target);
@@ -37,11 +39,14 @@ class SurfaceAccess {
       if (!this.permissions.grant(action, undefined, reason(verdict))) throw new Error('Surface approval no longer matches.');
       return action;
     }
-    const signal = AbortSignal.any([this.signal, AbortSignal.timeout(60_000)]);
+    const signal = AbortSignal.any([this.signal, requestSignal, this.permissions.revocation.signal, AbortSignal.timeout(60_000)]);
     let stop;
-    const answer = await Promise.race([this.ask(detail, signal), new Promise(resolve => {
+    const cancelled = new Promise(resolve => {
       stop = () => resolve(false); signal.addEventListener('abort', stop, { once: true });
-    })]).finally(() => signal.removeEventListener('abort', stop));
+    });
+    const answer = await Promise.race([Promise.resolve().then(() => signal.aborted ? false : this.ask(detail, signal)), cancelled])
+      .finally(() => signal.removeEventListener('abort', stop));
+    if (answer && !signal.aborted) await this.permissions.refreshPolicy?.();
     this.check(action);
     if (!answer || signal.aborted) {
       this.permissions.record(action, 'deny', 'Surface action declined or expired');

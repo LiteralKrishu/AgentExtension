@@ -347,3 +347,26 @@ On 12 November 2026, `npm run check` passed. The full suite passed **128 of 128 
 The installed VSIX passed in a fresh VS Code profile. The interface test approved a plan, rejected a hunk, ran the accepted-hunk check twice, then applied and undid the approved changes. It also covered plugin approval, workers, scoped browser and app actions, cancellation, and saved evidence.
 
 The integration tests cover language-provider results and diagnostic Quick Fix through fixtures. The earlier Qwen scenarios provide separate evidence for live-model behavior. The original live-model Flask Task B remains open.
+
+## Post-implementation verification
+
+The Phase 2–11 checks ran on Apple silicon with macOS 27.2, Node.js 24.18.0, VS Code 1.146.0, TrueForge 0.184.2, Chrome 157, and Playwright 1.62.1. The manifest requires Node.js 22.14 or later and VS Code 1.101 or later. Native app access requires a macOS build and Accessibility permission. The Linux background runner and the hosted HTTPS pilot remain open for end-to-end verification. [Setup](../README.md#set-up) · [Remaining work](remaining-work.md)
+
+### Installed package and live model
+
+- `npm run check`, `git diff --check`, and the VSIX build passed. The regression suite passed all 173 tests with the TrueForge, Chrome, and native macOS fixtures enabled. [Test commands](../README.md#verify)
+- The installed VSIX created and approved a read-only schedule. **Run now** produced one report after one workspace tool call. **View run history** opened the saved report. The fixture checked the exposed tools and verified that the source file stayed intact. The same UI run checked hunk review, browser downloads, the native slider, shared note conflicts, and assigned draft apply. [Installed UI harness](../test/ui/run.cjs)
+- The runner extracted from the VSIX passed both background integration tests. The closed-editor fixture verified a single occurrence, bounded workspace and connector access, separate webhook delivery status, and revocation. [Background integration tests](../test/background-live.test.js)
+- Qwen 3.5 9B returned an edit-proposal result, the parent merged it, and the change reached hunk review. The two calculator tests passed when run against the saved draft. On that run the model skipped the optional diagnosis and did not record a command check. The targeted harness now requires evidence of both the merge and review. [Live-model harness](../test/model/run.cjs)
+- The clean Flask 3.1.3 checkout passed all 58 baseline CLI tests. In the live Task B rerun, Qwen 3.5 9B reached the six-minute harness limit after 19 read calls, without a staged change. The checkout stayed clean. The model acceptance check remains open. [Flask rehearsal](demo.md#b-agent-mode)
+
+### Limits and upgrade behavior
+
+| Area | Limits and observed behavior | Evidence |
+| --- | --- | --- |
+| Plugin and worker input | Plugins accept up to 64 files and 128,000 bytes of text. Tests refused oversized packages without replacing the installed version. Worker tests exercised the configured deadline, cancellation, named-file scope, and the three-read budget. | [Plugin package tests](../test/plugin-packages.test.js) · [Worker tests](../test/worker-live.test.js) · [Worker limits](../test/workers.test.js) |
+| Scheduled execution | The installed test used the Small preset with two minutes, eight tool calls, two connector reads, and 25,000 model tokens. Store and bridge tests cover input limits, tool budget refusal, one shared occurrence, and paused approval after input changes. Notification failure preserved the report. | [Schedule tests](../test/schedules.test.js) · [Schedule integration](../test/extension-schedules.test.js) · [Runner tests](../test/background-live.test.js) |
+| Browser and native app | Browser downloads stop above 64,000 bytes and have a 15-second transfer deadline. The fixture rejected an oversized stream and closed a stalled connection on cancellation and revocation. The native fixture rejected a replaced window with the same visible contents. Both surfaces have a 30-operation run limit. | [Surface fixtures](../test/surface-live.test.js) · [Surface limit tests](../test/surfaces.test.js) |
+| Organization and project access | Organization requests have a four-second deadline. Handoffs permit up to 12 files and a 128,000-byte request. The fixture refused an oversized handoff, a private path, and a changed file base. Revocation closed an open review and blocked Apply. | [Organization tests](../test/organization.test.js) · [Collaboration tests](../test/collaboration.test.js) |
+
+The upgrade replay generated state with the code at baseline commit `f6ef6e5` and loaded it with the current code. The connector setting, bearer credential lookup key, and permission rule kept their meaning. The schedule kept its approval digest, and old and new history records could be read together. The unchanged plugin kept its pin. The version 1 checkpoint restored its draft into current hunk review. [Schedule storage tests](../test/schedules.test.js) · [Plugin upgrade tests](../test/plugin-packages.test.js) · [Checkpoint tests](../test/checkpoint.test.js)

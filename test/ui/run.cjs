@@ -8,6 +8,9 @@ const { setTimeout: sleep } = require('node:timers/promises');
 const { startReadServer } = require('../fixtures/read-server.cjs');
 const { startBrowserFixture } = require('../fixtures/browser.cjs');
 const { startDesktop } = require('../fixtures/desktop.cjs');
+const { startProject } = require('../fixtures/project.cjs');
+const { projectClient, prepareHandoff } = require('../../src/collaboration');
+const { Workspace } = require('../../src/workspace');
 
 async function main() {
   const baseUrl = process.env.AGENTEXTENSION_TEST_FORGE_URL;
@@ -18,11 +21,22 @@ async function main() {
   const browserFixture = await startBrowserFixture();
   const desktopFixture = await startDesktop();
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-ui-'));
+  const cleanupProject = [];
+  const project = await startProject({ after: cleanup => cleanupProject.unshift(cleanup) });
+  const [sender, recipient] = project.devices;
+  const projectSender = projectClient(sender.root, { files: [sender.policy] });
+  const projectReceiver = projectClient(recipient.root, { files: [recipient.policy] });
+  await projectSender.change({ action: 'save', section: 'notes', expected: 0, text: 'Shared baseline' });
+  const prepared = await prepareHandoff({ workspace: sender.root,
+    files: [{ file: 'assigned.txt', base: null, text: 'Approved project handoff\n' }] }, new Workspace(sender.root), 'Fixture assignment');
+  await projectSender.change({ action: 'send', to: { user: recipient.user, device: recipient.device }, ...prepared });
+  await fs.symlink(recipient.root, path.join(root, 'workspace'), 'junction');
   await fs.writeFile(path.join(root, 'surface-fixture.json'), JSON.stringify({ origin: browserFixture.origin, app: desktopFixture.app, result: desktopFixture.result }));
   const debugPort = Number(process.env.AGENTEXTENSION_UI_PORT || 19236);
   const name = `ui-${Date.now()}`;
   let providerError;
   let workerCalls = 0;
+  let scheduledCalls = 0;
   const send = (res, body, message, hold = false) => {
     res.writeHead(200, { 'content-type': 'text/event-stream' });
     const packet = (delta, finish_reason) => ({ id: 'ui-test', object: 'chat.completion.chunk', created: 1, model: body.model,
@@ -36,6 +50,10 @@ async function main() {
         res.setHeader('content-type', 'application/json');
         return res.end(JSON.stringify({ workerCalls, browser: browserFixture.calls }));
       }
+      if (req.method === 'GET' && req.url === '/project-remote-change') {
+        await projectSender.change({ action: 'save', section: 'notes', expected: 1, text: 'Published from the first device' });
+        return res.setHeader('content-type', 'application/json').end('true');
+      }
       let raw = '';
       for await (const chunk of req) raw += chunk;
       const body = JSON.parse(raw);
@@ -43,6 +61,20 @@ async function main() {
       const find = name => tools.find(tool => tool.endsWith(name));
       const all = JSON.stringify(body.messages);
       if (all.includes(fixture.token)) throw new Error('Connector credential reached the model.');
+      if (all.includes('Summarize the value from a.js for schedule verification.')) {
+        scheduledCalls++;
+        if (!all.includes('SCHEDULED READ-ONLY REPORT MODE') || tools.some(tool => /propose_|create_file|review_changes|run_command|browser_|computer_/.test(tool))) {
+          throw new Error('The scheduled UI run received write tools or missed its read-only context.');
+        }
+        if (!body.messages.some(message => message.role === 'tool')) {
+          return send(res, body, { role: 'assistant', tool_calls: [{ index: 0, id: 'schedule-read', type: 'function',
+            function: { name: find('read_file'), arguments: JSON.stringify({ file: 'a.js' }) } }] });
+        }
+        if (!body.messages.some(message => message.role === 'tool' && JSON.stringify(message.content).includes('const a = 1;'))) {
+          throw new Error('The approved scheduled run did not read its workspace file.');
+        }
+        return send(res, body, { role: 'assistant', content: 'Scheduled UI report verified the value in a.js.' });
+      }
       let child;
       for (const message of body.messages.filter(message => message.role === 'user')) {
         try { const value = JSON.parse(message.content); if (value.sources && ['repository-research', 'diff-review'].includes(value.role)) child = value; } catch {}
@@ -80,6 +112,15 @@ async function main() {
         if (round === 5) return toolCall('computer_act', { snapshot: latest.snapshot, element: latest.nodes.find(node => node.editable).id, action: 'fill', text: 'Panel native verified' });
         if (round === 6) return toolCall('computer_observe', {});
         if (round === 7) return toolCall('computer_act', { snapshot: latest.snapshot, element: latest.nodes.find(node => node.title === 'Confirm test').id, action: 'press' });
+        if (round === 8) return toolCall('computer_observe', {});
+        if (round === 9) return toolCall('computer_act', { snapshot: latest.snapshot, element: latest.nodes.find(node => node.increment).id, action: 'increment' });
+        if (round === 10) return toolCall('computer_observe', {});
+        if (round === 11) {
+          if (latest.nodes.find(node => node.role === 'AXSlider')?.value !== 3) throw new Error('The native slider did not increment.');
+          return toolCall('browser_open', { url: `${browserFixture.origin}/transfers` });
+        }
+        if (round === 12) return toolCall('browser_download', { snapshot: latest.snapshot, element: latest.elements.find(node => node.label === 'Text').id, file: 'attachment.txt' });
+        if (round === 13) return toolCall('review_changes', {});
         return send(res, body, { role: 'assistant', content: 'Scoped browser and native app verified.' });
       }
       if (all.includes('Stop scoped access')) {
@@ -129,7 +170,7 @@ async function main() {
   try {
     await forge.settings.modelProviders.createOrUpdate({ manifest: { name, type: 'custom',
       baseUrl: `http://127.0.0.1:${provider.address().port}/v1`, models: [{ name: 'editor', modelId: 'editor', properties: { contextLength: 32000 } }] } });
-    for (const sub of ['helper', 'user/User', 'workspace', 'extensions']) await fs.mkdir(path.join(root, sub), { recursive: true });
+    for (const sub of ['helper', 'user/User', 'extensions']) await fs.mkdir(path.join(root, sub), { recursive: true });
     const pluginRoot = path.join(root, 'plugins/test-team');
     await fs.cp(path.resolve(__dirname, '../../plugins/review-team'), pluginRoot, { recursive: true });
     const manifest = JSON.parse(await fs.readFile(path.join(pluginRoot, 'plugin.json'), 'utf8'));
@@ -158,7 +199,16 @@ async function main() {
           try {
             let output = true;
             if(req.url === '/open') await vscode.commands.executeCommand('agentextension.open');
+            else if(req.url === '/project') void vscode.commands.executeCommand('agentextension.project');
+            else if(req.url === '/project-remote-change') output=await (await fetch('http://127.0.0.1:${provider.address().port}/project-remote-change')).json();
+            else if(req.url === '/edit-shared-text') {
+              const editor = vscode.window.activeTextEditor;
+              if (editor?.document.uri.scheme !== 'untitled') throw new Error('Missing shared text editor');
+              const document = editor.document;
+              output = await editor.edit(builder => builder.replace(new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), 'Local edit from VS Code'));
+            }
             else if(req.url === '/save') await vscode.workspace.saveAll();
+            else if(req.url === '/active-document') output=vscode.window.activeTextEditor?.document.getText() ?? '';
             else if(req.url === '/version') output=vscode.extensions.getExtension('LiteralKrishu.agentextension')?.packageJSON.version;
             else if(req.url === '/worker-status') output=await (await fetch('http://127.0.0.1:${provider.address().port}/test-status')).json();
             else if(req.url === '/update-plugin') {
@@ -187,7 +237,8 @@ async function main() {
     } else extensionArgs.push(`--extensionDevelopmentPath=${path.resolve(__dirname, '../..')}`);
     code = spawn(executable, [`--user-data-dir=${root}/user`, `--extensions-dir=${root}/extensions`,
       ...extensionArgs, `--extensionDevelopmentPath=${root}/helper`,
-      `--remote-debugging-port=${debugPort}`, '--skip-welcome', '--skip-release-notes', `${root}/workspace`], { stdio: 'ignore' });
+      `--remote-debugging-port=${debugPort}`, '--skip-welcome', '--skip-release-notes', recipient.root],
+    { stdio: 'ignore', env: { ...process.env, AGENTEXTENSION_POLICY_FILE: recipient.policy } });
     code.on('error', error => { providerError = error; });
     let ready = false;
     for (let attempt = 0; attempt < 100; attempt++) {
@@ -208,18 +259,26 @@ async function main() {
     if (exit !== 0) throw new Error('VS Code panel verification failed.');
     if (fixture.calls() !== 2) throw new Error('Expected exactly two approved connector reads.');
     if (workerCalls !== 6) throw new Error(`Expected six real child calls, received ${workerCalls}.`);
-    if (browserFixture.calls.writes !== 1 || browserFixture.calls.escaped !== 0) throw new Error('Browser scope or write approval failed.');
+    if (scheduledCalls !== 2) throw new Error(`Expected a single scheduled report with one read, received ${scheduledCalls} model calls.`);
+    if (browserFixture.calls.writes !== 1 || browserFixture.calls.escaped !== 0 || browserFixture.calls.downloads !== 1) throw new Error('Browser scope or transfer approval failed.');
     if (await fs.readFile(desktopFixture.result, 'utf8') !== 'Panel native verified') throw new Error('Native app action was not verified.');
+    const observedProject = await projectReceiver.state();
+    if (await fs.readFile(path.join(recipient.root, 'assigned.txt'), 'utf8') !== 'Approved project handoff\n'
+        || observedProject.handoffs[0].state !== 'accepted' || observedProject.context.notes.text !== 'Local edit from VS Code'
+        || observedProject.context.notes.revision !== 3) throw new Error('Project sync or handoff was not verified.');
     await fs.writeFile(path.join(root, 'results.json'), JSON.stringify({ passed: true, connectorReads: fixture.calls(),
       version: require('../../package.json').version, packaged: Boolean(process.env.AGENTEXTENSION_VSIX), workerCalls,
-      browserWrites: browserFixture.calls.writes, outOfScopeRequests: browserFixture.calls.escaped, nativeActions: 2,
+      browserWrites: browserFixture.calls.writes, browserDownloads: browserFixture.calls.downloads, outOfScopeRequests: browserFixture.calls.escaped, nativeActions: 3,
+      projectHandoffs: 1, resolvedProjectConflicts: 1, scheduledReports: 1,
       checks: ['pinned prompt during plan and review', 'Enter submission and Shift+Enter newline', 'file picker and symbol insertion',
-        'workspace drawer actions', 'expandable context sources', 'visible revoke and stop controls',
-        'browser scope selection', 'native app selection', 'browser screenshot', 'per-action and outgoing-write approvals', 'native fill and press', 'stop during browser navigation', 'saved reports and exact checked patches', 'plugin approval', 'changed plugin blocked', 'capability update reapproval', 'plugin disable', 'research worker', 'draft review worker', 'stale report', 'two child cancellation', 'skills', 'approved memory', 'credential storage', 'connector approval', 'context panel', 'plan', 'native diff', 'accepted-hunk check', 'user-initiated accepted-hunk recheck', 'apply', 'undo', 'revocation', 'note removal'] }, null, 2));
+        'workspace drawer actions', 'expandable context sources', 'visible revoke and stop controls', 'shared notes conflict resolution', 'assigned draft review and apply',
+        'schedule creation and approval', 'manual scheduled run', 'scheduled run history and saved report',
+        'browser scope selection', 'native app selection', 'browser screenshot', 'per-action and outgoing-write approvals', 'native fill, press and slider increment', 'browser download review and apply', 'stop during browser navigation', 'saved reports and exact checked patches', 'plugin approval', 'changed plugin blocked', 'capability update reapproval', 'plugin disable', 'research worker', 'draft review worker', 'stale report', 'two child cancellation', 'skills', 'approved memory', 'credential storage', 'connector approval', 'context panel', 'plan', 'native diff', 'accepted-hunk check', 'user-initiated accepted-hunk recheck', 'apply', 'undo', 'revocation', 'note removal'] }, null, 2));
   } finally {
     code?.kill();
     provider.close(); provider.closeAllConnections(); fixture.close();
     browserFixture.close(); desktopFixture.close();
+    for (const cleanup of cleanupProject) await cleanup();
     await forge.settings.modelProviders.delete(name).catch(() => {});
   }
 }

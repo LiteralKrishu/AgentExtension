@@ -13,14 +13,16 @@ async function startDesktop() {
   await fs.writeFile(path.join(bundle, 'Contents/Info.plist'), `<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>${id}</string><key>CFBundleExecutable</key><string>Fixture</string><key>CFBundleName</key><string>AgentExtension Test</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>`);
   await promisify(execFile)('/usr/bin/swiftc', ['-module-cache-path', '/tmp/agentextension-swift-cache', path.join(__dirname, 'desktop.swift'), '-o', path.join(bundle, 'Contents/MacOS/Fixture')]);
   const result = path.join(root, 'result.txt');
-  const child = spawn(path.join(bundle, 'Contents/MacOS/Fixture'), [], { stdio: 'ignore', env: { ...process.env, AGENTEXTENSION_DESKTOP_RESULT: result } });
+  const switchFile = path.join(root, 'switch');
+  const child = spawn(path.join(bundle, 'Contents/MacOS/Fixture'), [], { stdio: 'ignore',
+    env: { ...process.env, AGENTEXTENSION_DESKTOP_RESULT: result, AGENTEXTENSION_DESKTOP_SWITCH: switchFile } });
   try {
     for (let i = 0; i < 40; i++) {
       const app = (await desktopRequest({ command: 'list' })).find(app => app.bundleId === id);
       if (app) {
         try {
           await desktopRequest({ command: 'observe', app });
-          return { app, result, root, close: () => child.kill() };
+          return { app, result, root, switchFile, close: () => child.kill() };
         } catch (error) { if (!/no accessible window/.test(error.message)) throw error; }
       }
       await sleep(100);
