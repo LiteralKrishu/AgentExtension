@@ -5,27 +5,16 @@ const send = (type, fields = {}) => vscode.postMessage({ type, ...fields });
 
 const prompt = byId('prompt');
 const form = byId('form');
-const workspace = byId('workspace');
-const workspaceToggle = byId('workspace-toggle');
 const contextMenu = byId('add-context');
 const stream = byId('stream');
 const phaseLabels = { idle: 'Ready', running: 'Running', question: 'Answer needed', plan: 'Plan to review',
   review: 'Changes to review', ready: 'Ready to apply', done: 'Complete', applied: 'Applied', error: 'Error', cancelled: 'Cancelled' };
 
-function showWorkspace(open) {
-  workspace.hidden = !open;
-  workspaceToggle.setAttribute('aria-expanded', String(open));
-}
-
-workspaceToggle.addEventListener('click', () => showWorkspace(workspace.hidden));
 document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
   if (contextMenu.open) {
     contextMenu.open = false;
     contextMenu.querySelector('summary').focus();
-  } else if (!workspace.hidden) {
-    showWorkspace(false);
-    workspaceToggle.focus();
   }
 });
 document.addEventListener('click', event => {
@@ -58,20 +47,34 @@ byId('attach-symbol').addEventListener('click', () => {
 prompt.value = vscode.getState()?.prompt ?? '';
 prompt.addEventListener('input', () => vscode.setState({ prompt: prompt.value }));
 prompt.addEventListener('keydown', event => {
-  if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return;
+  if (event.isComposing || event.keyCode === 229) return;
+  if (event.key === '/' && !prompt.value && !event.metaKey && !event.ctrlKey && !event.altKey && !byId('slash-picker').disabled) {
+    event.preventDefault();
+    if (!event.repeat) send('slash-commands');
+    return;
+  }
+  if (event.key !== 'Enter' || event.shiftKey) return;
   event.preventDefault();
   if (!event.repeat && !byId('run').disabled) form.requestSubmit(byId('run'));
 });
 form.addEventListener('submit', event => {
   event.preventDefault();
   if (!prompt.value.trim() || byId('run').disabled) return;
-  showWorkspace(false);
   contextMenu.open = false;
   send('run', { prompt: prompt.value, planFirst: event.submitter?.id === 'plan-first' });
 });
-for (const id of ['cancel', 'session', 'approve-plan', 'continue', 'apply', 'check-accepted', 'undo', 'select-skills', 'revoke', 'memory', 'connectors', 'connector-token', 'plugins', 'import-plugin', 'plugin-workflow', 'browser-access', 'computer-access', 'stop-surfaces', 'run-report', 'schedules', 'scheduled-questions', 'policy', 'instructions', 'export-audit', 'resume-run', 'review-conflicts', 'discard-checkpoint', 'review-git', 'model-settings']) {
+for (const id of ['cancel', 'session', 'approve-plan', 'continue', 'apply', 'check-accepted', 'undo', 'revoke', 'stop-surfaces', 'scheduled-questions', 'resume-run', 'review-conflicts', 'discard-checkpoint', 'model-settings', 'more-actions']) {
   byId(id).addEventListener('click', () => send(id));
 }
+for (const id of ['select-skills', 'instructions']) {
+  byId(id).addEventListener('click', () => {
+    contextMenu.open = false;
+    send(id);
+  });
+}
+byId('tool-picker').addEventListener('click', () => send('tools'));
+byId('slash-picker').addEventListener('click', () => send('slash-commands'));
+byId('setup-model').addEventListener('click', () => send('model-settings'));
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -253,22 +256,13 @@ window.addEventListener('message', ({ data }) => {
   lastPhase = state.phase;
   lastRequest = state.request;
   const busy = ['running', 'plan', 'review', 'question'].includes(state.phase);
-  const canRun = !busy && state.phase !== 'ready' && !state.applying && !state.scheduledRunning;
-  byId('surface-scope').textContent = state.surfaceScope || 'Browser and computer access off.';
-  byId('browser-access').disabled = byId('computer-access').disabled = busy || state.phase === 'ready' || state.applying;
+  const canRun = !busy && state.phase !== 'ready' && !state.applying && !state.scheduledRunning && !state.configuringModel;
   byId('stop-surfaces').hidden = !state.surfacesActive && !state.surfaceScope;
-  byId('run-report').disabled = state.applying;
-  byId('review-git').disabled = busy || state.phase === 'ready' || state.applying || Boolean(state.scheduledRunning);
-  byId('schedule-summary').textContent = state.scheduleSummary || 'No scheduled reports.';
   const pendingQuestions = state.pendingScheduleQuestions ?? 0;
   byId('scheduled-question-inbox').hidden = !pendingQuestions;
   byId('scheduled-question-summary').textContent = `${pendingQuestions} scheduled question${pendingQuestions === 1 ? '' : 's'} waiting.`;
   byId('scheduled-questions').disabled = !canRun;
-  byId('policy-summary').textContent = state.policySummary || 'Every protected action asks first.';
-  byId('memory-summary').textContent = state.memorySummary || '';
-  byId('instruction-summary').textContent = state.instructionSummary || 'No instruction profiles in use.';
-  byId('instructions').disabled = busy || state.phase === 'ready' || state.applying;
-  byId('schedules').disabled = state.applying || Boolean(state.scheduledRunning);
+  for (const id of ['tool-picker', 'slash-picker', 'instructions', 'select-skills']) byId(id).disabled = !canRun;
   byId('surface-activity').hidden = !state.surfaceEvents?.length;
   byId('surface-events').replaceChildren(...(state.surfaceEvents ?? []).map(event => element('li', `${event.kind} · ${event.status}`)));
   byId('welcome').hidden = state.phase !== 'idle' || Boolean(state.checkpoint || state.scheduledRunning);
@@ -276,7 +270,8 @@ window.addEventListener('message', ({ data }) => {
   byId('request-card').hidden = !state.request;
   if (requestChanged) byId('request').textContent = state.request ?? '';
   const setupNeeded = state.phase === 'idle' && !state.model;
-  byId('welcome-hint').textContent = setupNeeded ? 'Configure a TrueForge model below to start your first run.'
+  byId('welcome-title').textContent = setupNeeded ? 'Connect a model to get started' : 'What would you like to change?';
+  byId('welcome-hint').textContent = setupNeeded ? 'Use an API key, a local model, or an existing TrueForge server.'
     : 'Describe a task below. You can review the proposed edits before applying them.';
   byId('phase').textContent = state.scheduledRunning ? 'Scheduled report' : setupNeeded ? 'Setup needed' : phaseLabels[state.phase] ?? state.phase;
   byId('phase').dataset.phase = state.phase;
@@ -286,14 +281,20 @@ window.addEventListener('message', ({ data }) => {
   if (status.textContent !== (state.status ?? '')) status.textContent = state.status ?? '';
   byId('usage').hidden = !state.usage;
   byId('usage').textContent = state.usage ? `Usage: ${state.usage} · Estimated cost ${state.usageCost ?? 'Unreported'}` : '';
-  byId('run').disabled = byId('plan-first').disabled = !canRun;
+  byId('run').disabled = byId('plan-first').disabled = !canRun || !state.model;
   byId('cancel').hidden = !busy && state.phase !== 'ready' && !state.scheduledRunning;
   byId('cancel').textContent = state.validatingApply ? 'Cancel validation'
     : state.checkingAccepted ? 'Cancel check' : state.phase === 'ready' ? 'Discard draft' : 'Cancel run';
-  byId('run').hidden = byId('plan-first').hidden = !byId('cancel').hidden;
+  byId('run').hidden = byId('plan-first').hidden = !byId('cancel').hidden || !state.model;
+  const setupModel = byId('setup-model');
+  setupModel.hidden = Boolean(state.model) || !byId('cancel').hidden;
+  setupModel.disabled = !canRun;
+  setupModel.textContent = state.configuringModel ? 'Connecting…' : 'Connect model';
   const modelSettings = byId('model-settings');
-  modelSettings.textContent = state.model || 'Configure model';
-  modelSettings.title = state.model ? `Model settings · ${state.model}` : 'Open model settings';
+  modelSettings.hidden = !state.model;
+  modelSettings.disabled = busy || state.applying || Boolean(state.scheduledRunning || state.configuringModel);
+  modelSettings.textContent = state.configuringModel ? 'Connecting…' : state.model || 'Connect model';
+  modelSettings.title = state.model ? `Change model · ${state.model}` : 'Connect a model';
   modelSettings.setAttribute('aria-label', modelSettings.title);
   byId('session').hidden = !state.session;
   byId('history').hidden = !state.undo;
@@ -302,12 +303,6 @@ window.addEventListener('message', ({ data }) => {
   const response = byId('response');
   const responseChanged = response.textContent !== state.text;
   if (responseChanged) response.textContent = state.text;
-  byId('select-skills').disabled = busy || state.phase === 'ready' || state.applying;
-  for (const id of ['memory', 'connectors', 'connector-token', 'plugins', 'import-plugin', 'plugin-workflow']) byId(id).disabled = busy || state.phase === 'ready' || state.applying;
-  byId('plugin-summary').textContent = state.plugins?.length
-    ? `Enabled plugins: ${state.plugins.map(plugin => `${plugin.id} ${plugin.version} · ${plugin.digest.slice(0, 12)}`).join(', ')}` : 'No plugins enabled.';
-  byId('connector-summary').textContent = state.connectors?.length ? `Enabled connectors: ${state.connectors.join(', ')}` : 'No connectors enabled.';
-  byId('skill-summary').textContent = state.skills?.length ? `Selected skills: ${state.skills.join(', ')}` : 'No skills selected.';
   byId('revoke').hidden = !busy || state.permissions?.closed;
   byId('safety-actions').hidden = byId('revoke').hidden && byId('stop-surfaces').hidden;
   byId('permissions').hidden = !state.permissions;

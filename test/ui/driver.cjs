@@ -51,11 +51,21 @@ async function main(){
    await page.screenshot({path:root+'/failure.png'});
    await fs.writeFile(root+'/failure.json',JSON.stringify({panel:await ui(`return {phase:d.querySelector('#phase').dataset.phase,status:d.querySelector('#status').textContent}`),picker:await page.locator('.quick-input-widget').allTextContents(),notifications:await page.locator('.notification-toast').allTextContents()},null,2));
  };
- const workspaceAction=async id=>assert.equal(await ui(`
-   if(d.querySelector('#workspace').hidden)d.querySelector('#workspace-toggle').click();
-   const button=d.querySelector('#${id}');
-   if(!button.getClientRects().length||button.disabled)return false;
-   button.click();return true;`),true);
+ const actions={memory:['more-actions','Notes'],schedules:['more-actions','Scheduled reports'],
+   'run-report':['more-actions','Open saved run report'],plugins:['tool-picker','Plugins'],connectors:['tool-picker','Connectors'],
+   'connector-token':['tool-picker','Connector accounts'],'browser-access':['tool-picker','Browser access'],
+   'computer-access':['tool-picker','Computer access']};
+ const panelAction=async id=>{
+   if(id==='select-skills'){
+     await ui(`d.querySelector('#add-context summary').click();d.querySelector('#select-skills').click();return true`);
+     return;
+   }
+   const [button,label]=actions[id];
+   assert.equal(await ui(`const button=d.querySelector('#${button}');
+     if(!button.getClientRects().length||button.disabled)return false;
+     button.click();return true;`),true);
+   await page.locator('.quick-input-widget').getByText(label,{exact:true}).click();
+ };
  const visible=id=>ui(`const rect=d.querySelector('#${id}').getBoundingClientRect();
    return rect.height>0&&rect.top>=0&&rect.bottom<=d.documentElement.clientHeight;`);
  const disk=file=>fs.readFile(root+'/workspace/'+file,'utf8');
@@ -66,9 +76,13 @@ async function main(){
  });
  if(!process.argv.includes('--continue')){
  await page.keyboard.press('Escape');
- assert.equal(await ui(`return d.querySelector('#workspace').hidden`),true);
  assert.equal(await visible('prompt'),true);
  assert.equal(await visible('run'),true);
+ await ui(`d.querySelector('#prompt').focus();return true`);
+ await page.keyboard.press('/');
+ await page.locator('.quick-input-widget').getByText('/review',{exact:true}).waitFor();
+ await page.keyboard.press('Escape');
+ assert.equal(await ui(`return d.querySelector('#prompt').value`),'');
  await page.screenshot({path:root+'/prompt.png'});
  await ui(`d.querySelector('#add-context summary').click();d.querySelector('#attach-symbol').click();return true`);
  assert.deepEqual(await ui(`const input=d.querySelector('#prompt');
@@ -80,50 +94,55 @@ async function main(){
  await page.locator('.quick-input-widget').getByText('a.js',{exact:true}).click();
  await waitFor(()=>ui(`return d.querySelector('#prompt').value`),value=>value==='@file:"a.js" ');
  say('PINNED COMPOSER, MULTILINE INPUT AND CONTEXT PICKER PASS');
- await workspaceAction('memory');
+ await panelAction('memory');
  await page.getByText('Add a workspace note',{exact:true}).click();
  const entry=page.locator('.quick-input-widget .quick-input-box input');
  await entry.fill('Use focused checks for this workspace.');
  await entry.press('Enter');
  await page.getByRole('button',{name:'Save note',exact:true}).click();
  await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes('1 approved notes'));
- await workspaceAction('connector-token');
+ await panelAction('connector-token');
  await page.locator('.quick-input-widget .monaco-list-row').filter({hasText:'docs'}).click();
  await entry.fill('test-only-mcp-credential');
  await entry.press('Enter');
  await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes('saved securely'));
- await workspaceAction('connectors');
+ await panelAction('connectors');
  await page.locator('.quick-input-widget').getByRole('checkbox',{name:'docs',exact:true}).click();
  await page.locator('.quick-input-widget').getByRole('button',{name:'OK',exact:true}).click();
- await waitFor(()=>ui(`return d.querySelector('#connector-summary').textContent`),s=>s.includes('docs'));
- await workspaceAction('select-skills');
+ await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes('Enabled connectors: docs'));
+ await panelAction('select-skills');
  const picker=page.locator('.quick-input-widget');
  await picker.waitFor({state:'visible'});
  await picker.getByRole('checkbox',{name:'focused-change',exact:true}).click();
  await picker.getByRole('button',{name:'OK',exact:true}).click();
- await waitFor(()=>ui(`return d.querySelector('#skill-summary').textContent`),s=>s.includes('focused-change'));
+ await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes('Selected skills: focused-change'));
 
- await workspaceAction('plugins');
+ await panelAction('plugins');
  await picker.getByRole('checkbox',{name:'test-team',exact:true}).click();
  await picker.getByRole('button',{name:'OK',exact:true}).click();
  await page.getByRole('button',{name:'Enable plugin',exact:true}).click();
- await waitFor(()=>ui(`return d.querySelector('#plugin-summary').textContent`),s=>s.includes('test-team 1.0.0'));
+ await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes('test-team 1.0.0'));
+ await ui(`d.querySelector('#slash-picker').click();return true`);
+ await picker.getByText('/test-team:research',{exact:true}).click();
+ await picker.getByText('test-team: Research a repository question',{exact:true}).waitFor();
+ assert.match(await entry.inputValue(),/repository research worker/);
+ await entry.press('Escape');
  await helper('/update-plugin');
  await ui(`const input=d.querySelector('#prompt');input.value='Check the updated plugin';input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();return true`);
  await page.keyboard.press('Enter');
  await waitFor(()=>ui(`return d.querySelector('#phase').dataset.phase`),s=>s==='error');
  assert.match(await ui(`return d.querySelector('#status').textContent`),/changed/);
  assert.equal(await disk('a.js'),originalA);
- await workspaceAction('plugins');
+ await panelAction('plugins');
+ await picker.getByText(/Update needs review/).waitFor();
  await picker.getByRole('button',{name:'OK',exact:true}).click();
  await page.getByRole('button',{name:'Enable plugin',exact:true}).click();
- await waitFor(()=>ui(`return d.querySelector('#plugin-summary').textContent`),s=>s.includes('test-team 1.1.0'));
+ await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes('test-team 1.1.0'));
  say('PLUGIN UPDATE BLOCK AND CAPABILITY REAPPROVAL PASS');
 
  await ui(`const input=d.querySelector('#prompt');input.value='Update the demo constants and verify the accepted draft.';input.dispatchEvent(new Event('input',{bubbles:true}));d.querySelector('#plan-first').click();return true;`);
  await page.getByRole('button',{name:'Allow read',exact:true}).click();
  await phase('plan');
- assert.equal(await ui(`return d.querySelector('#workspace').hidden`),true);
  assert.equal(await ui(`return d.querySelector('#request').textContent`),'Update the demo constants and verify the accepted draft.');
  assert.equal(await visible('prompt'),true);
  assert.equal(await visible('revoke'),true);
@@ -185,7 +204,7 @@ async function main(){
  await waitFor(()=>ui(`return d.querySelector('#status').textContent`),text=>text.includes('Undid the last apply'));
  await waitFor(async()=>{await helper('/save');return disk('a.js');},text=>text===originalA);
  say('PARTIAL APPLY AND UNDO PASS');
- await workspaceAction('run-report');
+ await panelAction('run-report');
  await waitFor(()=>page.locator('.tab').allTextContents(),items=>items.some(text=>text.includes('report.md')));
  const reportRoot=root+'/user/User/globalStorage/literalkrishu.agentextension/reports';
  const reports=await fs.readdir(reportRoot,{recursive:true});
@@ -211,30 +230,30 @@ async function main(){
  assert.equal(await disk('a.js'),originalA);
  say('TWO LIVE CHILD CANCELLATION PASS');
  await page.screenshot({path:root+'/milestones.png'});
- await workspaceAction('plugins');
+ await panelAction('plugins');
  const pluginPicker=page.locator('.quick-input-widget');
  await pluginPicker.getByRole('checkbox',{name:'test-team',exact:true}).click();
  await pluginPicker.getByRole('button',{name:'OK',exact:true}).click();
- await waitFor(()=>ui(`return d.querySelector('#plugin-summary').textContent`),s=>s.includes('No plugins'));
+ await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes('No plugins enabled'));
  await ui(`const input=d.querySelector('#prompt');input.value='Check plugin disabled';input.dispatchEvent(new Event('input',{bubbles:true}));d.querySelector('#run').click();return true`);
  await waitFor(()=>ui(`return d.querySelector('#phase').dataset.phase`),s=>s!=='cancelled');
  await phase('done');
  assert.match(await ui(`return d.querySelector('#response').textContent`),/no worker tools/);
  say('PLUGIN DISABLE PASS');
  const surface=JSON.parse(await fs.readFile(root+'/surface-fixture.json','utf8'));
- await workspaceAction('browser-access');
+ await panelAction('browser-access');
  const surfacePicker=page.locator('.quick-input-widget');
  await surfacePicker.getByRole('checkbox',{name:surface.origin,exact:true}).last().click();
  await surfacePicker.getByRole('button',{name:'OK',exact:true}).click();
  await page.getByText('Observe and request actions',{exact:true}).click();
  await page.getByRole('button',{name:'Enable access',exact:true}).click();
- await waitFor(()=>ui(`return d.querySelector('#surface-scope').textContent`),s=>s.includes(surface.origin));
- await workspaceAction('computer-access');
+ await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes(surface.origin));
+ await panelAction('computer-access');
  await surfacePicker.locator('.quick-input-box input').fill(surface.app.name);
  await surfacePicker.locator('.monaco-list-row').filter({hasText:surface.app.bundleId}).click();
  await page.getByText('Observe and request actions',{exact:true}).click();
  await page.getByRole('button',{name:'Enable access',exact:true}).click();
- await waitFor(()=>ui(`return d.querySelector('#surface-scope').textContent`),s=>s.includes(surface.app.name));
+ await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes(surface.app.name));
  await ui(`const input=d.querySelector('#prompt');input.value='Scoped surface verification';input.dispatchEvent(new Event('input',{bubbles:true}));d.querySelector('#run').click();return true`);
  // Browser fill, click, POST, native fill, press, increment and download each need approval.
  for(let i=0;i<7;i++) {
@@ -257,7 +276,6 @@ async function main(){
  await ui(`d.querySelector('#apply').click();return true`);
  await phase('applied');
  assert.equal(await disk('attachment.txt'),'Approved attachment\n');
- await waitFor(()=>ui(`return !d.querySelector('#run-report').hidden`),Boolean);
  const allReports=await fs.readdir(reportRoot,{recursive:true});
  assert.ok(allReports.some(file=>file.endsWith('browser-1.jpg')));
  await page.screenshot({path:root+'/surfaces.png'});
@@ -267,7 +285,7 @@ async function main(){
  assert.equal(await visible('stop-surfaces'),true);
  await ui(`d.querySelector('#stop-surfaces').click();return true`);
  await phase('done');
- assert.match(await ui(`return d.querySelector('#surface-scope').textContent`),/access off/);
+ assert.equal(await visible('stop-surfaces'),false);
  await ui(`const input=d.querySelector('#prompt');input.value='Check surfaces disabled';input.dispatchEvent(new Event('input',{bubbles:true}));d.querySelector('#run').click();return true`);
  await waitFor(()=>ui(`return d.querySelector('#response').textContent`),s=>s.includes('No surface tools'));
  await phase('done');
@@ -307,7 +325,7 @@ async function main(){
    await input.fill(text);
    await input.press('Enter');
  };
- await workspaceAction('schedules');
+ await panelAction('schedules');
  await pickSchedule('New scheduled report');
  await scheduleInput('New scheduled report','Installed schedule fixture');
  await scheduleInput('Report request','Summarize the value from a.js for schedule verification.');
@@ -320,12 +338,11 @@ async function main(){
  await schedulePicker.getByRole('checkbox',{name:'focused-change',exact:true}).waitFor();
  await schedulePicker.getByRole('button',{name:'OK',exact:true}).click();
  await page.getByRole('button',{name:'Approve schedule',exact:true}).click();
- await waitFor(()=>ui(`return d.querySelector('#schedule-summary').textContent`),s=>s.includes('1 scheduled report'));
- await workspaceAction('schedules');
+ await panelAction('schedules');
  await pickSchedule('Installed schedule fixture');
  await pickSchedule('Run now');
  await waitFor(()=>ui(`return d.querySelector('#status').textContent`),s=>s.includes('Scheduled report "Installed schedule fixture" completed.'));
- await workspaceAction('schedules');
+ await panelAction('schedules');
  await pickSchedule('Installed schedule fixture');
  await pickSchedule('View run history');
  await schedulePicker.getByText(/^completed · /).click();
@@ -333,7 +350,7 @@ async function main(){
  assert.match(scheduledReport,/Installed schedule fixture/);
  assert.equal(await disk('a.js'),originalA);
  say('SCHEDULE APPROVAL, RUN NOW, HISTORY AND SAVED REPORT PASS');
- await workspaceAction('memory');
+ await panelAction('memory');
  const notesPicker=page.locator('.quick-input-widget');
  await notesPicker.getByText('Use focused checks for this workspace.',{exact:true}).click();
  await notesPicker.getByText('Remove',{exact:true}).click();

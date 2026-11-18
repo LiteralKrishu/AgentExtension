@@ -2,7 +2,7 @@
   "name": "agentextension",
   "displayName": "AgentExtension",
   "description": "Reviewable coding changes in VS Code, powered by local TrueForge.",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "publisher": "LiteralKrishu",
   "license": "MIT",
   "repository": {
@@ -36,6 +36,22 @@
       {
         "command": "agentextension.open",
         "title": "AgentExtension: Open Agent Panel"
+      },
+      {
+        "command": "agentextension.configureModel",
+        "title": "AgentExtension: Connect Model"
+      },
+      {
+        "command": "agentextension.tools",
+        "title": "AgentExtension: Configure Tools"
+      },
+      {
+        "command": "agentextension.slashCommands",
+        "title": "AgentExtension: Show Slash Commands"
+      },
+      {
+        "command": "agentextension.managePlugins",
+        "title": "AgentExtension: Manage Plugins"
       },
       {
         "command": "agentextension.reviewGit",
@@ -292,7 +308,7 @@
           "default": [],
           "maxItems": 7,
           "scope": "machine",
-          "description": "Approved local folders containing plugin directories with plugin.json. Installation does not enable a plugin. Review its version, content digest and capabilities in Manage plugins."
+          "description": "Approved local folders containing plugin directories with plugin.json. Review and enable a plugin's version, content digest, and capabilities under Tools → Plugins."
         },
         "agentextension.browserOrigins": {
           "type": "array",

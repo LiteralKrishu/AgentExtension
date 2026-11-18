@@ -24,7 +24,7 @@ section { display: grid; gap: 8px; min-width: 0; }
 .hint:empty { display: none; }
 
 .panel { display: flex; flex-direction: column; height: 100%; }
-.toolbar, .run-status, .workspace, .composer-area { flex: none; }
+.toolbar, .run-status, .composer-area { flex: none; }
 .toolbar {
   display: flex;
   align-items: center;
@@ -39,18 +39,7 @@ section { display: grid; gap: 8px; min-width: 0; }
 .phase[data-phase="idle"], .phase[data-phase="cancelled"] { color: var(--muted); }
 .phase[data-phase="running"] { color: var(--vscode-progressBar-background); }
 .phase[data-phase="error"] { color: var(--vscode-errorForeground); }
-#workspace-toggle span { display: inline-block; }
-#workspace-toggle[aria-expanded="true"] span { transform: rotate(180deg); }
-.workspace {
-  display: grid;
-  gap: 12px;
-  max-height: 42%;
-  overflow: auto;
-  padding: 12px;
-  border-bottom: 1px solid var(--line);
-  background: var(--vscode-editorWidget-background, var(--surface));
-}
-.workspace section + section { padding-top: 10px; border-top: 1px solid var(--line); }
+#more-actions { min-width: 28px; font-size: 16px; line-height: 1; }
 .run-status {
   max-height: 20%;
   overflow: auto;
@@ -129,6 +118,7 @@ textarea::placeholder { color: var(--vscode-input-placeholderForeground); }
   gap: 5px 8px;
 }
 .composer-actions { padding: 4px 5px 5px; }
+#slash-picker { min-width: 26px; }
 .run-actions { margin-left: auto; }
 .composer-meta { font-size: .88em; }
 #model-settings { min-width: 0; max-width: 100%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -150,7 +140,6 @@ textarea::placeholder { color: var(--vscode-input-placeholderForeground); }
   box-shadow: 0 2px 8px var(--vscode-widget-shadow);
 }
 .context-options button { text-align: left; }
-.context-options p { padding: 4px 7px; }
 
 button, .quiet {
   cursor: pointer;
