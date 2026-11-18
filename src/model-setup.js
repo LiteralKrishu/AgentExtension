@@ -12,25 +12,7 @@ function validate(fn) {
   };
 }
 
-async function chooseProviderModel(baseUrl, apiKey) {
-  // Some compatible APIs omit GET /models. In that case the user can enter the model ID.
-  let models = [];
-  try {
-    const response = await fetch(`${baseUrl}/models`, {
-      redirect: 'error', signal: AbortSignal.timeout(4_000),
-      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-    });
-    if (response.ok) {
-      const { data } = await response.json();
-      if (Array.isArray(data)) models = [...new Set(data.map(row => row?.id)
-        .filter(id => typeof id === 'string' && id.trim() && id.length <= 200))].sort();
-    }
-  } catch { /* Offer manual entry if discovery fails. */ }
-  if (models.length) {
-    const pick = await vscode.window.showQuickPick([...models.map(label => ({ label, model: label })), { label: 'Enter model ID manually' }],
-      { title: 'Choose a model that supports tool calls', ignoreFocusOut: true });
-    if (!pick || pick.model) return pick?.model;
-  }
+async function enterProviderModel() {
   return (await vscode.window.showInputBox({
     title: 'Model ID', prompt: 'Enter the model ID from your provider. Choose a chat model that supports tool calls.', ignoreFocusOut: true,
     validateInput: value => !value.trim() || value.trim().length > 200 ? 'Enter a model ID of up to 200 characters.' : undefined,
@@ -86,7 +68,7 @@ async function configureModel(context, managed, settings, status) {
       (!value.trim() && choice.id === 'openai') || /[\r\n]/.test(value) ? 'Enter a valid API key.' : undefined,
   });
   if (apiKey === undefined) return;
-  const modelId = choice.id === 'openai' ? OPENAI_MODEL : await chooseProviderModel(baseUrl, apiKey.trim());
+  const modelId = choice.id === 'openai' ? OPENAI_MODEL : await enterProviderModel();
   if (!modelId) return;
   const profile = { id: randomBytes(16).toString('hex'), baseUrl, apiKey: apiKey.trim(), modelId };
   status('Starting bundled TrueForge…');

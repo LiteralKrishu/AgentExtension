@@ -12,7 +12,7 @@ AgentExtension is a VS Code coding agent for local TrueForge. It can edit a sele
 4. Choose one connection.
 
    - **OpenAI.** Paste an OpenAI API key with access to GPT-4.1 mini. This is the default model. [Model requirements](https://developers.openai.com/api/docs/models/gpt-4.1-mini)
-   - **OpenAI-compatible API.** Enter the API URL. Add a key if the provider requires one. Select a model that supports tool calls, or enter its model ID. For LM Studio or Ollama, start the local model server first.
+   - **OpenAI-compatible API.** Enter the API URL and the ID of a model that supports tool calls. Add a key if the provider requires one. For LM Studio or Ollama, start the local model server first. TrueForge sends the provider requests.
    - **Existing TrueForge server.** Enter its local URL and select one of its configured models. You can continue to use **AgentExtension: Server URL**, **Model**, and **Fallback Model** in VS Code Settings for that connection.
 
 5. Describe a task and select **Run agent**. Review the proposed changes in VS Code.
