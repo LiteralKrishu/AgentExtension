@@ -14,10 +14,11 @@ test('installed VSIX connects a model and runs from saved credentials', { skip: 
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   await fs.writeFile(path.join(root, 'README.md'), 'Test workspace.\n');
   let calls = 0;
+  let providerRequests = 0;
   let authorization;
   let messages;
   const provider = http.createServer(async (req, res) => {
-    if (req.url === '/v1/models') return res.end(JSON.stringify({ data: [{ id: 'test-model' }] }));
+    providerRequests += 1;
     if (req.url !== '/v1/chat/completions') return res.writeHead(404).end();
     authorization = req.headers.authorization;
     let body = '';
@@ -42,11 +43,12 @@ test('installed VSIX connects a model and runs from saved credentials', { skip: 
     { kind: 'pick', value: items => items.find(item => item.id === 'custom') },
     { kind: 'input', value: baseUrl },
     { kind: 'input', value: 'fixture-secret' },
-    { kind: 'pick', value: items => items.find(item => item.model === 'test-model') },
+    { kind: 'input', value: 'test-model' },
   );
   await host.send({ type: 'model-settings' });
   await host.waitFor(state => state.configuringModel === false, 35_000, 'model setup to finish');
   assert.equal(host.state().model, 'test-model', host.state().status);
+  assert.equal(providerRequests, 0, 'Setup registers the model through TrueForge without querying the provider.');
   assert.equal(JSON.stringify(host.states).includes('fixture-secret'), false);
   const stored = host.secrets.get(MODEL_SECRET);
   assert.equal(readProfile(stored).apiKey, 'fixture-secret');
