@@ -9,6 +9,8 @@ const { Retrieval } = require('./retrieval');
 const { editorContext, workspaceFile } = require('./editor-context');
 const { changedPaths, readChanges } = require('./git-review');
 const { runForge, approve } = require('./forge');
+const { ManagedForge, MODEL_SECRET, MANAGED_MODEL, readProfile } = require('./managed-forge');
+const { configureModel, DEFAULT_SERVER } = require('./model-setup');
 const { applyWorkspaceChanges } = require('./apply');
 const { PermissionBroker } = require('./permissions');
 const { SkillRegistry } = require('./skills');
@@ -70,33 +72,13 @@ class Panel {
       <body><main class="panel">
         <header class="toolbar">
           <span id="phase" class="phase" data-phase="idle">Ready</span>
-          <button id="workspace-toggle" class="quiet" type="button" aria-controls="workspace" aria-expanded="false">Workspace <span aria-hidden="true">⌄</span></button>
+          <button id="more-actions" class="quiet" type="button" aria-label="More actions" aria-haspopup="listbox" title="More actions">⋯</button>
         </header>
-        <div id="workspace" class="workspace" aria-label="Workspace controls" role="region" hidden>
-          <section>
-            <h2>Context</h2>
-            <div class="actions"><button id="select-skills" class="secondary" type="button">Choose skills</button><button id="memory" class="secondary" type="button">Notes</button><button id="instructions" class="secondary" type="button">Instructions</button></div>
-            <p id="skill-summary" class="hint"></p><p id="memory-summary" class="hint"></p><p id="instruction-summary" class="hint"></p>
-          </section>
-          <section>
-            <h2>Tools and access</h2>
-            <div class="actions"><button id="connectors" class="secondary" type="button">Choose connectors</button><button id="connector-token" class="secondary" type="button">Connector credential</button><button id="plugins" class="secondary" type="button">Manage plugins</button></div>
-            <p id="connector-summary" class="hint"></p><p id="plugin-summary" class="hint"></p>
-            <div class="actions"><button id="import-plugin" class="secondary" type="button">Import plugin</button><button id="plugin-workflow" class="secondary" type="button">Run plugin workflow</button></div>
-            <div class="actions"><button id="browser-access" class="secondary" type="button">Browser access</button><button id="computer-access" class="secondary" type="button">Computer access</button><button id="policy" class="secondary" type="button">Permission rules</button></div>
-            <p id="surface-scope" class="hint"></p><p id="policy-summary" class="hint"></p>
-          </section>
-          <section>
-            <h2>Reports and review</h2>
-            <div class="actions"><button id="review-git" class="secondary" type="button">Review working-tree changes</button><button id="schedules" class="secondary" type="button">Scheduled reports</button><button id="run-report" class="secondary" type="button">Open saved run report</button><button id="export-audit" class="secondary" type="button">Export audit log</button></div>
-            <p id="schedule-summary" class="hint"></p>
-          </section>
-        </div>
         <div id="status" class="run-status" role="status" hidden></div>
         <div id="stream" class="stream" role="region" aria-label="Run and review" tabindex="0">
           <div class="flow">
         <section id="welcome" class="welcome">
-          <h1>What would you like to change?</h1>
+          <h1 id="welcome-title">What would you like to change?</h1>
           <p id="welcome-hint" class="hint">Describe a task below. You can review the proposed edits before applying them.</p>
         </section>
         <section id="activity" hidden>
@@ -158,15 +140,21 @@ class Panel {
             <label for="prompt" class="sr-only">Describe a task</label>
             <textarea id="prompt" rows="2" maxlength="8000" placeholder="Describe a task…"></textarea>
             <div class="composer-actions">
-              <details id="add-context" class="context-menu">
-                <summary class="quiet" title="Add a file or symbol reference">@ Context</summary>
-                <div class="context-options">
-                  <button id="attach-file" class="quiet" type="button">Choose a file…</button>
-                  <button id="attach-symbol" class="quiet" type="button">Type a symbol name</button>
-                  <p class="hint">You can also type <code>@file:path</code> or <code>@symbol:name</code>.</p>
-                </div>
-              </details>
+              <div class="actions">
+                <details id="add-context" class="context-menu">
+                  <summary class="quiet" title="Add context to the run">+ Context</summary>
+                  <div class="context-options">
+                    <button id="attach-file" class="quiet" type="button">File…</button>
+                    <button id="attach-symbol" class="quiet" type="button">Symbol…</button>
+                    <button id="select-skills" class="quiet" type="button">Skills…</button>
+                    <button id="instructions" class="quiet" type="button">Instructions…</button>
+                  </div>
+                </details>
+                <button id="tool-picker" class="quiet" type="button" aria-haspopup="listbox">Tools</button>
+                <button id="slash-picker" class="quiet" type="button" aria-label="Slash commands" aria-haspopup="listbox" title="Slash commands">/</button>
+              </div>
               <div class="actions run-actions">
+                <button id="setup-model" type="button">Connect model</button>
                 <button id="plan-first" class="quiet" type="submit">Plan first</button>
                 <button id="run" type="submit" title="Run agent (Enter)">Run agent</button>
                 <button id="cancel" class="secondary" type="button" hidden>Cancel</button>
@@ -174,7 +162,7 @@ class Panel {
             </div>
           </form>
           <div class="composer-meta">
-            <button id="model-settings" class="link" type="button">Model settings</button>
+            <button id="model-settings" class="link" type="button" hidden>Change model</button>
             <span class="hint">Shift+Enter for a new line</span>
           </div>
         </footer>
@@ -232,6 +220,10 @@ class Panel {
 
 function activate(context) {
   const panel = new Panel(context);
+  const managed = new ManagedForge(context.extensionPath);
+  let managedProfile;
+  let modelLoad;
+  let configuringModel = false;
   const audit = vscode.window.createOutputChannel('AgentExtension permissions', { log: true });
   const auditLogs = new Map();
   const auditSyncs = new Set();
@@ -269,18 +261,50 @@ function activate(context) {
   const projectEdits = new Map();
 
   const tell = message => panel.update({ status: message });
-  const schedules = createScheduleController({ context, panel, status, chooseFolder, makeWorkspace, runSettings,
+  const schedules = createScheduleController({ context, panel, status, chooseFolder, makeWorkspace, runSettings, prepareRunSettings,
     policyFor, connectorConfigs, connectorAccounts, auditDecision, tell, openReport,
     contextCatalog: scheduleContextCatalog, backgroundProfile,
     startFollowUp: async (folder, followUp) => { await panel.show(); await startRun(followUp.answer, folder, undefined, false, undefined, undefined, undefined, followUp); },
     setLastReport: report => { lastReport = report; panel.update({ reportAvailable: true }); },
     isForegroundActive: () => Boolean(active),
-    isForegroundBusy: () => Boolean(active || ready || starting || applying),
+    isForegroundBusy: () => Boolean(active || ready || starting || applying || configuringModel),
     onError: error => audit.error(`Scheduled report: ${error.message}`),
   });
   const refreshSchedules = () => { void schedules.refresh().catch(error => audit.error(`Scheduled report: ${error.message}`)); };
+  function refreshModel() {
+    const request = context.secrets.get(MODEL_SECRET).then(readProfile, () => undefined).then(profile => {
+      if (modelLoad !== request) return;
+      managedProfile = profile;
+      panel.update({ model: profile?.modelId ?? configuredModel() });
+      refreshSchedules();
+    });
+    modelLoad = request;
+    return request;
+  }
+
+  async function modelSetup() {
+    if (configuringModel || active || starting || applying || schedules.runningName) return;
+    configuringModel = true;
+    panel.update({ configuringModel: true });
+    try {
+      await modelLoad;
+      const model = await configureModel(context, managed, managedProfile, tell);
+      if (!model) return;
+      await refreshModel();
+      tell(`Model saved. You can start a run with ${model}.`);
+      return Boolean(runSettings().model);
+    } catch (error) { tell(error.message); }
+    finally {
+      configuringModel = false;
+      panel.update({ configuringModel: false });
+    }
+  }
   const commands = {
     open: () => panel.show(),
+    configureModel: async () => { await panel.show(); await modelSetup(); },
+    tools: () => panelCommand(chooseTools),
+    slashCommands: () => panelCommand(chooseSlashCommand),
+    managePlugins: () => panelCommand(choosePlugins),
     cancel: () => userCancel(),
     undo: () => exclusive(undo),
     inlineEdit: () => inline(),
@@ -292,14 +316,14 @@ function activate(context) {
     exportAudit: () => exportAudit(),
     syncAudit: () => syncAudit(),
     project: () => openProject().catch(error => tell(error.message)),
-    importPlugin: () => pluginCommand(importPlugin),
-    exportPlugin: () => pluginCommand(exportPlugin),
-    pluginWorkflow: () => pluginCommand(choosePluginWorkflow),
+    importPlugin: () => panelCommand(importPlugin),
+    exportPlugin: () => panelCommand(exportPlugin),
+    pluginWorkflow: () => panelCommand(choosePluginWorkflow),
   };
   context.subscriptions.push(status, audit, vscode.window.registerWebviewViewProvider('agentextension.panel', panel),
     vscode.workspace.onDidChangeConfiguration(event => {
       if (event.affectsConfiguration('agentextension.model')) {
-        panel.update({ model: configuredModel() });
+        panel.update({ model: managedProfile?.modelId ?? configuredModel() });
       }
       if (event.affectsConfiguration('agentextension.automaticSkills') && active) cancel();
       if (event.affectsConfiguration('agentextension.scriptNodeExecutable')) {
@@ -348,6 +372,11 @@ function activate(context) {
       refreshWorkflowCommands();
     }),
     context.secrets.onDidChange(event => {
+      if (event.key === MODEL_SECRET) {
+        schedules.cancel('Model connection changed');
+        if (active) cancel();
+        void refreshModel();
+      }
       if (event.key.startsWith('connector.v1.') && active) {
         active.permissions.revokeAll('Connector credential changed');
         cancel();
@@ -357,7 +386,7 @@ function activate(context) {
     vscode.workspace.registerTextDocumentContentProvider(SCHEME, { provideTextDocumentContent: uri => panel.previews.get(uri.toString()) }),
     ...Object.entries(commands).map(([key, handler]) => vscode.commands.registerCommand(`agentextension.${key}`, handler)),
     { dispose: () => {
-      cancel(); schedules.dispose();
+      cancel(); schedules.dispose(); managed.dispose();
       workflowCommandsDisposed = true;
       for (const command of workflowCommands.values()) command.dispose();
       workflowCommands.clear();
@@ -377,7 +406,7 @@ function activate(context) {
       },
     }, { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }));
   }
-  refreshSchedules();
+  void refreshModel();
   refreshWorkflowCommands();
   void refreshPolicy();
   void refreshCheckpoint();
@@ -464,7 +493,8 @@ function activate(context) {
     if (!choices) return;
     await skills.select(choices.map(choice => choice.id));
     skillSelections.set(identity, choices.map(choice => choice.id));
-    panel.update({ skills: choices.map(choice => choice.label), status: skills.warnings.join('\n') || 'Skill selection saved for this workspace.' });
+    const names = choices.map(choice => choice.label);
+    panel.update({ skills: names, status: skills.warnings.join('\n') || (names.length ? `Selected skills: ${names.join(', ')}.` : 'No skills selected.') });
   }
 
   async function memorySummary(identity) {
@@ -667,8 +697,9 @@ function activate(context) {
     try {
       for (const { config } of picked) if (config.entryPoint) await localServer(config);
     } catch (error) { return tell(`Cannot enable local MCP. ${error.message}`); }
-    connectorSelections.set(identity, picked.map(item => item.config.id));
-    panel.update({ connectors: picked.map(item => item.config.id), status: 'Connector selection saved for this workspace.' });
+    const ids = picked.map(item => item.config.id);
+    connectorSelections.set(identity, ids);
+    panel.update({ connectors: ids, status: ids.length ? `Enabled connectors: ${ids.join(', ')}.` : 'No connectors enabled.' });
   }
 
   async function connectorToken() {
@@ -816,11 +847,15 @@ function activate(context) {
     const key = pluginStorageKey(identity);
     const previous = context.globalState.get(key, []);
     const registry = await pluginRegistry();
-    const choices = await vscode.window.showQuickPick([...registry.entries.values()].map(plugin => ({
-      label: plugin.id, description: `${plugin.version} · ${plugin.publisher}`, plugin,
-      detail: `${plugin.capabilities.join(', ') || 'No capabilities'} · ${plugin.pin.digest.slice(0, 12)}`,
-      picked: previous.some(pin => pin.id === plugin.id),
-    })), { canPickMany: true, placeHolder: 'Enable up to three versioned plugins. Changes require review.' });
+    const choices = await vscode.window.showQuickPick([...registry.entries.values()].map(plugin => {
+      const pin = previous.find(pin => pin.id === plugin.id);
+      const status = pin ? digest(pin) === digest(plugin.pin) ? 'Enabled' : 'Update needs review' : 'Available';
+      const source = registry.installedIds.has(plugin.id) ? 'Imported'
+        : path.dirname(plugin.root) === path.join(context.extensionPath, 'plugins') ? 'Bundled' : 'Local';
+      return { label: plugin.id, description: `${status} · ${source} · ${plugin.version} · ${plugin.publisher}`, plugin,
+        detail: plugin.description, picked: Boolean(pin) };
+    }), { title: 'Plugins', canPickMany: true, matchOnDescription: true, matchOnDetail: true,
+      placeHolder: 'Search plugins. Select up to three for this workspace.' });
     if (!choices) return;
     const pins = choices.map(choice => choice.plugin.pin);
     await registry.verify(pins, connectorSelections.get(identity) ?? []);
@@ -835,7 +870,8 @@ function activate(context) {
     refreshSchedules();
     refreshWorkflowCommands();
     panel.update({ plugins: pins.map(pin => ({ id: pin.id, version: pin.version, digest: pin.digest })),
-      status: registry.warnings.join('\n') || 'Plugin versions approved for this workspace.' });
+      status: registry.warnings.join('\n') || (pins.length
+        ? `Enabled plugins: ${pins.map(pin => `${pin.id} ${pin.version}`).join(', ')}.` : 'No plugins enabled.') });
   }
 
   function pluginIdentity(plugin) {
@@ -858,9 +894,66 @@ function activate(context) {
     return check;
   }
 
-  async function pluginCommand(operation) {
+  async function panelCommand(operation) {
     try { await panel.show(); await operation(); }
     catch (error) { tell(error.message); }
+  }
+
+  async function pickPanelAction(title, items) {
+    const choice = await vscode.window.showQuickPick(items, {
+      title, placeHolder: 'Search actions', matchOnDescription: true, matchOnDetail: true,
+    });
+    await choice?.run();
+  }
+
+  function chooseTools() {
+    if (active || ready || starting || applying || configuringModel || schedules.runningName) return tell('Finish the current operation before configuring tools.');
+    return pickPanelAction('Configure tools', [
+      { label: 'Plugins', description: 'Enable or disable plugins', run: choosePlugins },
+      { label: 'Import plugin package', description: 'Install from a local file',
+        run: async () => { if (await importPlugin()) await choosePlugins(); } },
+      { label: 'Connectors', description: 'Enable configured MCP servers for this workspace', run: chooseConnectors },
+      { label: 'Connector accounts', description: 'Sign in or update a credential', run: connectorToken },
+      { label: 'Connector settings', run: () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:LiteralKrishu.agentextension connectors') },
+      { label: 'Browser access', run: () => chooseSurface('browser') },
+      { label: 'Computer access', run: () => chooseSurface('computer') },
+      { label: 'Permission rules', run: managePolicy },
+    ]);
+  }
+
+  function chooseMoreActions() {
+    return pickPanelAction('AgentExtension actions', [
+      { label: 'Review working-tree changes', run: () => exclusive(reviewGit) },
+      { label: 'Notes', description: panel.state.memorySummary, run: memory },
+      { label: 'Scheduled reports', description: panel.state.scheduleSummary, run: schedules.manage },
+      { label: 'Open saved run report', run: openReport },
+      { label: 'Export audit log', run: exportAudit },
+      { label: 'Export plugin package', run: exportPlugin },
+      { label: 'Open shared project', run: openProject },
+    ]);
+  }
+
+  async function chooseSlashCommand() {
+    if (active || ready || starting || applying || configuringModel || schedules.runningName) return;
+    const actions = [
+      { label: '/review', description: 'Review working-tree changes', run: () => exclusive(reviewGit) },
+      { label: '/plugins', description: 'Enable or disable plugins', run: choosePlugins },
+      { label: '/skills', description: 'Choose skills for this workspace', run: chooseSkills },
+      { label: '/notes', description: 'Manage workspace notes', run: memory },
+    ];
+    const items = (async () => {
+      const folders = vscode.workspace.isTrusted ? (vscode.workspace.workspaceFolders ?? []).filter(folder => folder.uri.scheme === 'file') : [];
+      if (!folders.length) return actions;
+      const registry = await pluginRegistry();
+      const groups = await Promise.all(folders.map(async folder => {
+        const workflows = await approvedPluginWorkflows(registry, folder).catch(() => []);
+        return workflows.map(choice => ({ label: `/${choice.plugin.id}:${choice.workflow.id}`,
+          description: choice.workflow.title, detail: folders.length > 1 ? folder.name : undefined,
+          run: () => startPluginWorkflow(choice, folder, registry) }));
+      }));
+      return [...groups.flat(), ...actions];
+    })();
+    return pickPanelAction('Slash commands', items);
   }
 
   async function importPlugin() {
@@ -881,7 +974,7 @@ function activate(context) {
           if (busy()) throw new Error('Finish or discard the run before importing a plugin.');
         };
         await check();
-        const detail = `${pluginIdentity(candidate)}\nAfter import, use Manage plugins to review and enable this version in a workspace.`;
+        const detail = `${pluginIdentity(candidate)}\nReview the plugin version before you enable it in a workspace.`;
         if (await vscode.window.showWarningMessage(`Import ${candidate.id} ${candidate.version}?`, { modal: true, detail }, 'Import plugin') !== 'Import plugin') return false;
         await check();
         return true;
@@ -889,7 +982,8 @@ function activate(context) {
       if (!plugin) return;
       refreshWorkflowCommands();
       panel.update({ plugins: (panel.state.plugins ?? []).filter(item => item.id !== plugin.id || item.digest === plugin.pin.digest),
-        status: `Imported ${plugin.id} ${plugin.version}. Review it in Manage plugins.` });
+        status: `Imported ${plugin.id} ${plugin.version}. Review it in Tools → Plugins.` });
+      return true;
     } finally { importingPlugin = false; }
   }
 
@@ -939,7 +1033,7 @@ function activate(context) {
       }
       for (const [id, [pluginId, workflowId]] of wanted) {
         if (!workflowCommands.has(id)) workflowCommands.set(id, vscode.commands.registerCommand(id,
-          () => pluginCommand(() => choosePluginWorkflow(pluginId, workflowId))));
+          () => panelCommand(() => choosePluginWorkflow(pluginId, workflowId))));
       }
     }).catch(error => { if (!workflowCommandsDisposed) audit.error(`Plugin workflows: ${error.message}`); });
   }
@@ -955,11 +1049,18 @@ function activate(context) {
       : workflows.length ? await vscode.window.showQuickPick(workflows.map(item => ({ ...item, label: item.workflow.title,
         description: item.command })), { placeHolder: 'Choose a workflow from an approved plugin' }) : undefined;
     if (!choice) {
-      if (pluginId || !workflows.length) tell('No matching approved plugin workflow. Review the plugin version in Manage plugins.');
+      if (pluginId || !workflows.length) tell('No matching approved plugin workflow. Review the plugin version in Tools → Plugins.');
       return;
     }
-    const { plugin, workflow } = choice;
+    await startPluginWorkflow(choice, folder, registry);
+  }
+
+  async function startPluginWorkflow({ plugin, workflow }, folder, registry) {
+    if (!vscode.workspace.isTrusted) return tell('Trust this workspace before running a plugin workflow.');
+    if (active || ready || starting || applying || configuringModel || schedules.runningName) return tell('Finish or discard the run before starting a plugin workflow.');
     const identity = await fs.realpath(folder.uri.fsPath);
+    const pins = context.globalState.get(pluginStorageKey(identity), []);
+    if (!pins.some(pin => digest(pin) === digest(plugin.pin))) return tell('Review and enable this plugin before running its workflow.');
     await registry.verify([plugin.pin], connectorSelections.get(identity) ?? []);
     const prompt = await vscode.window.showInputBox({ title: `${plugin.id}: ${workflow.title}`, value: workflow.prompt,
       prompt: workflow.planFirst ? 'Review the prompt, then start a planning run.' : 'Review the prompt, then start an agent run.',
@@ -997,7 +1098,7 @@ function activate(context) {
 
   async function startRun(prompt, folder, selection, planFirst = false, resume, editor, workflow, followUp) {
     if (schedules.runningName) return tell(`Scheduled report "${schedules.runningName}" is running. Wait for it or cancel it.`);
-    if (active || starting || applying) return tell('Wait for the current operation to finish or cancel it.');
+    if (active || starting || applying || configuringModel) return tell('Wait for the current operation to finish or cancel it.');
     if (ready) return tell('Apply or discard the current reviewed changes before starting a new run.');
     if (!vscode.workspace.isTrusted) return tell('Trust this workspace before running the agent.');
     if (!folder) return tell('Open a local workspace folder to start.');
@@ -1011,6 +1112,13 @@ function activate(context) {
     const workspace = makeWorkspace(folder);
     starting = true;
     try {
+      await modelLoad;
+      if (!runSettings().model) {
+        starting = false;
+        await panel.show();
+        if (await modelSetup()) return startRun(prompt, folder, selection, planFirst, resume, editor, workflow, followUp);
+        return;
+      }
       workspace.root = await fs.realpath(workspace.root);
       workspace.identity = workspace.root;
       if (resume && (resume.workspace !== workspace.root || (await checkWorkspace(resume, workspace)).length)) {
@@ -1027,7 +1135,7 @@ function activate(context) {
       let claimed = false;
       try {
         if (!vscode.workspace.isTrusted || workspace.root !== followUp.workspace) return tell('The workspace changed. Select the question again.');
-        if (!configuredModel()) return tell('Set AgentExtension: Model before starting a follow-up.');
+        if (!runSettings().model) return tell('Connect a model before starting a follow-up.');
         claimed = await followUp.claim();
         if (!claimed) return tell('This question has already been handled.');
       } finally { if (!claimed) starting = false; }
@@ -1115,7 +1223,7 @@ function activate(context) {
 
     try {
       const config = vscode.workspace.getConfiguration('agentextension');
-      if (!configuredModel()) throw new Error('Set AgentExtension: Model in VS Code Settings first.');
+      const settings = await prepareRunSettings(runSettings(), signal, tell);
       if (selection && await workspace.read(selection.file) !== selection.base) {
         throw new Error('The selection changed. Select the current code and try again.');
       }
@@ -1216,7 +1324,7 @@ function activate(context) {
       if (customRoles.some(role => role.tools.length)) permissions.allowScope('worker.read');
       const workerSeconds = Math.min(300, Math.max(30, Number(config.get('workerTimeoutSeconds', 60)) || 60));
       run.workers = new WorkerPool({ run, roles: allowedRoles, customRoles, timeoutMs: workerSeconds * 1000,
-        settings: { serverUrl: config.get('serverUrl'), model: config.get('model'), timeoutSeconds: workerSeconds },
+        settings: { ...settings, timeoutSeconds: workerSeconds },
         onChange: workers => panel.update({ workers }) });
       const ask = async ({ title, detail }, accessSignal) => {
         const answer = await vscode.window.showWarningMessage(title, { modal: true, detail }, 'Allow action');
@@ -1266,10 +1374,7 @@ function activate(context) {
           + JSON.stringify({ browser: browser ? { origins: browser.origins, interactive: browser.interactive } : null,
             computer: computer ? { name: computer.app.name, bundleId: computer.app.bundleId, interactive: computer.interactive } : null }) : '');
       permissions.require(permissions.action('context_send', 'workspace.read', workspace.root));
-      await runForge({
-        serverUrl: config.get('serverUrl'), model: config.get('model'), fallbackModel: config.get('fallbackModel'),
-        compaction: config.get('compaction'), turnTimeoutSeconds: config.get('turnTimeoutSeconds'),
-      }, run, promptText, {
+      await runForge(settings, run, promptText, {
         status: tell,
         session: (session, details) => { run.session = session; run.forgeSession = details; panel.update({ session }); },
         sessionTurn: turnId => {
@@ -1976,12 +2081,12 @@ function activate(context) {
   }
 
   async function reviewGit() {
-    if (starting || ready || schedules.runningName) return tell('Finish the current run or review before reviewing Git changes.');
+    if (starting || ready || configuringModel || schedules.runningName) return tell('Finish the current operation before reviewing Git changes.');
     if (!vscode.workspace.isTrusted) return tell('Trust this workspace before reviewing Git changes.');
     const folder = await chooseFolder();
     if (!folder) return tell('Open a local Git workspace to review changes.');
-    const settings = runSettings();
-    if (!settings.model?.trim()) return tell('Set AgentExtension: Model in VS Code Settings first.');
+    await modelLoad;
+    if (!runSettings().model) return modelSetup();
     const workspace = makeWorkspace(folder);
     workspace.root = await fs.realpath(workspace.root);
     workspace.identity = workspace.root;
@@ -2029,7 +2134,8 @@ function activate(context) {
       };
       run.manifest = new ContextManifest(workspace.root, manifest => panel.update({ manifest: [...manifest], manifestTotals: run.manifest.totals() }));
       run.validateCapabilities = () => permissions.refreshPolicy();
-      run.workers = new WorkerPool({ run, roles: ['diff-review'], settings,
+      const settings = await prepareRunSettings(runSettings(), signal, tell);
+      run.workers = new WorkerPool({ run, roles: ['diff-review'], settings: { ...settings, timeoutSeconds: settings.workerTimeoutSeconds },
         onChange: workers => panel.update({ workers }) });
       const result = await run.workers.execute('diff-review', { question: 'Review the selected working-tree changes against Git HEAD. Report concrete problems and missing checks.', files });
       signal.throwIfAborted();
@@ -2218,17 +2324,32 @@ function activate(context) {
 
   function runSettings() {
     const config = vscode.workspace.getConfiguration('agentextension');
-    return { serverUrl: config.get('serverUrl'), model: config.get('model') ?? '', fallbackModel: config.get('fallbackModel') ?? '',
+    return {
+      serverUrl: managedProfile ? `managed:${managedProfile.id}` : config.get('serverUrl', DEFAULT_SERVER),
+      model: managedProfile?.modelId ?? configuredModel(),
+      fallbackModel: managedProfile ? '' : config.get('fallbackModel', ''),
       compaction: config.get('compaction'), turnTimeoutSeconds: config.get('turnTimeoutSeconds'),
       workerTimeoutSeconds: Math.min(300, Math.max(30, Number(config.get('workerTimeoutSeconds', 60)) || 60)) };
+  }
+
+  async function prepareRunSettings(settings, signal, onStatus) {
+    if (!settings.serverUrl?.startsWith('managed:')) return settings;
+    const profile = managedProfile;
+    if (!profile || settings.serverUrl !== `managed:${profile.id}`) throw new Error('The model connection changed. Start again.');
+    onStatus?.('Connecting to bundled TrueForge…');
+    const server = await managed.connection(profile, signal);
+    return { ...settings, ...server, model: MANAGED_MODEL, modelLabel: profile.modelId };
   }
 
   // The pin covers everything an unattended run can use. Credentials enter only as a digest.
   panel.handle = async message => {
     switch (message?.type) {
       case 'ready': panel.publish(); break;
+      case 'tools': await chooseTools(); break;
+      case 'more-actions': await chooseMoreActions(); break;
+      case 'slash-commands': await chooseSlashCommand(); break;
       case 'model-settings':
-        await vscode.commands.executeCommand('workbench.action.openSettings', '@id:agentextension.model');
+        await modelSetup();
         break;
       case 'attach-file': {
         const folder = await chooseFolder();

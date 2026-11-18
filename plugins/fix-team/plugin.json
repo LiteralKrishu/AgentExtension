@@ -2,10 +2,18 @@
   "schemaVersion": 1,
   "id": "fix-team",
   "publisher": "LiteralKrishu",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Diagnose a failed check and draft a contained fix for parent review.",
   "skills": ["fix-workflow"],
   "workers": ["test-diagnosis", "edit-proposal"],
+  "workflows": [
+    {
+      "id": "fix-check",
+      "title": "Diagnose and fix a failing check",
+      "prompt": "Investigate the failing check I describe. Use the diagnosis and edit-proposal workers when applicable. Propose the smallest fix and show the draft and verification for review.",
+      "planFirst": true
+    }
+  ],
   "roles": [
     {
       "name": "docs-check",

@@ -30,12 +30,13 @@ async function fixture(t, settings = {}) {
     assert.deepEqual(host.answers, []);
   };
   const enablePlugin = async () => {
-    host.answers.push({ kind: 'pick', value: items => items.filter(item => item.label === 'sample-team') },
+    host.answers.push({ kind: 'pick', value: items => items.find(item => item.label === 'Plugins') },
+      { kind: 'pick', value: items => items.filter(item => item.label === 'sample-team') },
       { kind: 'modal', value: () => {
         assert.match(host.shown.warning.at(-1).detail, /Workflows: Inspect sources \(inspect\)/);
         return 'Enable plugin';
       } });
-    await host.send({ type: 'plugins' });
+    await host.command('tools');
     await host.waitFor(() => host.commands.has(command), 5_000, 'workflow registered after approval');
   };
   return { host, importPlugin, enablePlugin, root };
@@ -46,7 +47,19 @@ test('the editor shares packages and registers workflows only for exact approved
   await importPlugin('1.0.0');
   await host.waitFor(state => state.status?.startsWith('Imported sample-team 1.0.0'), 5_000);
   assert.equal(host.commands.has(command), false);
+  const workflowLabel = '/sample-team:inspect';
+  async function findWorkflow(expected) {
+    host.answers.push({ kind: 'pick', value: items => {
+      assert.ok(items.some(item => item.label === '/plugins'));
+      assert.equal(items.some(item => item.label === workflowLabel), expected);
+      return expected ? items.find(item => item.label === workflowLabel) : undefined;
+    } });
+    if (expected) host.answers.push({ kind: 'input', value: value => { assert.equal(value, initialPrompt); return undefined; } });
+    await host.command('slashCommands');
+  }
+  await findWorkflow(false);
   await enablePlugin();
+  await findWorkflow(true);
   const previousCommand = host.commands.get(command);
   host.answers.push({ kind: 'input', value: value => { assert.equal(value, initialPrompt); return undefined; } });
   await host.command('plugin.sample-team.inspect');
@@ -61,6 +74,7 @@ test('the editor shares packages and registers workflows only for exact approved
   assert.equal(host.commands.get(command), previousCommand);
   await importPlugin('2.0.0');
   await host.waitFor(() => !host.commands.has(command), 5_000, 'stale workflow removed');
+  await findWorkflow(false);
   await previousCommand();
   await host.waitFor(state => state.status?.startsWith('No matching approved plugin workflow'), 5_000);
   await enablePlugin();
@@ -84,10 +98,9 @@ test('a workflow uses the edited prompt and waits for normal plan approval', {
   await importPlugin('1.0.0');
   await enablePlugin();
   host.answers.push({ kind: 'pick', value: items => {
-    assert.equal(items[0].description, command);
-    return items[0];
+    return items.find(item => item.label === '/sample-team:inspect');
   } }, { kind: 'input', value: value => { assert.equal(value, initialPrompt); return prompt; } });
-  const run = host.command('pluginWorkflow');
+  const run = host.command('slashCommands');
   const plan = await host.waitFor(state => state.phase === 'plan' || state.phase === 'error', 30_000, 'plan approval');
   assert.ifError(model.state.error);
   assert.equal(plan.phase, 'plan', plan.status);

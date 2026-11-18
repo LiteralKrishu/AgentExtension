@@ -9,7 +9,8 @@ const { setTimeout: sleep } = require('node:timers/promises');
 
 // A small VS Code host stub. It loads the real extension and drives it through registered commands, the webview
 // message channel, quick picks, input boxes and modal dialogs. Answers are scripted in order.
-async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, storage: shared, storedSecrets = [] }) {
+async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, storage: shared, storedSecrets = [],
+  extensionPath = path.join(__dirname, '..', '..'), extensionEntry = path.join(extensionPath, 'src', 'extension.js') }) {
   const answers = [];
   const listeners = { config: [], folders: [], trust: [] };
   const commands = new Map();
@@ -95,7 +96,7 @@ async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, 
   const stateValues = new Map();
   const secretListeners = [];
   const context = {
-    subscriptions: [], extensionPath: path.join(__dirname, '..', '..'), extensionUri: uri(path.join(__dirname, '..', '..')),
+    subscriptions: [], extensionPath, extensionUri: uri(extensionPath),
     globalStorageUri: { fsPath: storage },
     globalState: { get: (key, fallback) => stateValues.get(key) ?? fallback, update: async (key, value) => stateValues.set(key, value), values: stateValues },
     secrets: { get: async key => secrets.get(key), store: async (key, value) => { secrets.set(key, value); secretListeners.forEach(listener => listener({ key })); },
@@ -113,7 +114,7 @@ async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, 
     if (!shared) await fs.rm(storage, { recursive: true, force: true });
   });
   for (const key of Object.keys(require.cache)) if (key.includes(`${path.sep}src${path.sep}`)) delete require.cache[key];
-  const extension = require('../../src/extension.js');
+  const extension = require(extensionEntry);
   extension.activate(context);
   provider.resolveWebviewView({ onDidDispose: () => disposable, webview: { options: {}, cspSource: 'test', asWebviewUri: value => value,
     set html(value) { this.markup = value; }, get html() { return this.markup; },

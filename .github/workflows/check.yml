@@ -18,3 +18,7 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm run package:vsix -- "$RUNNER_TEMP/agentextension.vsix"
+      - name: Test the packaged extension
+        run: |
+          unzip -q "$RUNNER_TEMP/agentextension.vsix" -d "$RUNNER_TEMP/agentextension-package"
+          AGENTEXTENSION_TEST_PACKAGED_PATH="$RUNNER_TEMP/agentextension-package/extension" node --test test/managed-vsix.test.js

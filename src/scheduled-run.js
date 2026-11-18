@@ -12,7 +12,7 @@ const { WorkerPool } = require('./workers');
 // Runs one unattended read-only report. The schedule approval is the only standing approval. It covers workspace
 // reads and the inputs reviewed when the schedule was approved, within the run budget.
 async function runScheduledReport({ schedule, occurrence, trigger, workspace, settings, policy, connectorConfigs = [], secrets, accounts,
-  notes = [], inputs, verify, storage, audit = () => {}, onStatus = () => {}, onCancel = () => {}, now = Date.now }) {
+  notes = [], inputs, verify, prepareRunSettings, storage, audit = () => {}, onStatus = () => {}, onCancel = () => {}, now = Date.now }) {
   const controller = new AbortController();
   onCancel(reason => controller.abort(new Error(reason ?? 'Scheduled report cancelled.')));
   const deadline = AbortSignal.timeout(schedule.budget.minutes * 60_000);
@@ -54,6 +54,7 @@ async function runScheduledReport({ schedule, occurrence, trigger, workspace, se
   let session;
   try {
     await run.validateCapabilities?.();
+    if (prepareRunSettings) settings = await prepareRunSettings(settings, signal, onStatus);
     if (selected.length && permissions.allowScope('connector.catalog')) {
       run.connectors = new ReadConnectors({ configs: selected, secrets, permissions, signal, accounts });
     }

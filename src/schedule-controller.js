@@ -10,7 +10,7 @@ const { Scheduler, ScheduleStore, normalizeSchedule, validateTimeZone, hasSchedu
   nextOccurrence, localLabel, describeCadence, DEFAULT_SCHEDULE_TOKENS } = require('./schedules');
 const { runScheduledReport } = require('./scheduled-run');
 
-function createScheduleController({ context, panel, status, chooseFolder, makeWorkspace, runSettings, policyFor,
+function createScheduleController({ context, panel, status, chooseFolder, makeWorkspace, runSettings, prepareRunSettings, policyFor,
   connectorConfigs, connectorAccounts, auditDecision, tell, openReport, setLastReport, isForegroundActive, isForegroundBusy, onError,
   contextCatalog, startFollowUp, backgroundProfile }) {
   const schedulers = new Map();
@@ -94,7 +94,7 @@ function createScheduleController({ context, panel, status, chooseFolder, makeWo
       try { scope = await verify(); }
       catch (error) { return { status: 'blocked', reason: `${error.message} Review and approve the schedule again.` }; }
       return await runScheduledReport({ schedule, occurrence, trigger, workspace, settings: scope.settings, policy: scope.policy,
-        inputs: scope.inputs, verify,
+        inputs: scope.inputs, verify, prepareRunSettings,
         connectorConfigs: scope.selected, accounts: connectorAccounts, secrets: context.secrets, notes: new WorkspaceMemory(context.globalState, identity).list(),
         storage: context.globalStorageUri.fsPath, audit: event => auditDecision(event, identity),
         onCancel: stop => { scheduled.cancel = stop; onCancel(stop); } });
@@ -396,7 +396,7 @@ function createScheduleController({ context, panel, status, chooseFolder, makeWo
   }
 
   async function createSchedule(folder, identity, entry) {
-    if (!runSettings().model.trim()) return tell('Set AgentExtension: Model in VS Code Settings first.');
+    if (!runSettings().model.trim()) return tell('Connect a model before creating a scheduled report.');
     const name = await vscode.window.showInputBox({ title: 'New scheduled report', prompt: 'Name', ignoreFocusOut: true,
       validateInput: text => !text.trim() || text.length > 80 ? 'Use 1 to 80 characters.' : undefined });
     if (!name) return;

@@ -2,10 +2,17 @@
   "schemaVersion": 1,
   "id": "review-team",
   "publisher": "LiteralKrishu",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Research relevant repository excerpts and review a draft with bounded, read-only workers.",
   "skills": ["review-workflow"],
   "workers": ["repository-research", "diff-review"],
+  "workflows": [
+    {
+      "id": "research",
+      "title": "Research a repository question",
+      "prompt": "Use the repository research worker to investigate my question. Cite file paths and line numbers and identify any gaps in the evidence. Do not change files."
+    }
+  ],
   "connectors": [],
   "capabilities": ["skill.read", "worker.research", "worker.review"]
 }

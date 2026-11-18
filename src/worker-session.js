@@ -22,7 +22,7 @@ function instructionsFor({ output, instructions, role, read } = {}) {
 async function runWorkerSession(settings, task, signal, onSession = () => {}, role = {}) {
   const { TrueForge, isEventDelta, mergeEventDelta } = await import('@truefoundry/trueforge-sdk');
   const baseUrl = require('./forge').localUrl(settings.serverUrl);
-  const client = new TrueForge({ baseUrl, timeoutInSeconds: (settings.timeoutSeconds ?? 60) + 5, maxRetries: 0 });
+  const client = new TrueForge({ baseUrl, token: settings.serverToken, timeoutInSeconds: (settings.timeoutSeconds ?? 60) + 5, maxRetries: 0 });
   let sessionId;
   let complete = false;
   let turnStarted = false;
@@ -66,7 +66,7 @@ async function runWorkerSession(settings, task, signal, onSession = () => {}, ro
     } } }, { abortSignal: signal, timeoutInSeconds: 10 });
     sessionId = session.id;
     signal.throwIfAborted();
-    onSession(new URL(`/sessions/${encodeURIComponent(sessionId)}`, baseUrl).href);
+    if (!settings.serverToken) onSession(new URL(`/sessions/${encodeURIComponent(sessionId)}`, baseUrl).href);
     const messages = new Map();
     const stream = await client.sessions.createTurnStream(sessionId, {
       input: [{ type: 'user.message', content: JSON.stringify(task) }],

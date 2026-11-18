@@ -4,33 +4,42 @@ AgentExtension is a VS Code coding agent for local TrueForge. It can edit a sele
 
 **Starting point** · From scratch. The project started with this repository's MIT license.
 
-## Set up
+## Install and connect a model
 
-1. Install Node.js 22.14 or later and VS Code 1.101 or later. [VS Code runtime requirements](https://code.visualstudio.com/updates/v1_101)
-2. Run `npm ci` in this repository.
-3. Start TrueForge in a separate terminal. Keep it bound to the loopback address. The allowlist lets TrueForge reach the extension's temporary editor connector.
+1. Download the VSIX with `darwin-arm64` in its name from **Assets** on the [latest GitHub release](https://github.com/LiteralKrishu/AgentExtension/releases/latest). It runs on Apple Silicon. For another platform, follow [the build instructions](#develop-or-build-the-vsix).
+2. In VS Code 1.101 or later, run **Extensions: Install from VSIX** and select the downloaded file.
+3. Open a trusted workspace folder. Open **AgentExtension** in the activity bar and select **Connect model**.
+4. Choose one connection.
 
-   ```sh
-   HOST=127.0.0.1 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' \
-     npx --yes @truefoundry/trueforge@0.184.2
-   ```
+   - **OpenAI.** Paste an OpenAI API key with access to GPT-4.1 mini. This is the default model. [Model requirements](https://developers.openai.com/api/docs/models/gpt-4.1-mini)
+   - **OpenAI-compatible API.** Enter the API URL. Add a key if the provider requires one. Select a model that supports tool calls, or enter its model ID. For LM Studio or Ollama, start the local model server first.
+   - **Existing TrueForge server.** Enter its local URL and select one of its configured models. You can continue to use **AgentExtension: Server URL**, **Model**, and **Fallback Model** in VS Code Settings for that connection.
 
-4. Open TrueForge at `http://127.0.0.1:8790`. Under **Settings → Models**, add a catalog provider or an OpenAI-compatible endpoint. The [example manifest](trueforge/model.example.json) shows the fields for a local model. Set any credentials in TrueForge.
-5. Open this repository in VS Code. Run **Run AgentExtension** from **Run and Debug**. Open the target repository in the Extension Development Host.
-6. In the host window, set **AgentExtension: Model** to the full name from TrueForge, such as `local-lm-studio/qwen`. Set **AgentExtension: Fallback Model** to a second configured model if you want automatic fallback.
+5. Describe a task and select **Run agent**. Review the proposed changes in VS Code.
 
-The extension loads the checked-in agent definition when it creates a session. Use a configured TrueForge chat model with a compatible tool-call template. [Agent definition](trueforge/agent.json) · [TrueForge model setup](https://trueforge.dev/models)
+The VSIX includes Node.js and TrueForge. VS Code stores the API key in its credential store. The bundled server starts when you connect a model or start your first run in a new window. It runs on a private local port for that window. After you close the window, **Resume** can recover the editor checkpoint and start a new model session. Scheduled reports that run while VS Code is closed require an existing TrueForge server.
 
-You can also install the packaged extension with **Extensions: Install from VSIX** and use it in a normal VS Code window.
+## Develop or build the VSIX
 
-Run `npm run package:vsix` to build the bundled VSIX. Pass an output path after `--` to choose where to save it.
+Install an official Node.js distribution, version 22.15 or later, and run `npm ci`. Run `npm run package:vsix` on the target platform to build its package. The default filename includes the operating system and processor. Pass an output path after `--` to choose where to save the file. On macOS, the build uses the Xcode Command Line Tools to compile the optional desktop helper.
+
+For source debugging, use **Run AgentExtension** from **Run and Debug**. The source host connects to a separately started TrueForge server. Keep it on the loopback address so it can reach the temporary editor connector.
+
+```sh
+HOST=127.0.0.1 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' \
+  npx --yes @truefoundry/trueforge@0.184.2
+```
+
+Open TrueForge at `http://127.0.0.1:8790` and add a model under **Settings → Models**. In the Extension Development Host, select **Connect model → Existing TrueForge server**. [Example model manifest](trueforge/model.example.json) · [Agent definition](trueforge/agent.json)
 
 ## Use the extension
 
 - **Inline edit.** Select code. Press **Cmd+Alt+I** on macOS or **Ctrl+Alt+I** on Windows or Linux. Enter an instruction. The first hunk opens in a native VS Code diff.
 - **Agent mode.** Open **AgentExtension** in the activity bar. Describe a task in the prompt at the bottom of the panel. Select **Run agent** or press **Enter** to start. Press **Shift+Enter** to add a line. Use the model link below the prompt to open model settings.
-- **Add context.** Select **@ Context** to choose a workspace file or enter a symbol name. You can also type `@file:src/path.py` or `@symbol:my_function`. Put a path with spaces in quotes.
-- **Workspace controls.** Open **Workspace** to manage skills, notes, instructions, connectors, plugins, access rules, and scheduled reports. Use the same menu to open saved reports, export the audit log, or start a working-tree review.
+- **Add context.** Select **+ Context** to add a file or symbol, choose skills, or review workspace instructions. You can also type `@file:src/path.py` or `@symbol:my_function`. Put a path with spaces in quotes.
+- **Configure tools.** Select **Tools** beside the prompt to manage plugins, connectors, accounts, browser and computer access, or permission rules.
+- **Run a workflow.** Type `/` in an empty prompt or select the **/** button. Search for a workflow from an enabled plugin, such as `/example-team:inspect`. You can also find shortcuts for skills, notes, and working-tree review.
+- **More actions.** Open **⋯** at the top of the panel for notes, scheduled reports, saved reports, sharing, and audit export.
 - **Run details.** Expand **Run details** below the run to see context sources, permission decisions, tool activity, verification, and worker findings. Cancel, revoke, and stop controls stay near the prompt while they are available.
 - **Interrupted runs.** Select **Resume** to restore an agent or inline draft. The extension reconnects to the original TrueForge session when it can confirm the previous turn ended and the old editor connection closed. Otherwise it starts a new session. Inline recovery preserves the selection and independent file edits. Use **Review conflicts** to preview overlapping changes and choose what to stage. If the selection boundaries are ambiguous, select the current code to start a new inline edit. The plan, hunk review, commands, and connector calls that require approval need a fresh decision. Applying or discarding the draft clears the checkpoint.
 - **Questions.** The agent can pause to ask a question with up to five options. The panel shows it under **Question from the agent**. Choose an option, type an answer, or select **Skip question**. Answers are sent as your input and do not approve any action. A run can ask up to five questions. Answered questions do not count toward the run's limit of 12 approval pauses. If the agent ends a turn with a plain-text question and nothing is staged, the extension asks it once to use the question panel or continue. A scheduled report can save a question for later review.
@@ -43,12 +52,12 @@ Run `npm run package:vsix` to build the bundled VSIX. Pass an output path after 
 - **Save and undo.** Apply edits existing files in editor buffers. Use **Save All** if Auto Save is off. New files are created at apply time. **Undo last apply** reverts the last batch if the current text still matches it. Save reverted buffers if needed.
 - **Cancel.** Select **Cancel run** in the panel or click the TrueForge status item. The extension discards the run's drafts. Use **Discard draft** to clear a completed review before apply.
 - **Permissions.** Expand **Permissions and decisions** to inspect the current workspace scope and recent decisions. Select **Revoke run access** to cancel the run and invalidate its grants. The **AgentExtension permissions** output channel keeps a local decision log with hashed targets. It does not log source text, command arguments, or connector credentials.
-- **Skills.** Select **Choose skills** to enable text workflows for this workspace. The extension includes `focused-change`. Add local roots in **AgentExtension: Skill Roots**. Each root contains `skill-name/SKILL.md` folders. With **AgentExtension: Automatic Skills** on, the agent can match up to two skills at run start. During the run it can list eligible skill names and descriptions and request a workflow. Matching and requests share a 12,000-character budget. The run allows up to three active skills and 24,000 body characters across all sources. Skills with `disable-model-invocation: true` or `allow_implicit_invocation: false` require manual selection. The panel marks matched and requested skills, and **Context sources** records when text enters the run.
+- **Skills.** Select **+ Context → Skills** to enable text workflows for this workspace. The extension includes `focused-change`. Add local roots in **AgentExtension: Skill Roots**. Each root contains `skill-name/SKILL.md` folders. With **AgentExtension: Automatic Skills** on, the agent can match up to two skills at run start. During the run it can list eligible skill names and descriptions and request a workflow. Matching and requests share a 12,000-character budget. The run allows up to three active skills and 24,000 body characters across all sources. Skills with `disable-model-invocation: true` or `allow_implicit_invocation: false` require manual selection. The panel marks matched and requested skills, and **Context sources** records when text enters the run.
 - **Context.** Expand **Context sources** to see the instruction, request, selection, skill, repository, memory, and tool-result entries recorded during the run. Each entry shows its origin, trust label, reason, and character count. After a main-thread compaction, entries show whether the extension recorded them before or after that event. Retained source IDs are unavailable.
 - **Notes.** Open **Notes** and type to search by full note text, scope, or cited file. Workspace notes enter future runs for that workspace. User preferences enter runs in every workspace. To free space, select **Summarize workspace notes** or **Summarize user preferences**. Select at least two entries, write a shorter summary, and review it before replacing the originals. You can also add, edit, or remove a note and open its source. Notes persist in extension storage and support opt-in [private sync](#sync-personal-preferences-and-workspace-notes). Keep credentials out of notes.
 - **Suggested notes.** During a run, the agent can call `suggest_note` to propose a workspace note or user preference. It can cite up to five workspace files. Suggestions are kept in a separate list and never sent to a model. The panel shows how many are waiting for review. Choose **Review suggested notes** to save, edit and save, or discard each one. A run can make at most three suggestions, and at most 20 can wait for review. A rule that denies `memory.suggest` removes the tool.
-- **MCP connectors.** Configure a server, account label, and tools with exact targets. Select **Choose connectors** to enable it for this workspace. Use **Connector credential** to set a bearer token or sign in with OAuth. Every write requires a separate editor approval.
-- **Plugins.** Select **Manage plugins** to enable a bundled, configured, or imported plugin. Review its version, publisher label, capabilities, source, and content digest. Enablement is saved for this workspace. A changed version, file, or referenced connector configuration requires approval again. Clear its checkbox to disable it. [Share packages and run workflows](#plugin-packages-and-workflows)
+- **MCP connectors.** Open **Tools → Connector settings** to configure a server, account label, and tools with exact targets. Select **Tools → Connectors** to enable it for this workspace. Use **Tools → Connector accounts** to set a bearer token or sign in with OAuth. Every write requires a separate editor approval.
+- **Plugins.** Select **Tools → Plugins** to enable a bundled, configured, or imported plugin. Review its version, publisher label, capabilities, source, and content digest. Enablement is saved for this workspace. A changed version, file, or referenced connector configuration requires approval again. Clear its checkbox to disable it. [Share packages and run workflows](#plugin-packages-and-workflows)
 - **Subagents.** With `review-team` enabled, ask the agent to research relevant repository files or review its draft. Under **Research and review workers**, open a task to see its source ranges, findings, state, and TrueForge session link. Diff reports become stale when the draft or accepted hunk selection changes. Findings are advice. Apply still requires your hunk decisions.
 - **Fix workers.** Enable the bundled `fix-team` plugin to add three workers. `diagnose_failure` explains the latest failed check from its output and the files it cites. `propose_worker_edits` drafts edits to named files in a separate draft. The agent must merge those edits with `merge_worker_edits`. A merge is refused if the draft changed after the worker started or if an edit overlaps a change the agent already staged. Merged edits appear in hunk review like any other change. The plugin also defines a custom `docs-check` reviewer.
 - **Browser inspection.** Add exact origins in **AgentExtension: Browser Origins**. Select **Browser access**, choose the origins, then choose observation or requests for actions. The extension starts a separate Chrome profile. It can read a page, list controls, and capture a small screenshot. Each click, text fill, upload, and outgoing write request needs approval.
@@ -68,9 +77,11 @@ Browser and computer selections also last for the extension-host session. Each r
 ## Plugin packages and workflows
 
 1. To share a plugin from a configured plugin root, run **AgentExtension: Export Plugin Package** from the Command Palette. Select the plugin and save the `.agentextension-plugin.json` file to a shared folder or send the file to the recipient.
-2. On the receiving editor, select **Workspace → Import plugin** in the Agent panel. Open the package and review the publisher label, version, capabilities, and content digest. Select **Import plugin**.
-3. Select **Manage plugins** and approve the exact version for this workspace. To upgrade a plugin, import the new package and approve its version again.
-4. Select **Run plugin workflow**, then choose a workflow. Review or edit the prompt before you start. Planning workflows wait for the usual plan approval. Runs use the same access and change review as other agent runs.
+2. In the receiving editor, select **Tools → Import plugin package**. Open the package and review the publisher label, version, capabilities, and content digest. Select **Import plugin**.
+3. Select the plugin in the picker that opens and approve its version for this workspace. You can return to **Tools → Plugins** to change the selection. To upgrade a plugin, import the new package and approve its version again.
+4. Type `/` in an empty prompt and choose a workflow. Review or edit its prompt before you start. Planning workflows wait for plan approval. Runs use the same access and change review as other agent runs.
+
+The bundled plugins add `/review-team:research` and `/fix-team:fix-check` after you enable them. Add your question or the failing check to the workflow prompt.
 
 The package uses the `agentextension-plugin/1` JSON format. It contains a manifest, declared skills, and text resources. The extension validates the package before making it available for approval. An invalid or cancelled import leaves the current version available. Use a unique plugin ID for packages. An installed package ID must differ from IDs in the bundled and configured plugin folders on the receiving editor. A publisher label comes from the manifest.
 
@@ -384,7 +395,7 @@ Load the file with `launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgen
 
 ## Local plugin setup
 
-Add parent folders to **AgentExtension: Plugin Roots**. Each child folder must contain `plugin.json`. Copy a plugin into a folder, then use **Manage plugins** to review and enable it.
+Add parent folders to **AgentExtension: Plugin Roots**. Each child folder must contain `plugin.json`. Copy a plugin into a folder, then use **Tools → Plugins** to review and enable it.
 
 The bundled manifest provides a working example:
 
@@ -439,7 +450,7 @@ Select or load the skill in an interactive run. Each call shows the script path,
 
 ### Built-in plugin hooks
 
-Add the hook IDs to the manifest's `hooks` array and include `hook.run` in `capabilities`. **Manage plugins** shows each hook and its event before approval.
+Add the hook IDs to the manifest's `hooks` array and include `hook.run` in `capabilities`. **Tools → Plugins** shows each hook and its event before approval.
 
 - `reject-conflict-markers` runs before **Apply**. It scans accepted hunk text only. It blocks apply if it finds possible conflict markers or exceeds 64 accepted hunks or 64,000 characters.
 - `record-check-result` runs after an isolated check returns. It records the outcome and draft revision in the saved run report.

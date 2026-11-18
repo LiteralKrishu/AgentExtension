@@ -174,7 +174,7 @@ async function main() {
     const pluginRoot = path.join(root, 'plugins/test-team');
     await fs.cp(path.resolve(__dirname, '../../plugins/review-team'), pluginRoot, { recursive: true });
     const manifest = JSON.parse(await fs.readFile(path.join(pluginRoot, 'plugin.json'), 'utf8'));
-    Object.assign(manifest, { id: 'test-team', workers: ['repository-research'], capabilities: ['skill.read', 'worker.research'] });
+    Object.assign(manifest, { id: 'test-team', version: '1.0.0', workers: ['repository-research'], capabilities: ['skill.read', 'worker.research'] });
     await fs.writeFile(path.join(pluginRoot, 'plugin.json'), JSON.stringify(manifest));
     await fs.writeFile(path.join(root, 'workspace/a.js'), 'const a = 1;\n\n// Separate hunk\n\nconst z = 2;\n');
     await fs.writeFile(path.join(root, 'workspace/b.js'), 'const b = 3;\n');
@@ -271,7 +271,7 @@ async function main() {
       browserWrites: browserFixture.calls.writes, browserDownloads: browserFixture.calls.downloads, outOfScopeRequests: browserFixture.calls.escaped, nativeActions: 3,
       projectHandoffs: 1, resolvedProjectConflicts: 1, scheduledReports: 1,
       checks: ['pinned prompt during plan and review', 'Enter submission and Shift+Enter newline', 'file picker and symbol insertion',
-        'workspace drawer actions', 'expandable context sources', 'visible revoke and stop controls', 'shared notes conflict resolution', 'assigned draft review and apply',
+        'tools picker, slash commands and more actions', 'expandable context sources', 'visible revoke and stop controls', 'shared notes conflict resolution', 'assigned draft review and apply',
         'schedule creation and approval', 'manual scheduled run', 'scheduled run history and saved report',
         'browser scope selection', 'native app selection', 'browser screenshot', 'per-action and outgoing-write approvals', 'native fill, press and slider increment', 'browser download review and apply', 'stop during browser navigation', 'saved reports and exact checked patches', 'plugin approval', 'changed plugin blocked', 'capability update reapproval', 'plugin disable', 'research worker', 'draft review worker', 'stale report', 'two child cancellation', 'skills', 'approved memory', 'credential storage', 'connector approval', 'context panel', 'plan', 'native diff', 'accepted-hunk check', 'user-initiated accepted-hunk recheck', 'apply', 'undo', 'revocation', 'note removal'] }, null, 2));
   } finally {

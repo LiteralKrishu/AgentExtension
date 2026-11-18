@@ -61,7 +61,10 @@ async function scheduleContextCatalog({ identity, connectorIds, fields, policy, 
 async function resolveScheduleScope({ identity, schedule, connectors, settings, secrets, accounts, contextCatalog, backgroundProfile }) {
   const selected = connectors.filter(config => config.tools.length && schedule.connectors.includes(config.id));
   if (selected.length !== schedule.connectors.length) throw new Error('A connector in this schedule is no longer configured.');
-  if (!settings.model.trim()) throw new Error('Set AgentExtension: Model first.');
+  if (!settings.model.trim()) throw new Error('Connect a model first.');
+  if (schedule.background && settings.serverUrl?.startsWith('managed:')) {
+    throw new Error('Connect an existing TrueForge server to run this report while VS Code is closed.');
+  }
   if (schedule.background) localUrl(settings.serverUrl);
   const oauthAccounts = new Map();
   const credentials = await Promise.all(selected.map(async config => {

@@ -32,8 +32,8 @@ function endsWithQuestion(text) {
 }
 
 function localUrl(value) {
-  const url = new URL(value);
-  if (url.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+  const url = URL.parse(value);
+  if (!url || url.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
       || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
     throw new Error('Set AgentExtension: Server URL to the local TrueForge address, such as http://127.0.0.1:8790.');
   }
@@ -116,7 +116,7 @@ async function runForge(settings, run, prompt, ui) {
   if (!primary) throw new Error('Set AgentExtension: Model to a model configured in TrueForge, including its provider prefix.');
 
   const timeout = Math.min(1800, Math.max(30, settings.turnTimeoutSeconds ?? 600));
-  const client = new TrueForge({ baseUrl, timeoutInSeconds: timeout + 10, maxRetries: 0 });
+  const client = new TrueForge({ baseUrl, token: settings.serverToken, timeoutInSeconds: timeout + 10, maxRetries: 0 });
   const quick = { timeoutInSeconds: 10, abortSignal: run.signal };
   let sessionId;
   let bridge;
@@ -146,14 +146,15 @@ async function runForge(settings, run, prompt, ui) {
       if (/outbound url blocked/i.test(error.body?.error?.message ?? '')) {
         throw new Error('TrueForge blocked the editor connector. Start it with 127.0.0.1 in OUTBOUND_URL_ALLOWED_HOSTS.');
       }
-      throw new Error('Could not connect to local TrueForge. Start TrueForge and check the server URL.');
+      throw new Error(settings.serverToken ? 'The bundled TrueForge connection closed. Start the run again.'
+        : 'Could not connect to local TrueForge. Start your server or open AgentExtension model setup.');
     }
 
     async function attempt(model) {
       run.signal.throwIfAborted();
       await run.validateCapabilities?.();
       if (run.workers) run.workers.settings = { ...run.workers.settings, model };
-      ui.status(`Starting TrueForge with ${model}…`);
+      ui.status(`Starting TrueForge with ${settings.modelLabel ?? model}…`);
       const surfaceTools = [
         ...(run.browser ? ['browser_open', 'browser_visit', 'browser_observe'] : []),
         ...(run.browser?.interactive ? ['browser_act'] : []),
@@ -211,7 +212,7 @@ async function runForge(settings, run, prompt, ui) {
         session = response.data;
       }
       sessionId = session.id;
-      ui.session(new URL(`/sessions/${encodeURIComponent(sessionId)}`, baseUrl).href,
+      ui.session(settings.serverToken ? '' : new URL(`/sessions/${encodeURIComponent(sessionId)}`, baseUrl).href,
         { id: sessionId, origin: baseUrl, owner, bridgeUrl: bridge.url, connector: name, turnId: restored?.turnId });
       if (restored) ui.status(`Reconnected to the TrueForge session with ${model}…`);
       // A new user turn supersedes the interrupted turn's pending actions. Never submit their old receipts.

@@ -1,0 +1,8 @@
+{
+  "name": "agentextension-managed-server",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@truefoundry/trueforge": "0.184.2"
+  }
+}
