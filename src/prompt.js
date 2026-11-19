@@ -43,7 +43,7 @@ function composePrompt({ request, requestSource = 'Your request', selection, pla
   const scope = report ? `SCHEDULED READ-ONLY REPORT MODE. This run was started by a schedule, not by a person at the keyboard. Read the workspace and the listed connector targets only. Write tools are unavailable and no approval can be given during this run.\nRUN SCOPE (host data)\n${JSON.stringify(report.scope)}`
     : selection ? 'INLINE MODE. Only replace text within the original selection.'
     : planFirst ? 'PLAN FIRST MODE. Use read-only tools. Call propose_plan and wait for approval before edits or commands.'
-      : 'AGENT MODE. Discover the files needed to complete this task.';
+      : 'AGENT MODE. Carry out the user request with the available tools. For an edit request, find the relevant files, stage the requested changes, and submit them for review.';
   manifest.add('instructions', 'Run mode', scope, { trust: 'host instructions' });
   manifest.add('request', requestSource, request, { trust: 'user instruction', limit: 8_000 });
   const parts = [scope, `USER REQUEST\n${request}`];
