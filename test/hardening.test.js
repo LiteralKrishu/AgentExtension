@@ -35,9 +35,13 @@ test('sandbox arguments hide home and the real workspace on both platforms', asy
   assert.ok(profile.includes(`(deny file-read* (subpath ${JSON.stringify(home)}))`));
   assert.ok(profile.includes('(deny file-read* (subpath "/work/repo"))'));
   assert.ok(profile.indexOf('(allow file-read* file-write* (subpath "/tmp/copy"))') > profile.lastIndexOf('(deny file-read*'), 'The copy is allowed after the denials');
+  for (const folder of ['/Users', '/private/tmp', '/private/var/folders']) assert.ok(profile.includes(`(deny file-read* (subpath "${folder}"))`), folder);
+  assert.match(profile, /\(deny mach-lookup\) \(allow mach-lookup \(global-name "com\.apple\.system\.opendirectoryd\.libinfo"\)/);
+  assert.match(profile, /\(deny appleevent-send\) \(deny lsopen\)/);
   const linux = await sandboxArguments('node', ['t.js'], '/tmp/copy', { hidden: ['/work/repo'], platform: 'linux', searchPath: '' });
   const args = linux.parameters.join(' ');
   assert.ok(args.includes(`--tmpfs ${home}`) && args.includes('--tmpfs /work/repo'));
+  for (const folder of ['/tmp', '/var/tmp', '/run']) assert.ok(args.includes(`--tmpfs ${folder} `), folder);
   assert.ok(args.indexOf('--bind /tmp/copy /tmp/copy') > args.lastIndexOf('--tmpfs'), 'The copy is bound after the tmpfs mounts');
   await assert.rejects(sandboxArguments('node', [], '/tmp/copy', { platform: 'win32' }), /macOS and on Linux/);
 });
@@ -54,6 +58,13 @@ test('macOS sandbox blocks home, the real workspace and the network but runs the
   assert.notEqual(secret.exitCode, 0);
   assert.doesNotMatch(secret.output, /SECRET/);
   assert.notEqual((await run('curl', ['-sS', '-m', '5', 'https://example.com'])).exitCode, 0);
+  // Other runs' temporary files stay hidden, and the command cannot ask Launch Services to start an app.
+  const sibling = await temporary(t, 'agentextension-sibling-');
+  await fs.writeFile(path.join(sibling, 'note.txt'), 'SIBLING\n');
+  const neighbour = await run('cat', [path.join(sibling, 'note.txt')]);
+  assert.notEqual(neighbour.exitCode, 0);
+  assert.doesNotMatch(neighbour.output, /SIBLING/);
+  assert.notEqual((await run('/usr/bin/open', ['-g', '-b', 'com.apple.calculator'])).exitCode, 0);
   const staged = await run(process.execPath, ['t.js']);
   assert.equal(staged.exitCode, 0, staged.output);
   assert.match(staged.output, /copy ok/);

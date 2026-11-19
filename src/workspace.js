@@ -164,19 +164,35 @@ async function readableToolchains(hidden, searchPath = process.env.PATH ?? '') {
   return [...output];
 }
 
-// The command reads only the staged copy, system folders and toolchains. The home folder and the real workspace,
-// including files excluded from the copy such as .env, stay unreadable. Network and other writes are denied.
+// Shared folders that hold other users' files, other runs' temporary files and service sockets.
+const SHARED_FOLDERS = {
+  darwin: ['/Users', '/Volumes', '/private/tmp', '/private/var/tmp', '/private/var/folders'],
+  linux: ['/tmp', '/var/tmp', '/run'],
+};
+// Lookups a command needs for user names and logging. Other services could start programs outside the sandbox,
+// for example through launchd, Launch Services or Apple Events.
+const DARWIN_SERVICES = ['com.apple.system.opendirectoryd.libinfo', 'com.apple.system.logger', 'com.apple.system.notification_center'];
+
+// The command reads only the staged copy, system folders and toolchains. The home folder, the real workspace
+// (including files excluded from the copy such as .env), shared temporary folders and service sockets stay
+// unreachable. Network and other writes are denied.
 async function sandboxArguments(command, args, cwd, { hidden = [], platform = process.platform, searchPath } = {}) {
   let home;
   try { home = await fs.realpath(os.homedir()); } catch { home = os.homedir(); }
-  const folders = [...new Set([home, ...hidden])].filter(folder => path.isAbsolute(folder) && folder !== path.parse(folder).root);
+  // The home folder comes first so a toolchain under it is measured against home, not against /Users.
+  const folders = [...new Set([home, ...hidden, ...SHARED_FOLDERS[platform] ?? []])]
+    .filter(folder => path.isAbsolute(folder) && folder !== path.parse(folder).root);
   const readable = await readableToolchains(folders, searchPath);
   if (platform === 'darwin') {
     const quote = value => JSON.stringify(value);
     // Later rules win: hide the folders, then allow toolchains and the staged copy again.
     const profile = ['(version 1) (allow default) (deny network*) (deny file-write*)',
+      `(deny mach-lookup) (allow mach-lookup ${DARWIN_SERVICES.map(name => `(global-name ${quote(name)})`).join(' ')})`,
+      '(deny appleevent-send) (deny lsopen)',
       ...folders.map(folder => `(deny file-read* (subpath ${quote(folder)}))`),
       ...readable.map(folder => `(allow file-read* (subpath ${quote(folder)}))`),
+      // Path resolution needs the metadata, not the contents, of the folders above the copy and toolchains.
+      `(allow file-read-metadata ${[cwd, ...readable].map(folder => `(path-ancestors ${quote(folder)})`).join(' ')})`,
       `(allow file-read* file-write* (subpath ${quote(cwd)})) (allow file-write* (literal "/dev/null"))`].join(' ');
     return { executable: '/usr/bin/sandbox-exec', parameters: ['-p', profile, command, ...args] };
   }

@@ -4,5 +4,10 @@
   "version": "1.0.0",
   "dependencies": {
     "@truefoundry/trueforge": "0.184.2"
+  },
+  "overrides": {
+    "@anthropic-ai/sandbox-runtime": {
+      "zod": "^4.6.6"
+    }
   }
 }
