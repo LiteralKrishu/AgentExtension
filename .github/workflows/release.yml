@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Check release version and platform
+        run: |
+          node -e 'const p = require("./package.json"); if (process.env.GITHUB_REF_NAME !== `v${p.version}` || process.platform !== "darwin" || process.arch !== "arm64") process.exit(1);'
+          test -f "docs/releases/$GITHUB_REF_NAME.md"
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - name: Build the Apple Silicon installer
+        run: npm run package:vsix -- "$RUNNER_TEMP/agentextension-${GITHUB_REF_NAME#v}-darwin-arm64.vsix"
+      - name: Test the packaged TrueForge connection
+        run: |
+          unzip -q "$RUNNER_TEMP/agentextension-${GITHUB_REF_NAME#v}-darwin-arm64.vsix" -d "$RUNNER_TEMP/agentextension-package"
+          AGENTEXTENSION_TEST_PACKAGED_PATH="$RUNNER_TEMP/agentextension-package/extension" node --test test/managed-vsix.test.js
+      - name: Publish the verified installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cd "$RUNNER_TEMP"
+          shasum -a 256 "agentextension-${GITHUB_REF_NAME#v}-darwin-arm64.vsix" > SHA256SUMS.txt
+          gh release create "$GITHUB_REF_NAME" "agentextension-${GITHUB_REF_NAME#v}-darwin-arm64.vsix" SHA256SUMS.txt --verify-tag --latest --title "AgentExtension $GITHUB_REF_NAME" --notes-file "$GITHUB_WORKSPACE/docs/releases/$GITHUB_REF_NAME.md"

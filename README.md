@@ -6,7 +6,7 @@ AgentExtension is a VS Code coding agent for local TrueForge. It can edit a sele
 
 ## Install and connect a model
 
-1. Download the VSIX with `darwin-arm64` in its name from **Assets** on the [latest GitHub release](https://github.com/LiteralKrishu/AgentExtension/releases/latest). It runs on Apple Silicon. For another platform, follow [the build instructions](#develop-or-build-the-vsix).
+1. Download the VSIX with `darwin-arm64` in its name from **Assets** on the [latest GitHub release](https://github.com/StackOverHack-Hub/AgentExtension/releases/latest). It runs on Apple Silicon. For another platform, follow [the build instructions](#develop-or-build-the-vsix).
 2. In VS Code 1.101 or later, run **Extensions: Install from VSIX** and select the downloaded file.
 3. Open a trusted workspace folder. Open **AgentExtension** in the activity bar and select **Connect model**.
 4. Choose one connection.
