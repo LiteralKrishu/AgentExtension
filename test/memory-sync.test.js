@@ -215,6 +215,19 @@ test('the Notes panel previews incoming changes and syncs only after approval', 
   const note = await left.save('Approved on the other device');
   await sync(left, clientFor(first));
   const host = await startHost(t, { root: second.root, settings: {}, env: { AGENTEXTENSION_POLICY_FILE: second.policy } });
+  const update = host.context.globalState.update;
+  host.context.globalState.update = async (...args) => {
+    // Storage can finish after the host helper's fixed message delay on a busy runner.
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return update(...args);
+  };
+  const sendMemoryAndWait = async expectedStatus => {
+    const published = host.states.length;
+    await host.send({ type: 'memory' });
+    // A previous sync can have the same status. Require a fresh panel update.
+    await host.waitFor(state => host.states.length > published && expectedStatus.test(state.status ?? ''),
+      5_000, 'Notes action to finish');
+  };
   const local = new WorkspaceMemory(host.context.globalState, second.root);
   const option = { kind: 'pick', value: items => items.find(item => item.label === 'Sync workspace notes') };
   host.answers.push(option, { kind: 'modal', value: () => undefined });
@@ -225,7 +238,7 @@ test('the Notes panel previews incoming changes and syncs only after approval', 
     assert.match(host.shown.warning.at(-1).detail, /fixture-team \/ alice \/ demo/);
     return 'Sync notes';
   } });
-  await host.send({ type: 'memory' });
+  await sendMemoryAndWait(/^Synced workspace notes\./);
   assert.deepEqual(texts(local), ['Approved on the other device']);
   assert.ok(host.shown.info.includes('command:vscode.diff'));
   assert.match(host.state().status, /0 sent, 1 received/);
@@ -234,11 +247,11 @@ test('the Notes panel previews incoming changes and syncs only after approval', 
   await local.edit(note.id, 'Local edit');
   host.answers.push(option, { kind: 'pick', value: items => items.find(item => item.value === 'remote') },
     { kind: 'modal', value: 'Sync notes' });
-  await host.send({ type: 'memory' });
+  await sendMemoryAndWait(/^Synced workspace notes\./);
   assert.deepEqual(texts(local), ['Published edit']);
   host.answers.push({ kind: 'pick', value: items => items.find(item => /Forget the sync link for workspace/.test(item.label)) },
     { kind: 'modal', value: 'Forget link' });
-  await host.send({ type: 'memory' });
+  await sendMemoryAndWait(/^Sync link removed\.$/);
   assert.deepEqual(texts(local), ['Published edit']);
   assert.equal(local.record().sync, undefined);
   assert.equal((await clientFor(first).read()).state.notes.length, 1);
