@@ -1,0 +1,303 @@
+{
+  "version": 1,
+  "recordedDate": "2026-11-23",
+  "handoff": {
+    "source": "Open Claude project chat and current repository",
+    "head": "1875fe5",
+    "priorChange": "7de74b8",
+    "pushedByThisContinuation": false,
+    "newCommitsByThisContinuation": false
+  },
+  "codingSmokes": [
+    {
+      "model": "local-max-openai-gpt-oss-20b/main",
+      "configuration": {
+        "model": "local-max-openai-gpt-oss-20b/main",
+        "modelId": "agentextension-max-openai-gpt-oss-20b",
+        "properties": {
+          "contextLength": 131072,
+          "maxOutputTokens": 2600
+        },
+        "compaction": false,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": "",
+        "temperature": null,
+        "determinism": "Provider defaults; temperature was not exposed by this setup.",
+        "localOnly": true,
+        "hostedHost": null
+      },
+      "attempts": [
+        {
+          "task": "edit-and-check",
+          "outcome": "complete",
+          "seconds": 20,
+          "tokens": 13313,
+          "implementationDigest": "15441f0ec00a32ee1ee7d9dc2d60d4853358b24410af21a69807aae5df94276c",
+          "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+        },
+        {
+          "task": "flask-task-b",
+          "outcome": "failed",
+          "seconds": 676,
+          "tokens": 422608,
+          "implementationDigest": "15441f0ec00a32ee1ee7d9dc2d60d4853358b24410af21a69807aae5df94276c",
+          "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+        }
+      ]
+    },
+    {
+      "model": "local-max-qwen-qwen3-5-9b/main",
+      "configuration": {
+        "model": "local-max-qwen-qwen3-5-9b/main",
+        "modelId": "agentextension-max-qwen-qwen3-5-9b",
+        "properties": {
+          "contextLength": 65536,
+          "maxOutputTokens": 2600
+        },
+        "compaction": false,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": "",
+        "temperature": null,
+        "determinism": "Provider defaults; temperature was not exposed by this setup.",
+        "localOnly": true,
+        "hostedHost": null
+      },
+      "attempts": [
+        {
+          "task": "edit-and-check",
+          "outcome": "complete",
+          "seconds": 64,
+          "tokens": 24836,
+          "implementationDigest": "15441f0ec00a32ee1ee7d9dc2d60d4853358b24410af21a69807aae5df94276c",
+          "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+        },
+        {
+          "task": "flask-task-b",
+          "outcome": "incomplete",
+          "seconds": 370,
+          "tokens": 512498,
+          "implementationDigest": "15441f0ec00a32ee1ee7d9dc2d60d4853358b24410af21a69807aae5df94276c",
+          "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+        }
+      ]
+    },
+    {
+      "model": "local-max-qwen3-coder-30b-a3b-instruct/main",
+      "configuration": {
+        "model": "local-max-qwen3-coder-30b-a3b-instruct/main",
+        "modelId": "agentextension-max-qwen3-coder-30b-a3b-instruct",
+        "properties": {
+          "contextLength": 32768,
+          "maxOutputTokens": 2600
+        },
+        "compaction": false,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": "",
+        "temperature": null,
+        "determinism": "Provider defaults; temperature was not exposed by this setup.",
+        "localOnly": true,
+        "hostedHost": null
+      },
+      "attempts": [
+        {
+          "task": "edit-and-check",
+          "outcome": "complete",
+          "seconds": 74,
+          "tokens": 38331,
+          "implementationDigest": "15441f0ec00a32ee1ee7d9dc2d60d4853358b24410af21a69807aae5df94276c",
+          "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+        },
+        {
+          "task": "flask-task-b",
+          "outcome": "failed",
+          "seconds": 494,
+          "tokens": 448120,
+          "implementationDigest": "15441f0ec00a32ee1ee7d9dc2d60d4853358b24410af21a69807aae5df94276c",
+          "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+        }
+      ]
+    }
+  ],
+  "interruptedBatch": {
+    "plannedAttempts": 60,
+    "completedAttempts": 6,
+    "complete": 4,
+    "fullReportExists": false,
+    "qualified": false,
+    "attempts": [
+      {
+        "task": "edit-and-check",
+        "repetition": 1,
+        "outcome": "complete",
+        "implementationDigest": "098056265d4d900bbf408e04309765dc862b697c88c29a58fe1efe7ce10b4722",
+        "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+      },
+      {
+        "task": "question",
+        "repetition": 1,
+        "outcome": "complete",
+        "implementationDigest": "098056265d4d900bbf408e04309765dc862b697c88c29a58fe1efe7ce10b4722",
+        "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+      },
+      {
+        "task": "instructions",
+        "repetition": 1,
+        "outcome": "complete",
+        "implementationDigest": "098056265d4d900bbf408e04309765dc862b697c88c29a58fe1efe7ce10b4722",
+        "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+      },
+      {
+        "task": "fix-team-workers",
+        "repetition": 1,
+        "outcome": "incomplete",
+        "implementationDigest": "098056265d4d900bbf408e04309765dc862b697c88c29a58fe1efe7ce10b4722",
+        "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+      },
+      {
+        "task": "js-stable-unique",
+        "repetition": 1,
+        "outcome": "incomplete",
+        "implementationDigest": "098056265d4d900bbf408e04309765dc862b697c88c29a58fe1efe7ce10b4722",
+        "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+      },
+      {
+        "task": "js-pagination",
+        "repetition": 1,
+        "outcome": "complete",
+        "implementationDigest": "098056265d4d900bbf408e04309765dc862b697c88c29a58fe1efe7ce10b4722",
+        "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce"
+      }
+    ],
+    "limitation": "Interrupted after the computer restarted. Cause unconfirmed. This is not a full qualification result."
+  },
+  "retrieval": {
+    "version": "agent-capability-upgrade/retrieval/2",
+    "recordedBy": "Claude handoff",
+    "overallRecallAt10": 0.85,
+    "heldOutRecallAt10": 0.875,
+    "exactSuccessRate": 1,
+    "heldOutStatus": "evaluated and exposed",
+    "qualified": false,
+    "limitation": "The 90% overall target is unmet. Future selection needs fresh held-out queries."
+  },
+  "snapshot": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.18.0",
+    "hardware": "Apple M5",
+    "memoryBytes": 25769803776,
+    "copyOnWriteProbePassed": false,
+    "results": [
+      {
+        "iteration": 1,
+        "ms": 2574.665,
+        "files": 12051,
+        "bytes": 65253990,
+        "hashBodyReads": 12051
+      },
+      {
+        "iteration": 2,
+        "ms": 2056.179042,
+        "files": 12051,
+        "bytes": 65253990,
+        "hashBodyReads": 0
+      },
+      {
+        "iteration": 3,
+        "ms": 1971.2319159999997,
+        "files": 12051,
+        "bytes": 65253990,
+        "hashBodyReads": 0
+      }
+    ],
+    "scope": "Synthetic fixture on this Mac; not a cross-platform result."
+  },
+  "managedExecution": {
+    "dockerClient": "29.6.2",
+    "dockerServer": "29.6.2",
+    "realAcceptance": {
+      "tests": 8,
+      "passed": 8,
+      "skipped": 0,
+      "failed": 0,
+      "durationMs": 14464.253209
+    },
+    "focusedFinal": {
+      "tests": 19,
+      "passed": 19,
+      "skipped": 0,
+      "failed": 0
+    },
+    "limits": {
+      "jobInputFiles": 10000,
+      "jobInputMiB": 128,
+      "writableTmpfsMiB": 512,
+      "memoryGiB": 2,
+      "cpus": 2,
+      "pids": 256,
+      "services": 3,
+      "leaseSeconds": 120,
+      "readinessMs": 20000
+    },
+    "network": "One container per job; private loopback only, no host ports or external network. No per-process loopback firewall.",
+    "scope": "Node.js service integration and Chromium smoke in Linux arm64 containers on macOS arm64. Ordinary Python dependency checks also passed.",
+    "limitations": [
+      "Browser profile is for controlled project smoke tests.",
+      "Container-reported lifecycle is separate from host-confirmed removal.",
+      "Setup registry destinations are explicit but not firewall-restricted."
+    ],
+    "images": [
+      {
+        "profile": "node",
+        "digest": "sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee",
+        "platform": "linux/arm64"
+      },
+      {
+        "profile": "python",
+        "digest": "sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90",
+        "platform": "linux/arm64"
+      },
+      {
+        "profile": "browser",
+        "digest": "sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e",
+        "platform": "linux/arm64"
+      }
+    ]
+  },
+  "trialScript": {
+    "defaultContextLength": 32768,
+    "maximumExplicitContextLength": 65536,
+    "coderMaximumContextLength": 32768,
+    "parallel": 1,
+    "unloadsOnlyOwnedModels": true,
+    "dedicatedRuntime": true,
+    "resourceGuardOverride": false,
+    "apiSpend": 0,
+    "liveTrialRun": false
+  },
+  "validation": {
+    "sourceTypeLint": "passed",
+    "fullSuite": {
+      "tests": 408,
+      "passed": 391,
+      "skipped": 17,
+      "failed": 0,
+      "durationMs": 151695.965625
+    },
+    "package": {
+      "artifact": "/tmp/agentextension-managed-services-upgrade.vsix",
+      "sha256": "b12441c610b8fac11ea54dabf9a60e96916c34d5cfe967485ceaa2cf31079f93",
+      "bytes": 101953096,
+      "tests": 1,
+      "passed": 1,
+      "skipped": 0,
+      "failed": 0,
+      "durationMs": 4479.610459,
+      "scope": "Extracted VSIX saved-connection and bundled-runtime fixture on macOS arm64; no interactive or cross-platform acceptance."
+    },
+    "sourceDigestStatus": "Source digests were not captured before later worker and grant changes. The Phase 13 VSIX SHA-256 is recorded."
+  }
+}

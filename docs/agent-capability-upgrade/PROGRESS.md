@@ -1,15 +1,15 @@
 # Agent Capability Upgrade Progress
 
-## Status: Phase 10 open; Phase 11 implemented
+## Status: Core gate open; Phases 16–17 and supported Phase 22 implemented; Phases 23–24 in progress
 
-The core components for Phases 1–9 are implemented, including a measured rejection of the optional embedding configuration. Phase 2's reopened retrieval-data work is complete. Version 2 resolves the six source findings and freezes 16 fresh held-out queries. Those queries remain unevaluated. Phase 10 is in progress. No local model profile qualifies. The core retrieval and completion gates remain open. Later phases retain their dependency and evidence gates. The user chose to keep improving the core gate. No complete-task benchmark or product-parity claim is made.
+The core components for Phases 1–9 are implemented. Retrieval version 2 was evaluated during the Claude handoff. Its held-out set is now exposed. Overall recall is 85.00%, below the 90% target. No local model profile qualifies. The six-attempt interrupted coding batch is not a completed qualification. The user authorized later implementation while the core gate stays open. Phases 11–13 have now been tested on this Mac, including real Docker checks. Phase 13 passed its full regression and package checks. No release or product-parity claim is made.
 
 ## Quick Reference
 
 - Research: [RESEARCH.md](RESEARCH.md)
 - Implementation and acceptance criteria: [IMPLEMENTATION.md](IMPLEMENTATION.md)
 - Baseline: AgentExtension 0.7.1, source commit 5c5fe67
-- Current work: /build phase 10 agent-capability-upgrade
+- Next work: Phase 10, the Phase 14 model comparison, Phase 18 physical-device acceptance, and Phase 21 model measurements remain open.
 
 ## Phase Progress
 
@@ -18,7 +18,7 @@ Each phase row tracks its state, completed work, decision, and blocker. Use the 
 | Phase | Deliverable | Status | Tasks completed / decisions / blockers |
 | --- | --- | --- | --- |
 | 1 | Strict complete-task scoring | Completed | Strict scorer, disposable verification, saved check-patch evidence, and negative fixtures / only complete passes / no implementation blocker |
-| 2 | Versioned task and retrieval sets | Completed | Frozen 20-task set and retrieval version 2; all 120 judgments validated; five corrected test paths and a hashed cancellation-test overlay / keep version 1 unchanged / 16 fresh held-out queries remain unevaluated; same-implementer review limits independence |
+| 2 | Versioned task and retrieval sets | Completed | Frozen 20-task set and retrieval version 2; all 120 judgments validated; five corrected test paths and a hashed cancellation-test overlay / keep version 1 unchanged / 16 held-out queries were evaluated during the Claude handoff and are now exposed; same-implementer review limits independence |
 | 3 | Progress evidence and replay | Completed | Host tool timing, source-free traces, check/error categories, waits, compaction, and deterministic replay fixtures / unknown causes stay unknown / Flask stall recorded |
 | 4 | Bounded recovery | Completed | Preserved retry drafts, restored task constraints, fresh approvals, input-bound repeated-check limits, task evidence, and repair/recheck fixtures / no automatic retry after external writes / local runtime checks passed |
 | 5 | Fresh exact search | Completed | Current disk/buffer/draft search, literal/word/path/glob/regex, pagination, deadlines, coverage, source hints / native hints revalidated through workspace reads / native and editor checks passed |
@@ -27,20 +27,20 @@ Each phase row tracks its state, completed work, decision, and blocker. Use the 
 | 8 | Symbol relationships | Completed | Document/workspace symbols, definitions/references, version/provider cache, explicit JS/TS/Python relationship lookup, and provenance / automatic relationship reranking rejected after measured regression / optional providers retain text fallback |
 | 9 | Semantic retrieval experiment | Completed — rejected | Local Nomic 768-dimensional ablation, equal-budget packing, cache/offline checks, and resource report / held-out hybrid recall fell to 64.58% / keep normal lexical search |
 | 10 | Model profiles and core gate | In Progress | Three observed local models and strict qualification checker; balanced category ranking adopted / version 2 held-out 87.50% and exact success 100% meet their targets; overall 85.00% misses 90% / no model qualifies; overall recall and full coding qualification remain open |
-| 11 | Scalable verification snapshots | Implemented — macOS check pending | Execution manifest with lockfiles, copy-on-write snapshot, stat-keyed hash cache, file/byte/disk quotas, environment digest, shared by agent checks and the verifier / copy-on-write chosen over worktrees by design / started with Gate A open at the user's direction; macOS clone timing and runtime tests not yet run |
-| 12 | Managed dependency setup | Implemented — Docker acceptance pending | Docker adapter, pinned image digest, dependency-digest volumes, setup-only network, hardened offline checks, no host fallback / user chose Docker Desktop / engine not installed yet; real fixtures not run; merged after the Phase 10 batch |
-| 13 | Managed checks and services | Not Started | None / declared services and leases / depends on environment adapter |
-| 14 | Worker queue | Not Started | None / keep current defaults until measured / depends on core and execution gates |
-| 15 | Bounded grants and review controls | Not Started | None / reuse current exact allow rules / depends on approval measurements |
-| 16 | Scheduled coding drafts | Not Started | None / existing schedules stay read-only / depends on execution gate |
-| 17 | Git and pull-request handoff | Not Started | None / local patch path works without connector / provider access needed for connected acceptance |
+| 11 | Scalable verification snapshots | Completed | Large-tree, quota, lockfile, freshness, overlay, and isolation tests passed on macOS / first snapshot 2.57 s; repeats 1.97–2.06 s with zero hash body reads / forced clone probe unavailable; private-copy fallback measured |
+| 12 | Managed dependency setup | Completed | Real pinned Node.js and Python fixtures passed; empty Node project regression added / cache readiness and concurrent setup protected; cancellation waits for removal / Docker Desktop 29.6.2 on this Mac; setup destinations remain explicit but not firewall-restricted |
+| 13 | Managed checks and services | Completed | Exact declared checks, cwd/env, bounded private services, readiness, leases, lifecycle reports, discovery, and browser profile implemented / five real service cases passed / 391 of 408 regression tests passed, 17 skipped; extracted VSIX connection fixture passed |
+| 14 | Worker queue | Implemented — model comparison pending | FIFO queue, shared reported usage, scoped search/read, source versions, and optional registered role models; separate edit drafts retained / one, two, and three scripted workers compared; release maximum remains two / real-model cost and quality comparison remains open |
+| 15 | Bounded grants and review controls | Completed | Optional five-minute exact managed-check grants, full source and image binding, dispatch expiry/revocation checks, visible scope and approval measurements / two real editor/container checks used one prompt; workspace rules run first / 418 of 435 tests passed, 17 skipped; final extracted VSIX fixture passed |
+| 16 | Scheduled coding drafts | Completed — implementation acceptance | Source-bound private copy, declared Docker checks, separate coding store, occurrence claims, expiry, revocation, inbox, saved questions, and fresh interactive import / nine local runtime/container cases cover the CLI, editor, cancellation, and changed policy / no real coding-model qualification or automatic apply |
+| 17 | Git and pull-request handoff | Completed — supported adapter | Base-bound portable export/import, separate clone, configured author, separate local commit and remote actions / eight cases pass, including a loopback MCP draft-PR fixture and lost-response reconciliation / no real remote push or PR; provider schema and 4,000-character write limit apply |
 | 18 | Physical-device HTTPS acceptance | Blocked | Not run / physical devices cannot be simulated for this gate / user confirmed only one computer is available |
 | 19 | Remote protocol | Not Started | None / separate sharing and execution authority / depends on physical-device gate |
 | 20 | Remote executor prototype | Not Started | None / leased managed environment / Phase 18 physical-device dependency is blocked |
 | 21 | Inline suggestions | Implemented — manual trigger only | Off by default, tool-free 256-token turn, current document only, private files excluded, stale and cancelled results dropped, hourly cap, per-language settings / latency and cost unmeasured, so automatic mode stays unqualified / merged after the Phase 10 batch |
-| 22 | Extension interoperability | Not Started | None / supported subsets and visible limitations / none identified |
-| 23 | Packaged platform/runtime checks | Not Started | Core package connection evidence is available / claim only tested combinations / full platform acceptance depends on the core gate and additional environments |
-| 24 | Independent comparison and release evidence | Not Started | None / publish all attempts and restrictions / competitor access not yet established |
+| 22 | Extension interoperability | Completed — supported subset | Portable SKILL.md preview, exact text and resource copy, explicit-only controls, immutable package digests, and visible unsupported settings / four new import cases plus existing workflow and MCP checks / arbitrary foreign configs and execution authority are not imported |
+| 23 | Packaged platform/runtime checks | In Progress | Capability and runtime matrices published; latest Mac package passed 29 cases; Linux passed 31 storage/cache cases and its connection fixture / keep server 0.184.2 and SDK 0.184.1 / current other-platform and interactive installation acceptance remain unverified |
+| 24 | Independent comparison and release evidence | In Progress — protocol and inventory | Fixed comparison procedure, per-task not-run ledger, unreleased notes, open gates, and rollback guidance / no inferred competitor scores / real-model qualification and independent product attempts remain pending |
 
 Potential acceptance resources are recorded here for later phases. They do not block starting Phase 1 or imply that the resource is unavailable.
 
@@ -49,13 +49,62 @@ Potential acceptance resources are recorded here for later phases. They do not b
 | Gate | State | Evidence |
 | --- | --- | --- |
 | A: Core reliability and retrieval | Open — unqualified | Version 2 with balanced ranking: overall Recall@10 85.00% (target 90%), held-out 87.50% (target 85%, now exposed), exact success 100%; small coding tasks passed, larger local trials remain unqualified |
-| B: Managed execution | Not evaluated | No new results |
-| C: Expanded autonomy | Not evaluated | No new results |
+| B: Managed execution | Implementation checks passed; stage gate open | Dependency, service, browser, stale-source, cleanup, full regression, and package fixtures passed on macOS arm64 with Linux arm64 containers; other platforms are untested; Gate A is still required |
+| C: Expanded autonomy | Implementation acceptance passed for selected features; stage gate open | Worker, grant, and scheduled coding fixtures passed; Gate A and real-model measurements remain open |
 | D: Remote work | Not evaluated | Existing same-machine rehearsals are not physical-device acceptance |
-| E: Editor and interoperability | Not evaluated | No new results |
+| E: Editor and interoperability | Partial | Manual inline prototype and supported portable import fixtures; automatic latency/cost and platform acceptance remain open |
 | Release | Open | Local package built and connection test passed; core qualification, other platforms, and independent comparison remain open |
 
 ## Session Log
+
+### 23 November 2026 — Four release-risk fixes
+
+- Fixed all four remaining must-fix audit findings. macOS checks cannot signal unrelated host processes. Checkpoint writes and clears compare ownership under a shared lock. Python cache identity includes local requirements and constraint inputs. Audit append and rotation use a process-safe lock.
+- The full regression passed 453 of 471 cases, with 18 skipped and zero failures. Nineteen final storage cases passed after the preservation and initial-creation guards. Twelve focused editor cases and three real Docker dependency cases passed. The signal and cancellation suite passed ten cases.
+- Two independent checkpoint writers cannot replace newer work. Three audit writers keep one verifiable chain during rotation and export. A real killed writer's lock was recovered after ten seconds. A two-window editor test preserves resumed work after an old window cancels.
+- Existing recovery formats remain readable. Unsupported or damaged recovery files are preserved. Broken historical audit logs remain detectable and are not rewritten. Close old extension windows and background runners before installing the storage change.
+- The final Mac installer passed 29 checks. Linux passed 31 storage/cache checks and one installer connection fixture. Both extension bundles match, and the exported Linux archive passed integrity checks. See [release-risk fixes](RELEASE-RISK-FIXES.md). No push or paid model API use occurred. The broader release gates stay open.
+
+### 23 November 2026 — Scheduled coding, handoff, and portable import
+
+- Finished the Phase 16 private coding runner and review inbox. The CLI runs without an editor, executes declared checks, and leaves the source checkout unchanged. Questions import with their answer in one exclusive checkpoint write. User and workspace settings are reconciled when the editor opens or changes; the standalone runner keeps its approved snapshot and checks live administrator policy and revocation.
+- Added base-bound handoff export/import and a separate Git clone. Branch preparation, local commit, push, and draft PR are distinct actions. Eight fixture cases cover exact scope, configured authors, dirty source, wrong remotes, changed drafts, lost responses, a real loopback MCP draft PR, and editor preview/import. Managed Git disables inherited hooks and filters, including source-local clean filters. No real remote write ran.
+- Added portable skill preview and import through the existing package store. Four cases cover unsupported settings, exact text and resources, explicit-only behavior, content upgrades, declared scripts, rejected inputs, and the editor preview. Existing named workflows and MCP schemas keep their local permission model.
+- Fixed all three should-fix audit items: denied commands cannot cause an implicit image pull; suggested notes use separate storage keys; concurrent index saves use unique temporary files. Four separate must-fix findings remain open in [the audit follow-up](AUDIT-FOLLOWUP.md).
+- The 460-test regression passed 442 tests with 18 skipped and zero failures before the final editor-policy reconciliation. All 24 affected coding, policy, schedule, handoff, and import paths passed separately on final source. The earlier extracted Mac package candidate passed all 14 selected runtime and workflow cases. The final package result below supersedes that candidate. The first regression's missing storage fixture API and the policy test's expected CLI refusal were corrected. Failed and interrupted logs are retained.
+- The final full regression passed 444 of 462 cases with 18 skipped and zero failures. The final Git guard passed eight focused cases. The final Mac package passed 27 cases in 23.68 seconds, including its compiled coding CLI and managed branch flow. The Linux arm64 package passed its connection fixture in 2.33 seconds. Exported archive integrity passed, and both extension bundles match.
+- Published platform/runtime and comparison status records. Phases 18–20 remain gated on a second physical device. Phase 21 stays manual-trigger-only. Phase 23 is partial and Phase 24 has no new product scores. No new real coding model was loaded. Paid API spending stayed zero. Nothing was pushed.
+
+### 23 November 2026 — Claude handoff checked; managed execution continued
+
+- Read the open Claude project chat and matched its handoff to commits 7de74b8 and 1875fe5. Preserved the uncommitted progress entry. The user asked to continue and not push. No push or new commit was made.
+- Confirmed authorization to work on later phases while Phase 10 remains open. Kept the interrupted six-attempt batch and all failed smokes separate. No real coding model was loaded in this continuation. No paid model API was used.
+- Started the installed Docker Desktop engine. Its client and server are 29.6.2. The two original real-engine fixtures passed. Nine lifecycle unit tests then passed, including concurrent setup, incomplete caches, cancellation cleanup, and cleanup failure. A new real fixture covers Node projects with no dependencies.
+- Snapshot validation passed on this Mac. The 12,051-file, 65,253,990-byte fixture took 2.57 seconds initially and 2.06 and 1.97 seconds on repeat. Hash body reads fell from 12,051 to zero. The forced clone probe did not succeed, so these results describe the private-copy fallback.
+- Implemented Phase 13 checks and services in one private container. Jobs use loopback only, publish no host ports, and have no external network. Inputs and dependency caches are read-only. The working copy and temporary files share a 512 MiB limit. Readiness, startup failures, occupied job ports, service crashes, leases, cancellation, Chromium smoke, stale source, and container removal passed eight real-engine cases together with Phase 12.
+- Fixed two mount issues found by the real fixtures. Empty npm projects need a cache mount directory. Managed service inputs need the dependency volume mounted beside the read-only source, then copied into the private working tree. Original failures remain in the raw logs.
+- Added a bounded read-only managed-check catalog and tested it through the actual editor/TrueForge flow. It exposes exact command arguments and readiness data without literal environment values or command execution.
+- The Phase 13 complete regression passed 391 of 408 tests, with 17 skipped and zero failures. Source, type, and lint checks passed. The extracted VSIX saved-connection and bundled-runtime fixture passed in 4.48 seconds on macOS arm64. This is not interactive or cross-platform acceptance.
+- Reworked the local trial script after the restart history. Default context is 32,768 with one prediction. Larger profiles require an explicit cap of at most 65,536; Coder stays capped at 32,768. The script preserves resource guards, unloads only its own model, uses a dedicated runtime, and fails on missing batch reports. A full diagnostic batch after failed smokes needs FULL_CORPUS=1. Syntax and read-only cap checks passed. No new live-model result is implied.
+
+### 23 November 2026 — Worker queue and exact managed-check grants
+
+- Added a FIFO worker queue. Two workers run by default, with four total calls per run. Queue time is part of the deadline. Queued cancellation, expiry, permission changes, and shared reported token, tool, and time limits passed. Usage updates are counted once, including failed turns.
+- Approved custom research roles can search or read only explicitly named captured files. Both tools share three calls. Extra access checks source hashes; changed sources mark advice stale. Per-role settings accept registered model names and cannot add endpoints or credentials. Separate edit drafts and merge protections remain in place.
+- All 39 focused worker, runtime, plugin, and usage checks passed before the final queued-expiry test; the updated worker unit suite passed all 21 cases. The Phase 14 full suite passed 390 of 415 tests, with 25 skipped and zero failures. Docker was not enabled in that full run; its separate eight-case real-engine suite had passed. The new full run enables Docker.
+- Compared one, two, and three scripted workers on four independent read-only declarations. Three did not improve the fixture over two. This is queue evidence, not a real coding model comparison. Keep the release maximum at two. Provider usage can arrive late, so an exact token ceiling is not established.
+- Added optional five-minute grants only for unchanged managed checks. Scope includes command, arguments, draft, selected hunks, full permitted source, image digest, service declaration, run, workspace, and permission epoch. Checks reject expiry or revocation after preparation. Exact workspace allow rules take precedence. Explicit ask rules and administrator restrictions prevent reuse. External writes and draft apply remain separately controlled.
+- The real editor fixture ran two offline container checks with one approval prompt in 1.66 seconds. All nine real-engine cases passed in 16.03 seconds. Twenty existing runtime and new grant checks passed. Eleven grant acceptance cases passed, including source changes, open buffers, lockfiles, image changes, expiry during preparation, revocation, policy, and private report measurements.
+- The Phase 14–15 suite first passed 411 of 428 tests, with 17 skipped and zero failures. The suite with the Phase 16 foundation then passed 418 of 435 tests, with 17 skipped and zero failures. A final manual-check permit pass-through was verified separately in 27 runtime cases. The larger run overlapped that last change; it is regression evidence, not a frozen model qualification. Source, type, and lint checks passed. A strict metadata check found an unnecessary false field; the optional field is now omitted when unavailable, preserving the prior interface.
+- Started Phase 16 with a separate versioned coding-schedule schema and store. Six cases passed for exact declarations, scope pins, report isolation, duplicate claims, expiry, revocation, history, and stored-scope changes. The ordinary scheduler cannot enumerate coding jobs. The final source/type/lint checks passed. A new regression also prevents an expired unconsumed exact approval from gaining an extra use when renewed. No automatic coding dispatch or review-inbox UI is enabled.
+- Built /tmp/agentextension-workers-grants-final.vsix from the final source. Its extracted-package saved-connection and bundled-runtime fixture passed in 3.70 seconds. The record includes its SHA-256 and source/evaluator digests. Scope is macOS arm64; interactive and other-platform acceptance remain open. All 240 local guide and roadmap links resolve. The dedicated test service is stopped and no test containers remain.
+- Corrected two isolated fixture setup errors: its copy lacked the package lockfile, and its completion predicate expected an editable draft from a check-only task. The report fixture also needed to account for Markdown escaping. These failures remain in the raw logs. No paid model call or push was made.
+
+### 22–23 November 2026 — Max-context smokes and an interrupted full batch
+
+- Smokes with the user's local models (all small tasks complete; all Flask attempts failed): GPT-OSS 20B at 131,072 context failed on literal \n and escaped quotes in cli.py; Qwen3 Coder 30B at 32,768 staged CLI and test changes without documentation and failed independent checks; Qwen 3.5 9B at 65,536 used 512,498 tokens against the 400,000 budget and staged nothing.
+- The full 20-task × 3 batch on GPT-OSS 20B at 131,072 context reached 6 of 60 attempts (4 complete, 2 incomplete; all development tasks; one implementation digest) before the computer restarted around 23:46. The cause is unconfirmed; memory pressure from the 131,072-token context is the likely suspect. No qualification result exists.
+- CI failed on the pushed commit because the shallow checkout lacked pinned commit 5c5fe67; the workflow now fetches full history. A local reproduction of every CI step passed.
 
 ### 22 November 2026 — Phases 12 and 21 built beside the running batch
 

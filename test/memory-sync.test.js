@@ -32,7 +32,7 @@ async function start(t, options = {}) {
 
 function storage() {
   const values = new Map();
-  return { get: (key, fallback) => values.get(key) ?? fallback, update: async (key, value) => values.set(key, structuredClone(value)) };
+  return { keys: () => [...values.keys()], get: (key, fallback) => values.get(key) ?? fallback, update: async (key, value) => values.set(key, structuredClone(value)) };
 }
 
 const clientFor = (device, scope = 'workspace', fetchFn) => memoryClient(device.root, scope, { files: [device.policy], fetchFn });

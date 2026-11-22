@@ -96,7 +96,9 @@ class PluginPackages {
   }
 
   async import(source, connectors, confirm) {
-    const files = await readPackage(source);
+    const { files, warnings } = path.basename(source) === 'SKILL.md'
+      ? await require('./portable-skill').readPortableSkill(source) : { files: await readPackage(source), warnings: [] };
+    validatePackage({ format: FORMAT, files });
     await fs.mkdir(this.root, { recursive: true, mode: 0o700 });
     const temporary = await fs.mkdtemp(path.join(this.root, '.import-'));
     const staging = path.join(temporary, 'package');
@@ -107,6 +109,7 @@ class PluginPackages {
         await fs.writeFile(file, text, { flag: 'wx', mode: 0o600 });
       }
       const plugin = await loadPlugin(staging, connectors);
+      plugin.importWarnings = warnings;
       if (!await confirm(plugin)) return;
       const { id, pin: { digest } } = plugin;
       const versions = path.join(this.versions, id);

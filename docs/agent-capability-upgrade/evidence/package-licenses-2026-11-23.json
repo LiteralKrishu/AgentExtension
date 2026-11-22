@@ -1,0 +1,2608 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-23",
+  "platform": "darwin",
+  "arch": "arm64",
+  "node": "v24.18.0",
+  "server": "0.184.2",
+  "sdk": "0.184.1",
+  "lockfiles": {
+    "package-lock.json": "da8f9d02b555f39f159534f78c2efada72246b82d937b87f3b4bf618be925664",
+    "trueforge/server/package-lock.json": "57850a9ef4acc041ad183f069e20f2a323769a50a688ada8a5c05492fb653d7c"
+  },
+  "nodeLicenseIncluded": true,
+  "packages": [
+    {
+      "path": "node_modules/@truefoundry/trueforge-sdk",
+      "name": "@truefoundry/trueforge-sdk",
+      "version": "0.184.1",
+      "license": "MIT",
+      "packageJsonSha256": "dc7a8b906bacb56fbab66b69fbbb23b273a6d03be46843201eda60d3aeed1940"
+    },
+    {
+      "path": "node_modules/playwright-core",
+      "name": "playwright-core",
+      "version": "1.62.1",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "07c47543631fef9508760365dee9fbe958c562093ec8d122543949ed231f233f"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@ai-sdk/alibaba",
+      "name": "@ai-sdk/alibaba",
+      "version": "2.0.88",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "4695076d8d9ed20321a892bdaaa5bfdbb1eb7a5acc6242fcd53d48087e1d5c79"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@ai-sdk/anthropic",
+      "name": "@ai-sdk/anthropic",
+      "version": "4.0.102",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "c2bc37c812676bae4afc8fa1336605e5c6981c8330be7e34949620a3fce3376d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@ai-sdk/gateway",
+      "name": "@ai-sdk/gateway",
+      "version": "4.0.142",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "07ba66c5368e9de475dc430523d079a6d3f2d347a2234139ac4a39dfd9d30691"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@ai-sdk/google",
+      "name": "@ai-sdk/google",
+      "version": "4.0.117",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "1e0a70df4a2707f56ad48d6fd313ea434eb1f121a25a3abad58ac9355bda2dc4"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@ai-sdk/moonshotai",
+      "name": "@ai-sdk/moonshotai",
+      "version": "3.0.90",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "b62a0d222bc433f2cf546c7b1755e89d0dc5638244454eb99a8de718df5249b5"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@ai-sdk/openai",
+      "name": "@ai-sdk/openai",
+      "version": "4.0.114",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "55f42911abc89da645f05f5cafe646c05c03adf718293904452642fcc468f0c3"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@ai-sdk/openai-compatible",
+      "name": "@ai-sdk/openai-compatible",
+      "version": "3.0.90",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "a7ef995a19afeefc87065d2d8f7d98af8ecdd968ad6962eef0345685caa42904"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@ai-sdk/provider",
+      "name": "@ai-sdk/provider",
+      "version": "4.0.37",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "229574d714bd6ee69f6d1ceec6efa7812c54042dbe6117e80fd0c01d4257e247"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@ai-sdk/provider-utils",
+      "name": "@ai-sdk/provider-utils",
+      "version": "5.0.79",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "338c1f4eef47e895852e7722f893d9ddfe47f37da4dc306380bd7abf5e06d535"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@anthropic-ai/sandbox-runtime",
+      "name": "@anthropic-ai/sandbox-runtime",
+      "version": "0.0.77",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "465cd12d488c791c8d2df4cca155eaaf78a01d4dfbc2b165e9f4dfdb8e5f327e"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@asteasolutions/zod-to-openapi",
+      "name": "@asteasolutions/zod-to-openapi",
+      "version": "9.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "14bb85e358d8fe728d0ce58b2ab5affdf2b2b2078880c9b71e01dfedb2f6d894"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/checksums",
+      "name": "@aws-sdk/checksums",
+      "version": "3.1002.5",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "1e793e76d335ee4726ca82691dffe63bfa3ec03ff3ce86c078a7a579b383ed90"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/client-s3",
+      "name": "@aws-sdk/client-s3",
+      "version": "3.1166.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "7d64fe3d96824f7b3bde7447670019e2d6382e25654a1f6e73edfdefbab6cc4a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/core",
+      "name": "@aws-sdk/core",
+      "version": "3.981.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "920876e6431c6f1f256366ba9460bc2c4f7e29372265454e9f2ad54457bcd891"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/credential-provider-env",
+      "name": "@aws-sdk/credential-provider-env",
+      "version": "3.972.84",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "61c632c456ea826d84f950e21d87f6b21e923261885b8f5e9c0a1dc38d9e1e49"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/credential-provider-http",
+      "name": "@aws-sdk/credential-provider-http",
+      "version": "3.972.86",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "eeb379f6d195b0b6a3f809b0801c4009b12ef5ece882f978e7a8856f83f59b9c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/credential-provider-ini",
+      "name": "@aws-sdk/credential-provider-ini",
+      "version": "3.973.29",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "603577b46cadef97e895a3d26df7537125a87dd78e98c7fe5167a5a050172016"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/credential-provider-login",
+      "name": "@aws-sdk/credential-provider-login",
+      "version": "3.972.91",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "efb873629c190ad247989da7cb56b4e2795f9221ebb211f775198daa2ec1ba7a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/credential-provider-node",
+      "name": "@aws-sdk/credential-provider-node",
+      "version": "3.972.96",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "16347b08a81af040db3ec32f7dcc73c0a5fcec63345e0559002e897e6d316c14"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/credential-provider-process",
+      "name": "@aws-sdk/credential-provider-process",
+      "version": "3.972.84",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "baae9db22248e234d781a3ece0b665c2932b1911ba1a561c6cbf65d2ee908fff"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/credential-provider-sso",
+      "name": "@aws-sdk/credential-provider-sso",
+      "version": "3.973.28",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "563cd49025991c00538565dd8feca7cdf2eb4d5f5c98fdfe850c06b91be3a707"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/credential-provider-web-identity",
+      "name": "@aws-sdk/credential-provider-web-identity",
+      "version": "3.972.90",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "5cb3d9780cd50ceece5d2b225d43745af556d77293df954401c68349925bbc0e"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/lib-storage",
+      "name": "@aws-sdk/lib-storage",
+      "version": "3.1166.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "9b65a95f1deb8600e5e806a3b873fb1a25fa2bce2bf536f0e5b05470be49bcc4"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/middleware-sdk-s3",
+      "name": "@aws-sdk/middleware-sdk-s3",
+      "version": "3.972.89",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "7a5a9a432916f166560a4282e7e233bc22a5dfa51619224a54cb01c6144ff41a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/nested-clients",
+      "name": "@aws-sdk/nested-clients",
+      "version": "3.998.3",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "756480d422c005e6a3f22f5ba573c58d4f81579ae709767e9f8fccbdbad67d7c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/signature-v4-multi-region",
+      "name": "@aws-sdk/signature-v4-multi-region",
+      "version": "3.996.52",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "52dca8b8a9f4686e907328cac425ccb0e16caf10881cf450bd4719f6668b0ed2"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/token-providers",
+      "name": "@aws-sdk/token-providers",
+      "version": "3.1166.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "21351b0d3703188e8423d4a486ca6f37d214cd9d233303a9c55bdde4d4718ab7"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/types",
+      "name": "@aws-sdk/types",
+      "version": "3.975.1",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "e20e491b59c6d9bf61363afcaf6dc11b9c79fcb8aeb9ad72bffda51d22759a54"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws-sdk/xml-builder",
+      "name": "@aws-sdk/xml-builder",
+      "version": "3.972.43",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "58b4634d97cde7eee9cc2d7fb071be09d0825031a504c9818c5b4b144fb64836"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@aws/lambda-invoke-store",
+      "name": "@aws/lambda-invoke-store",
+      "version": "0.3.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "67dd0cc15cb17df9e12654a78486e710e13a2e96623cb28c683056378fa973dc"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@colors/colors",
+      "name": "@colors/colors",
+      "version": "1.6.1",
+      "license": "MIT",
+      "packageJsonSha256": "c323c381679a4b42bf25c053ff47cd96bbce82bd208f96c46a8862ebf9544ce3"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@dabh/diagnostics",
+      "name": "@dabh/diagnostics",
+      "version": "2.0.9",
+      "license": "MIT",
+      "packageJsonSha256": "1de7ca957d5288c9bdbb70e1793f04bc07585af8aa617a036b3908c65d3b9dee"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@daytona/analytics-api-client",
+      "name": "@daytona/analytics-api-client",
+      "version": "0.218.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "2ca66de29f10604e3059206b23387d98fed360bac5ed3676b5aa8db443f54043"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@daytona/api-client",
+      "name": "@daytona/api-client",
+      "version": "0.218.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "aaed07cbaf37f82e1fe909adc8d09c88e0f6830636ca674544d30c9dbd008e7d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@daytona/sdk",
+      "name": "@daytona/sdk",
+      "version": "0.218.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "a6ba8ac5b367860db4f36338a3c8fee753edbdf6076be4641936010e0ef8c261"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@daytona/toolbox-api-client",
+      "name": "@daytona/toolbox-api-client",
+      "version": "0.218.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "643f5fc05e3b5139c04ae122a7b13cef35ba87c439510cefaa7ce468b19397c5"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@grpc/grpc-js",
+      "name": "@grpc/grpc-js",
+      "version": "1.14.7",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "425331076f9212318ca9582c75cd45c6c1efbe3baa66b97691e3cecb80f59afa"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@grpc/proto-loader",
+      "name": "@grpc/proto-loader",
+      "version": "0.8.1",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "04fc16d6ba1496e29f0919c9c9438e19156153988b4a4776c9139365bd6650a9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@hono/node-server",
+      "name": "@hono/node-server",
+      "version": "2.1.7",
+      "license": "MIT",
+      "packageJsonSha256": "b633cdc96e88758ed1c4a44111a5f656a0ba79b5807fe111eedd417579c8d67e"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@hono/prometheus",
+      "name": "@hono/prometheus",
+      "version": "1.0.3",
+      "license": "MIT",
+      "packageJsonSha256": "97d4e012d5c5dcf7868c9b8d98c568e439136704c8c0fd4885d36ef4455df84b"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@hono/swagger-ui",
+      "name": "@hono/swagger-ui",
+      "version": "0.6.2",
+      "license": "MIT",
+      "packageJsonSha256": "812b09833c3172eeecdc5a33a68240e7f67e6b31b387a168793e63ecf05cf5ae"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@hono/zod-openapi",
+      "name": "@hono/zod-openapi",
+      "version": "1.6.3",
+      "license": "MIT",
+      "packageJsonSha256": "c1caa031228983cb2a91551bcd1e74d55a013b0a8a294a8c6f59c88763252aee"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@hono/zod-validator",
+      "name": "@hono/zod-validator",
+      "version": "0.9.1",
+      "license": "MIT",
+      "packageJsonSha256": "860c35f665aa096362a8042b1f918a30d6ac1b8db3cc0e9bf92660f2f1d140fb"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@iarna/toml",
+      "name": "@iarna/toml",
+      "version": "2.2.5",
+      "license": "ISC",
+      "packageJsonSha256": "5f12af78655b4014079ecdd8c946ccea0356eb0282b36a2108bfb99abddf65e9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@isaacs/fs-minipass",
+      "name": "@isaacs/fs-minipass",
+      "version": "4.0.1",
+      "license": "ISC",
+      "packageJsonSha256": "ab8c1c2bce664e4c76b1937fa1a28f00ca5231a70cf0c1f78dd473101a9d2a88"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@js-sdsl/ordered-map",
+      "name": "@js-sdsl/ordered-map",
+      "version": "4.4.2",
+      "license": "MIT",
+      "packageJsonSha256": "2858688bad5a7a1ed196247429a5371f3dba8e0d770762b1e7d69aaef1858ba5"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@modelcontextprotocol/sdk",
+      "name": "@modelcontextprotocol/sdk",
+      "version": "1.32.2",
+      "license": "MIT",
+      "packageJsonSha256": "7a8d6f79ee52e2bf7cfe23f2d79f7e3c0ab6a3912a340ec345d6ff014534d59d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@nats-io/nats-core",
+      "name": "@nats-io/nats-core",
+      "version": "3.4.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "2866920339fec2de454ec4947c8c158ae1912acc30806f6e5cdfeb1cf211a760"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@nats-io/nkeys",
+      "name": "@nats-io/nkeys",
+      "version": "2.0.3",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "d43baf854840cac5bfc05d08c4cda3c80d5b67915bc6bc47dcd873f37478175a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@nats-io/nuid",
+      "name": "@nats-io/nuid",
+      "version": "3.0.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "24fa67bb01ff3845614a3f10f9ddb211c14320c8b9887b12a769efdb80e7cb8e"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@nodelib/fs.scandir",
+      "name": "@nodelib/fs.scandir",
+      "version": "2.1.5",
+      "license": "MIT",
+      "packageJsonSha256": "d2dd608ef7400bc51bfa744f658b6a32b679ac5c053ef6d21499b2b0db1ccaba"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@nodelib/fs.stat",
+      "name": "@nodelib/fs.stat",
+      "version": "2.0.5",
+      "license": "MIT",
+      "packageJsonSha256": "ad8601ad12a424f995579ffa7ae24042c44df9f89248b715dcd8ef56c54aacca"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@nodelib/fs.walk",
+      "name": "@nodelib/fs.walk",
+      "version": "1.2.8",
+      "license": "MIT",
+      "packageJsonSha256": "509382ca0b57206ef4ccec2738a6ba060094eb65bd2f4bee1462d941c72d4344"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/api",
+      "name": "@opentelemetry/api",
+      "version": "1.9.1",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "c0d7c72331bc8cd456dd791f2f429ddafa1d0b5b8abeb4104e6deb12f18b4a86"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/api-logs",
+      "name": "@opentelemetry/api-logs",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "2876a24aa73f20017656ddcd42fce755801a389f5cf1365cfb683ac071b3a2b7"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/configuration",
+      "name": "@opentelemetry/configuration",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "ff8c9e8e3adfac5b460c0c1f2f586d54a5b81ba0e2136ac3d68a388f7c0387e3"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/context-async-hooks",
+      "name": "@opentelemetry/context-async-hooks",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "8c33ca293fd182d808a31824ed08cb4c1b8bdeaf86cc5757684526d3686988bf"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/core",
+      "name": "@opentelemetry/core",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "da42c9aa39a655b2eef83c2dbc764bdce4440579900bbff9386241bcd641e245"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-logs-otlp-grpc",
+      "name": "@opentelemetry/exporter-logs-otlp-grpc",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "2f1452b43c8038fa5158266a2b339931635497cd2add1045b17c2c113801e65d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-logs-otlp-http",
+      "name": "@opentelemetry/exporter-logs-otlp-http",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "95e36a3731f27a3ed77d5cfa5f537be12b8006d67aa68d4558ec303c9ef97204"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-logs-otlp-proto",
+      "name": "@opentelemetry/exporter-logs-otlp-proto",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "48d95a972ce9d38e50c353c7a9580ee0daee24e950f5f238c27a30e407fc1458"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-metrics-otlp-grpc",
+      "name": "@opentelemetry/exporter-metrics-otlp-grpc",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "22c5ea5e5222755720228e393e1226d1df12ec629527b4a5be23c76ddd861689"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-metrics-otlp-http",
+      "name": "@opentelemetry/exporter-metrics-otlp-http",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "5158ee42a53341db3c7b7faecdaca19f0a57e73084788674d9b6025569ce76e4"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-metrics-otlp-proto",
+      "name": "@opentelemetry/exporter-metrics-otlp-proto",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "64a827a4b80fa788a35c12edfeff00ecea546bee9177cdbdabe3470c0a6f4174"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-prometheus",
+      "name": "@opentelemetry/exporter-prometheus",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "a012527eebabef4028a085517a2f7980af6fb8bbb46eb6baae634252840246cb"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-trace-otlp-grpc",
+      "name": "@opentelemetry/exporter-trace-otlp-grpc",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "1a2152bf4fc0202b66852266bab9d29f3c8253d748028d3410157bc36084e102"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-trace-otlp-http",
+      "name": "@opentelemetry/exporter-trace-otlp-http",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "f40c97e923c605f9598f6ee9c13d522aaf703c3a4424c7d020053bccca84fd74"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-trace-otlp-proto",
+      "name": "@opentelemetry/exporter-trace-otlp-proto",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "73b51fafdafaa000560d834f1a62da37677cdff5d1465c41193fcf2d1fbd9f46"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/exporter-zipkin",
+      "name": "@opentelemetry/exporter-zipkin",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "d01fb70f0a850fdaba7a93860d445a58851f2fd4cb3a6e152a1095b5653abf04"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/instrumentation",
+      "name": "@opentelemetry/instrumentation",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "630e428dc9fd8461d99391def72726e76d3631c1bd24774d1a7ed6a097eeb9a6"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/instrumentation-http",
+      "name": "@opentelemetry/instrumentation-http",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "1376593aa44510484c37bc255d2c133585b64d58e49d5d870da8bdf75db01cec"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/otlp-exporter-base",
+      "name": "@opentelemetry/otlp-exporter-base",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "082c58c619bc5ebb7388376eb9ea2cd3e995fc5ca3d0dd9cc0e56381f839a7b9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/otlp-grpc-exporter-base",
+      "name": "@opentelemetry/otlp-grpc-exporter-base",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "9395a4e235b48fac63b2f80d54520f30c10593b134981190f6107b958c728418"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/otlp-transformer",
+      "name": "@opentelemetry/otlp-transformer",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "bbf0327219d756b87226235a772ff633e29f5f9c79e677c940a1e6b55a25e9f6"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/propagator-b3",
+      "name": "@opentelemetry/propagator-b3",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "3053e2f7f679d359d3a4963329678fe35ade0165de6dc7921de8b695cd4b54f1"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/propagator-jaeger",
+      "name": "@opentelemetry/propagator-jaeger",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "88af24569181960e9a4edaa3f2726692ad8936df23a53238f6653c5cb779a7c3"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/resources",
+      "name": "@opentelemetry/resources",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "acb15a54bfa0b1893f70ba2161350610b3909a37c8fa9ecfffd1e98d1316103d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-logs",
+      "name": "@opentelemetry/sdk-logs",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "0e8db32bf5622ce3a4725bfe8584f1b6ec98b2ceea721cbbaca43a194b6550d6"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-metrics",
+      "name": "@opentelemetry/sdk-metrics",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "a8b63f837d4b9bd34229185cb22c9fb13ff11b4becd87af8651617b28dd2ff1d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-node",
+      "name": "@opentelemetry/sdk-node",
+      "version": "0.222.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "452a1d4bb5556b8c57ae13333b07426d306f6dbaf477c9ba3f3592abf80f8100"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-node/node_modules/@opentelemetry/sdk-trace-base",
+      "name": "@opentelemetry/sdk-trace-base",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "d2df2e5417a6325b52492c72dbf8c41d120d34ff0dcea76cf01b76cdccff340a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-trace",
+      "name": "@opentelemetry/sdk-trace",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "1b84f5625dc6c8e6a8d4cf71f3b8335206eb07139648b29b4e61bf972e1cbe7c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-trace-base",
+      "name": "@opentelemetry/sdk-trace-base",
+      "version": "2.12.1",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "acfa2d337b00f06aed4a8d52e0637bbd89fb7ed04d1bb4ac79991eb272d6dc04"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-trace-base/node_modules/@opentelemetry/core",
+      "name": "@opentelemetry/core",
+      "version": "2.12.1",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "998af8ff5bcf4788f5607ce7d34368086388a29ca1466c396de3ed2ebe7f2dbf"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-trace-base/node_modules/@opentelemetry/resources",
+      "name": "@opentelemetry/resources",
+      "version": "2.12.1",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "0a140e2d5f31479d6233d21446a2270eb4a71578d42bdbf31636e6893bbeb636"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-trace-base/node_modules/@opentelemetry/sdk-trace",
+      "name": "@opentelemetry/sdk-trace",
+      "version": "2.12.1",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "1bc0e1e7445a69c01c13895aa16ea2f8b533a8e7c75fdc47f9ecd6d7111e75c4"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-trace-node",
+      "name": "@opentelemetry/sdk-trace-node",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "6325df0f0c02cfde02aa6d24856b0cf28d6b1be6e2c66e9628952db00c02ac54"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/sdk-trace-node/node_modules/@opentelemetry/sdk-trace-base",
+      "name": "@opentelemetry/sdk-trace-base",
+      "version": "2.11.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "d2df2e5417a6325b52492c72dbf8c41d120d34ff0dcea76cf01b76cdccff340a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@opentelemetry/semantic-conventions",
+      "name": "@opentelemetry/semantic-conventions",
+      "version": "1.45.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "8cb17fe339152c587fe5771bee2e6b8184e6e398e4926a8e1522eeb7787cccd7"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@pondwader/socks5-server",
+      "name": "@pondwader/socks5-server",
+      "version": "1.0.10",
+      "license": "MIT",
+      "packageJsonSha256": "8eadc55dfb785dd26a477766447a37a0de8fcdb69ca187cf2224318d1386722c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@protobufjs/aspromise",
+      "name": "@protobufjs/aspromise",
+      "version": "1.1.2",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "4a39ee1c94f6ee038d2944196aa6167785d3429a91727f828a1274262919e2d8"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@protobufjs/base64",
+      "name": "@protobufjs/base64",
+      "version": "1.1.2",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "7ff6a89f566b95c0f21a5a9cb12df5718f0b06ef96d4186a92d650c0849fa2c5"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@protobufjs/codegen",
+      "name": "@protobufjs/codegen",
+      "version": "2.0.5",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "818bf10387c19ab09b3814004ec672ab8d975302cdaf2dd65466bdb604764d65"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@protobufjs/eventemitter",
+      "name": "@protobufjs/eventemitter",
+      "version": "1.1.1",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "d157d364fe4aee21cfd517abff35bca312ff51e6e6e90abdbec16225057e5914"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@protobufjs/fetch",
+      "name": "@protobufjs/fetch",
+      "version": "1.1.1",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "52f997898a745acce5d68751883aad6296bcc2f152468ced0ed30e3c3c5a1c72"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@protobufjs/float",
+      "name": "@protobufjs/float",
+      "version": "1.0.2",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "1cae4ded1bc97375a67fe4608f87ee59990734ea738fabb98e9061ab23669cdf"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@protobufjs/path",
+      "name": "@protobufjs/path",
+      "version": "1.1.2",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "b19802dd696ceb8a4aa4839f35ab1c8312e97693d93485ff3c3e4f19cca183c4"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@protobufjs/pool",
+      "name": "@protobufjs/pool",
+      "version": "1.1.0",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "7a33b609e770020fe1e09690cfebc23bbdd6e1306e3f0dd98ba5048966cb7fec"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@protobufjs/utf8",
+      "name": "@protobufjs/utf8",
+      "version": "1.1.2",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "80fdb6b9f633023846b6cdf352ea795523abcf27affd4d54afd4b50a90a87411"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@redis/bloom",
+      "name": "@redis/bloom",
+      "version": "5.12.1",
+      "license": "MIT",
+      "packageJsonSha256": "4a90538f3e72472eb1945b779d15b640e29f070348e57ce1f3d1ba2c7f72d62c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@redis/client",
+      "name": "@redis/client",
+      "version": "5.12.1",
+      "license": "MIT",
+      "packageJsonSha256": "094e3f4233fd2f5ac62bee39f99bd1e34dec220f981cf56f5c2df778588ce304"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@redis/json",
+      "name": "@redis/json",
+      "version": "5.12.1",
+      "license": "MIT",
+      "packageJsonSha256": "e156498916c049f74d98da30ad34927c4ee15f6827d7144b409e463ee580b65d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@redis/search",
+      "name": "@redis/search",
+      "version": "5.12.1",
+      "license": "MIT",
+      "packageJsonSha256": "2c53e0b150482580ce81c041e76f145a74de6b6c6f98bf32d96ea501b4fd4ac8"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@redis/time-series",
+      "name": "@redis/time-series",
+      "version": "5.12.1",
+      "license": "MIT",
+      "packageJsonSha256": "bd6c39f459035dd24be18164dd6851a8a46374784d25161b774a98fea87219b7"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@sentry/conventions",
+      "name": "@sentry/conventions",
+      "version": "0.16.0",
+      "license": "MIT",
+      "packageJsonSha256": "cdb1d1da078b88419c985ea8be0d19aff3ba542bff7edf0a3e5e37874a406ee6"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@sentry/core",
+      "name": "@sentry/core",
+      "version": "10.78.0",
+      "license": "MIT",
+      "packageJsonSha256": "31399f72d1d7f487739a79dffd73f5ec62a449ac4e12d633718a4b32c54edc03"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@sentry/node",
+      "name": "@sentry/node",
+      "version": "10.78.0",
+      "license": "MIT",
+      "packageJsonSha256": "285cefbe2973e8a2910b917d120c46c76166a9c923f225252bf86e2e72daf3f2"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@sentry/node-core",
+      "name": "@sentry/node-core",
+      "version": "10.78.0",
+      "license": "MIT",
+      "packageJsonSha256": "bb9c13d3e3aab53b24a5f1de19c7872c07dd47f6a38a72275bc80e2f54085656"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@sentry/node/node_modules/@opentelemetry/api-logs",
+      "name": "@opentelemetry/api-logs",
+      "version": "0.220.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "11a03cf82b7380d98fe5fa49f2b666ad5f2a72eed26149217f7feb9bd4ed3679"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@sentry/node/node_modules/@opentelemetry/instrumentation",
+      "name": "@opentelemetry/instrumentation",
+      "version": "0.220.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "373f4136aa86dac729322a6954dad025c4a29f47f8240b68b58fdafa8bdc9313"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@sentry/opentelemetry",
+      "name": "@sentry/opentelemetry",
+      "version": "10.78.0",
+      "license": "MIT",
+      "packageJsonSha256": "d8e8160a3e7daa14c45b8f8b175b6d2d73ceac213d5454b89478f4448401b7b3"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@sentry/server-utils",
+      "name": "@sentry/server-utils",
+      "version": "10.78.0",
+      "license": "MIT",
+      "packageJsonSha256": "88cfafec311298aecb03f58aa63e79678d92190dc1291131cc855fb1c981a7e7"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@smithy/core",
+      "name": "@smithy/core",
+      "version": "3.40.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "cebbdc3db20cb2fc9dbe780dd488014c193693dd1f9dd09dceb11ba39de4e26a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@smithy/credential-provider-imds",
+      "name": "@smithy/credential-provider-imds",
+      "version": "4.5.2",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "1e3b437bfaf7800cbcd770cc744084ab9e3b6c445196b707fde90e2f66e0403c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@smithy/fetch-http-handler",
+      "name": "@smithy/fetch-http-handler",
+      "version": "5.8.1",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "6473f5ec29d6e21ae38824265465ba1b95cb7d9d5dc6c6f485c6145879f8cbee"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@smithy/node-http-handler",
+      "name": "@smithy/node-http-handler",
+      "version": "4.14.2",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "395aace10ec8ec73f9c7a71e7d3c0729901670f0663b29e1782b67b3916223c7"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@smithy/signature-v4",
+      "name": "@smithy/signature-v4",
+      "version": "5.7.5",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "f3817922e717df10e63d4cc1b5ee2f8d8e54f6f64f40f1823dd0823dedc5e7e5"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@smithy/types",
+      "name": "@smithy/types",
+      "version": "4.20.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "cc39d011cd8fc26837c1b6d4f3c60161eef3df86ea9df81143901ba819efb06d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@so-ric/colorspace",
+      "name": "@so-ric/colorspace",
+      "version": "1.1.6",
+      "license": "MIT",
+      "packageJsonSha256": "86b3cce52cb2f3418fb1bd20578fd194de861d9e5ad7d9348bc577a71bf03100"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@socket.io/component-emitter",
+      "name": "@socket.io/component-emitter",
+      "version": "3.1.2",
+      "license": "MIT",
+      "packageJsonSha256": "e27384033330a18408e0f2dd764278c75ed169229bde709d29e753159b04848a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@standard-schema/spec",
+      "name": "@standard-schema/spec",
+      "version": "1.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "58e5bd75ddd0684c88b07cd799585cc72a37fd6efb8ab0c936d49e230d5164fb"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@truefoundry/trueforge",
+      "name": "@truefoundry/trueforge",
+      "version": "0.184.2",
+      "license": "MIT",
+      "packageJsonSha256": "99f1dfe67034fc387821d7883650a1188523c4e75985a61fcb7f4858cc1f99b6"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@truefoundry/trueforge-core",
+      "name": "@truefoundry/trueforge-core",
+      "version": "0.184.0",
+      "license": "MIT",
+      "packageJsonSha256": "7ede47ed246609702b5aca21bc52894d702301a9591cbe2edab80a6c0dcbd579"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@truefoundry/trueforge-sdk",
+      "name": "@truefoundry/trueforge-sdk",
+      "version": "0.184.1",
+      "license": "MIT",
+      "packageJsonSha256": "dc7a8b906bacb56fbab66b69fbbb23b273a6d03be46843201eda60d3aeed1940"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@types/node",
+      "name": "@types/node",
+      "version": "26.6.6",
+      "license": "MIT",
+      "packageJsonSha256": "2520fc33dc754e75d61e6e49c174b439244537c3f2cff1897432806156a054fd"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@types/triple-beam",
+      "name": "@types/triple-beam",
+      "version": "1.3.5",
+      "license": "MIT",
+      "packageJsonSha256": "c8ed1c5130fb111dfad72c99a414eeb10a3171be8076aca86307b4d80c9ca079"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@vercel/oidc",
+      "name": "@vercel/oidc",
+      "version": "3.2.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "989edf56a27f7fc414d6718aad5d5d69e83f14ef14eaacd2b3e59b47a67a51b5"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/@workflow/serde",
+      "name": "@workflow/serde",
+      "version": "4.1.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "06a007abc3797db37b39a78c549a498c5e5b0f90d79b3988c3ccfd22e4be6e2d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/accepts",
+      "name": "accepts",
+      "version": "2.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "c579f3f992d488ac2f4ae751df8fd4169f034f4b6f6716f9a3ddfaf130993d63"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/agent-base",
+      "name": "agent-base",
+      "version": "6.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "05daa619e51686fd21d15f987f943f6692c56b9f489f555cbaf42a4263d5c5e8"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ai",
+      "name": "ai",
+      "version": "7.0.169",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "a47721d62718be53122d148755a27b3f6244d704afecdd7ca7b7703ea6c88bb1"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ajv",
+      "name": "ajv",
+      "version": "8.20.0",
+      "license": "MIT",
+      "packageJsonSha256": "1f9033ee5a6515e7d76938b7072941862d1ed228a6879cc7fe10cdeb75107989"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ajv-formats",
+      "name": "ajv-formats",
+      "version": "3.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "402fb4bcfa457f0226813f3976ac42839dd619907c075c108efba8600d7edb69"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ansi-regex",
+      "name": "ansi-regex",
+      "version": "5.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "8b2dc166f2b74d5098bad38bdd3dd2f4d4775c626199872f5e36dbb48c40931d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ansi-styles",
+      "name": "ansi-styles",
+      "version": "4.3.0",
+      "license": "MIT",
+      "packageJsonSha256": "d405f010681d53f77691015e98461f8484b2afe6a9edfdd2ddb27b1e8a8e883d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ansi-styles/node_modules/color-convert",
+      "name": "color-convert",
+      "version": "2.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "9471d21744ca3137410448da6b3bd7b30ee91d42edce3b82ebcbf84faef74fb4"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ansi-styles/node_modules/color-name",
+      "name": "color-name",
+      "version": "1.1.4",
+      "license": "MIT",
+      "packageJsonSha256": "4a557ea373907e4643badb89ff21b3f4b969d20631086d78eab2e03d05c2efa4"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/async",
+      "name": "async",
+      "version": "3.2.6",
+      "license": "MIT",
+      "packageJsonSha256": "e010fe63aa861e8a60fb8b9d3e7fb5205e3b8d6001ebe3ff95985996abe581a9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/asynckit",
+      "name": "asynckit",
+      "version": "0.4.0",
+      "license": "MIT",
+      "packageJsonSha256": "63eb9ff63be2e241ee6e80434d4641d6e9b5157d88bd3bbb692fcb2dfc8da4a9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/axios",
+      "name": "axios",
+      "version": "1.21.1",
+      "license": "MIT",
+      "packageJsonSha256": "65f87e1420173239f4a02fb17e52641f7dc8635b17aa5e0761f5d968eab23077"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/base64-js",
+      "name": "base64-js",
+      "version": "1.5.1",
+      "license": "MIT",
+      "packageJsonSha256": "9758f3ab8c45e07bb9a368e32f9a8b3729623bbf47cbbb205b32d674ab2a91f0"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/better-sqlite3",
+      "name": "better-sqlite3",
+      "version": "13.0.3",
+      "license": "MIT",
+      "packageJsonSha256": "6c9ea355190dfce3646ad4d2a31c9506de36d884a6461b3655a2a0c4ba3d1695"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/bintrees",
+      "name": "bintrees",
+      "version": "1.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "b1428f5f1084ec992b386903254420e8bbbd3cc9b3482dd8a8a031c749b1c5f9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/body-parser",
+      "name": "body-parser",
+      "version": "2.4.0",
+      "license": "MIT",
+      "packageJsonSha256": "9410a56eb52cfe53ec48f013c872d4d336bb1cad66ea166bf3d97d2807bf542a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/body-parser/node_modules/content-type",
+      "name": "content-type",
+      "version": "2.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "33102772db7c8375395bdcc11e7004c597b4cdbe457d8dd0ae2e56f5a2d28637"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/bowser",
+      "name": "bowser",
+      "version": "2.15.0",
+      "license": "MIT",
+      "packageJsonSha256": "e9d27c7ce8ccc41058a86bb94d6f22ef888a2c70c4166ed64421e0c7f229bd52"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/braces",
+      "name": "braces",
+      "version": "3.0.3",
+      "license": "MIT",
+      "packageJsonSha256": "56f08b888a4f30dc7cf8a7dbb36ffe92b737912ba36abe9d069d32167c957ac7"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/buffer",
+      "name": "buffer",
+      "version": "5.6.0",
+      "license": "MIT",
+      "packageJsonSha256": "cf070470935befb7823b0fd178b9c96f9f16c41a8812c6473da03b97fa42c045"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/busboy",
+      "name": "busboy",
+      "version": "1.6.0",
+      "license": [
+        {
+          "type": "MIT",
+          "url": "http://github.com/mscdex/busboy/raw/master/LICENSE"
+        }
+      ],
+      "packageJsonSha256": "4faefdc1fc73a2c8a87dfa0cc6ca3dc3d9e518abf9b92d84aa495c59b3e20c92"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/bytes",
+      "name": "bytes",
+      "version": "3.1.2",
+      "license": "MIT",
+      "packageJsonSha256": "99b21c09ce812dc76a06cd87c4753247cb9615c6a8501c5a5a9d9caa22ea2d12"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/call-bind-apply-helpers",
+      "name": "call-bind-apply-helpers",
+      "version": "1.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "59639b628c6846f674857c6a613fd47e2e4d2a24036cdf0f7a62ac634f4c8a5f"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/call-bound",
+      "name": "call-bound",
+      "version": "1.0.4",
+      "license": "MIT",
+      "packageJsonSha256": "dcc8abb3c4ad3774234272149020cb36d7b1a3d377a419454d1e7adb368dd9c3"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/chownr",
+      "name": "chownr",
+      "version": "3.0.0",
+      "license": "BlueOak-1.0.0",
+      "packageJsonSha256": "4300e90fdd91ec7035047473c60f880251a9801bd786302729d4277751d3b948"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/cjs-module-lexer",
+      "name": "cjs-module-lexer",
+      "version": "2.3.0",
+      "license": "MIT",
+      "packageJsonSha256": "6b965e316d46fae013ac17bf7c4e74ffaf4d5e89231e9b041e3671d21f497e6c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/cliui",
+      "name": "cliui",
+      "version": "8.0.1",
+      "license": "ISC",
+      "packageJsonSha256": "95964483c512a6bf35aa1211dc2c185d72be1b58b1271ddd4a7c2e48836472a9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/cluster-key-slot",
+      "name": "cluster-key-slot",
+      "version": "1.1.2",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "1155a79463e5ecd0187f69e76eea7ca038867275de5ad07dcf20eeb51888cf72"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/color",
+      "name": "color",
+      "version": "5.0.3",
+      "license": "MIT",
+      "packageJsonSha256": "e056a5ef1ac8bd65d4a19eb544b2b3dfb69e21da39543e3f58456d6f1793019e"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/color-convert",
+      "name": "color-convert",
+      "version": "3.1.3",
+      "license": "MIT",
+      "packageJsonSha256": "2ca1a776fdacc56b2c1463045e8b2edcc7ff31490c362ee84e258cc905b90e73"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/color-name",
+      "name": "color-name",
+      "version": "2.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "efbf349af1ba4890af24b0b382366a191cd038c6a79357e7711be515053c2d89"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/color-string",
+      "name": "color-string",
+      "version": "2.1.4",
+      "license": "MIT",
+      "packageJsonSha256": "c07e159e468107920cf59dc92a06185593c180c2bbf12cd6baf9494da68c8d35"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/combined-stream",
+      "name": "combined-stream",
+      "version": "1.0.8",
+      "license": "MIT",
+      "packageJsonSha256": "761adece21443081ae818fe0e18864d7fa03f387075b89afa6cc5dd98356fafa"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/commander",
+      "name": "commander",
+      "version": "12.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "4ee3239971f47b1be752b2a9510184a5ece7c2d888890772b6ab69443ce089de"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/content-disposition",
+      "name": "content-disposition",
+      "version": "2.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "03fb6b61a5526d9b4b37bc7924734c3ddd34bf2dc70ae4d2718e501492c0b510"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/content-type",
+      "name": "content-type",
+      "version": "1.0.5",
+      "license": "MIT",
+      "packageJsonSha256": "bd78a5427ffca1966621301edc6cac2146c8c1e137f122161ba90dca7ec89f77"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/cookie",
+      "name": "cookie",
+      "version": "0.7.2",
+      "license": "MIT",
+      "packageJsonSha256": "7fa781bd142e7f38b66bff64b4e3a8be9e53e340e7ddaf27caebd00322602208"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/cookie-signature",
+      "name": "cookie-signature",
+      "version": "1.2.2",
+      "license": "MIT",
+      "packageJsonSha256": "c07dac3271d2ab772ac105f714c3f44bea5180a9a40bf95c2db8d6cb29bb28be"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/cors",
+      "name": "cors",
+      "version": "2.8.6",
+      "license": "MIT",
+      "packageJsonSha256": "b314218cdfc9e9442efd35c74c4176902c0bbd74700ba30d6055e70a76455174"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/cron-parser",
+      "name": "cron-parser",
+      "version": "5.10.4",
+      "license": "MIT",
+      "packageJsonSha256": "84f8047c35af7e1ba6d9532a04a67e1683af08a34a67de6cc8178dc9d018a2e3"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/cross-spawn",
+      "name": "cross-spawn",
+      "version": "7.0.6",
+      "license": "MIT",
+      "packageJsonSha256": "2e106cd9b4ae4e34ead35218371a0d4e172da72515a4f8f97d69a2e1fe3dee82"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/debug",
+      "name": "debug",
+      "version": "4.4.3",
+      "license": "MIT",
+      "packageJsonSha256": "ea8e33d63fe5f3a4c36609b6c3df8e2ef1f8b8ba2fc3a2e1e53cb27291f384af"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/dedent",
+      "name": "dedent",
+      "version": "1.7.2",
+      "license": "MIT",
+      "packageJsonSha256": "42794a4864fec1741d324f5ff6ba436a5542f910d6658c7bf1946614e5dcc7f8"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/delayed-stream",
+      "name": "delayed-stream",
+      "version": "1.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "4f5bd886efbd8feda6ac04db6ac1aa8b2e8dfc159503b0652667e1bc88efd4cb"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/depd",
+      "name": "depd",
+      "version": "2.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "5a3659bcc2e47b25ebf9f23f38eb9452a58920bfe4b59410bfa6fe84639a3b99"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/dunder-proto",
+      "name": "dunder-proto",
+      "version": "1.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "24df71008e4225c858f389dd2728b76cf66b752256d42a38ed7930aacae7fe2b"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ee-first",
+      "name": "ee-first",
+      "version": "1.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "a4eece6ff6b38bf7ac107323f381cc60500097a9cbdd473f5d5b45e68822cb89"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/emoji-regex",
+      "name": "emoji-regex",
+      "version": "8.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "7bec29b9ca68f2c4becc60e866c2f9342ecdc89fab39841a818ccd9eda15c148"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/enabled",
+      "name": "enabled",
+      "version": "2.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "5bc65d6409ffeb2c9eada8c0706d2b6426697d748fa2f409342f3668f4ee23f7"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/encodeurl",
+      "name": "encodeurl",
+      "version": "2.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "2053c6579831e6ea212cb9fcd5b0bfe78ff4a7b4b012d027ece0deb46b47689c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/engine.io-client",
+      "name": "engine.io-client",
+      "version": "6.6.8",
+      "license": "MIT",
+      "packageJsonSha256": "5cd1e6cedb29c1ef63f4b86f7b6ebbfbad294580ad3237c1be12553428255024"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/engine.io-client/node_modules/ws",
+      "name": "ws",
+      "version": "8.21.3",
+      "license": "MIT",
+      "packageJsonSha256": "a56a3fd55945a3ce177e3ca165dafae6f7eb03b7aefd58c092ac723d5741a6fb"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/engine.io-parser",
+      "name": "engine.io-parser",
+      "version": "5.2.3",
+      "license": "MIT",
+      "packageJsonSha256": "1424a9e48ed5141c78bfc5e1316fc482c9c9f3975665152cbf081c39d8d0255c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/env-paths",
+      "name": "env-paths",
+      "version": "4.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "19f5eeda57740c46b6a0a08e87c35508d7d22e2101da13c03e719e9a3460fc08"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/es-define-property",
+      "name": "es-define-property",
+      "version": "1.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "3a2cb30dae30a96705dcd9aa2d5fb190cf8200f27badccfa5a81a4374e5708b4"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/es-errors",
+      "name": "es-errors",
+      "version": "1.3.0",
+      "license": "MIT",
+      "packageJsonSha256": "1a0a0bcccc76b915cb64073317312840cf6363e9144b96f406d0059774dd5278"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/es-module-lexer",
+      "name": "es-module-lexer",
+      "version": "3.0.4",
+      "license": "MIT",
+      "packageJsonSha256": "b32a3ebd96a8343fa7286e6b846e130a1e0ea69642119b2d94dd999ae87a9763"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/es-object-atoms",
+      "name": "es-object-atoms",
+      "version": "1.1.2",
+      "license": "MIT",
+      "packageJsonSha256": "e4b7882975d10c68457945c883e1060d0b058af5b1216215c872263f42e12fc9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/es-set-tostringtag",
+      "name": "es-set-tostringtag",
+      "version": "2.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "c9506942c9ef472286aff079bb65b7f3edcaccbc7f59fac9f419787b570086e5"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/escalade",
+      "name": "escalade",
+      "version": "3.2.0",
+      "license": "MIT",
+      "packageJsonSha256": "acd22b264ecbea162e320a360dab0ad0f3e5438fa4382288df844fa08b484e73"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/escape-html",
+      "name": "escape-html",
+      "version": "1.0.3",
+      "license": "MIT",
+      "packageJsonSha256": "bd320a3e9d23249f5f7d3ce72f2fa426e28a6b2704bd2b281d0c92806a1f5223"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/etag",
+      "name": "etag",
+      "version": "1.8.1",
+      "license": "MIT",
+      "packageJsonSha256": "836b9a5dd1c6af638f4602e83e2568277f9ab1f457db0b95d949c2a4ddb0462a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/events",
+      "name": "events",
+      "version": "3.3.0",
+      "license": "MIT",
+      "packageJsonSha256": "878ad3687fef7efe3757c1872a3af998c95197129a7445d632486a9591ee542e"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/eventsource",
+      "name": "eventsource",
+      "version": "3.0.7",
+      "license": "MIT",
+      "packageJsonSha256": "99cec0bc0f4919b5de13302b0ce28cb0dd966b316cd2c961e0e7c73f884f7524"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/eventsource-parser",
+      "name": "eventsource-parser",
+      "version": "3.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "27a8440c43f6bb12ec3d93338d93efcc4130e8be1ec7f33f5b31c05c2147430b"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/expand-tilde",
+      "name": "expand-tilde",
+      "version": "2.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "b2d0ab00c2e5d4f6a4ecf0d6a43cb88ce72f44b1847f5c09088c2a485aac07db"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/express",
+      "name": "express",
+      "version": "5.3.0",
+      "license": "MIT",
+      "packageJsonSha256": "9645053f08f43135ec21f46ae434e49e10528c9062fde7776b150f38a2335afe"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/express-rate-limit",
+      "name": "express-rate-limit",
+      "version": "8.7.4",
+      "license": "MIT",
+      "packageJsonSha256": "4fc276b5b93613159e4b9e54205ba3039b1192db4e4c462209fcad3c9f694830"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/express/node_modules/content-type",
+      "name": "content-type",
+      "version": "2.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "33102772db7c8375395bdcc11e7004c597b4cdbe457d8dd0ae2e56f5a2d28637"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/fast-deep-equal",
+      "name": "fast-deep-equal",
+      "version": "3.1.3",
+      "license": "MIT",
+      "packageJsonSha256": "a5c63940db0260739be9e2ac67f3aac268df4db5770420ee4e34e493152f97d2"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/fast-glob",
+      "name": "fast-glob",
+      "version": "3.3.3",
+      "license": "MIT",
+      "packageJsonSha256": "be3e54394e824554b06a85529804f11c59b9f2fa7ca6d579fefe71a5d5cf78ee"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/fast-uri",
+      "name": "fast-uri",
+      "version": "3.1.9",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "06728ad83c4df979c6895d089452622441e34afe9b1c24584e2acac8d94a2876"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/fastq",
+      "name": "fastq",
+      "version": "1.20.3",
+      "license": "ISC",
+      "packageJsonSha256": "0e01425632d69b4e148bcde6edcfddce0f39889cb4ea70a4d52bbf622b44e553"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/fecha",
+      "name": "fecha",
+      "version": "4.2.3",
+      "license": "MIT",
+      "packageJsonSha256": "80ecd4a2611642303d3fdd2dcf480a806737c6b7e9b2306c9bb314fdf16c81d3"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/fill-range",
+      "name": "fill-range",
+      "version": "7.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "87f5c78f9b47d21f9ca62b60cff1d250a3b468eab320dd13c3f3ab2464a02735"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/finalhandler",
+      "name": "finalhandler",
+      "version": "2.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "42f5503e57f067caf49dda0353d766f8eb4616429d3c43234ba673ee8acd1196"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/fn.name",
+      "name": "fn.name",
+      "version": "1.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "20d7245ef0121af63e27998ea2c1a477a712809f4a621ca5246869c32ff76cd9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/follow-redirects",
+      "name": "follow-redirects",
+      "version": "1.16.3",
+      "license": "MIT",
+      "packageJsonSha256": "6d8de10cff3afbe74c7933a5424a22699ebb9528a792ae0212f8bdf83ed2866e"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/form-data",
+      "name": "form-data",
+      "version": "4.0.6",
+      "license": "MIT",
+      "packageJsonSha256": "d5222c863d975ddefb3ec2c012d3c3ab92f51ef8f3f5c3080dee02c79d217665"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/form-data/node_modules/mime-db",
+      "name": "mime-db",
+      "version": "1.52.0",
+      "license": "MIT",
+      "packageJsonSha256": "d03e37b915a050af548d543f4e45ff5de06ec767c19e745f18c431d9dc26b5bf"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/form-data/node_modules/mime-types",
+      "name": "mime-types",
+      "version": "2.1.35",
+      "license": "MIT",
+      "packageJsonSha256": "5053cc10259c3913ab6b6c8f13170a619c0d1836c1d9081238329a559fafeb3a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/forwarded",
+      "name": "forwarded",
+      "version": "0.2.0",
+      "license": "MIT",
+      "packageJsonSha256": "550a78f64b6a76bc353d6a10152af5750613d0d910f8478943176c1a6196158a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/forwarded-parse",
+      "name": "forwarded-parse",
+      "version": "2.1.2",
+      "license": "MIT",
+      "packageJsonSha256": "de98796a31c926d9f4c3c2ecaaf1531018ebf15cfd80760ecb5dd55ff8a4a73b"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/fresh",
+      "name": "fresh",
+      "version": "2.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "3895d6c15a9e65c1cca20c675db7637423ec2d087bb221ef79e09ed2e7d34ec0"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/function-bind",
+      "name": "function-bind",
+      "version": "1.1.2",
+      "license": "MIT",
+      "packageJsonSha256": "edb1c4faf4148e6e3d74ed8dbac1a1dc359a647ff4207aad4851396dc7a3559a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/get-caller-file",
+      "name": "get-caller-file",
+      "version": "2.0.5",
+      "license": "ISC",
+      "packageJsonSha256": "680a080d2885c05bc51dde429c80784bfb248ca3ef3685438079c5015721e2ae"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/get-intrinsic",
+      "name": "get-intrinsic",
+      "version": "1.3.0",
+      "license": "MIT",
+      "packageJsonSha256": "45b14763baacc59b0fd7b39e3ad983d5d2aaf7f5ed682f2fce9edb469826c999"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/get-proto",
+      "name": "get-proto",
+      "version": "1.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "73839e012ac7134a632c9d9fc6bdb700ac9ab5553cce39eb789ba2b65663e734"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/glob-parent",
+      "name": "glob-parent",
+      "version": "5.1.2",
+      "license": "ISC",
+      "packageJsonSha256": "858af9aa27cfe6eea1cfd1abbda15ad0ccc87e66e88b3ad249fab8df6dd13192"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/gopd",
+      "name": "gopd",
+      "version": "1.2.0",
+      "license": "MIT",
+      "packageJsonSha256": "33ace32dc861f6da9d1fd9d0a44c66e8c6ff3b13358d070683c1c2978ff5f19f"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/has-symbols",
+      "name": "has-symbols",
+      "version": "1.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "5190268c0e3308d7446d1f7c036238f329f786938453e6017cb90980b3612e7a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/has-tostringtag",
+      "name": "has-tostringtag",
+      "version": "1.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "30ab773c52021a6b800ea48f251abeeb1f6e378300f819204dfbb38d6e43f3ad"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/hasown",
+      "name": "hasown",
+      "version": "2.0.4",
+      "license": "MIT",
+      "packageJsonSha256": "40b750c55a8bacf2c5ac316f5299dd44d48acc101c189a00cd59d39376b5eb89"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/homedir-polyfill",
+      "name": "homedir-polyfill",
+      "version": "1.0.3",
+      "license": "MIT",
+      "packageJsonSha256": "b841920660c6b6a524d764904a766cc59c401ebaa523b12a3fd429f7774d7159"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/hono",
+      "name": "hono",
+      "version": "4.13.18",
+      "license": "MIT",
+      "packageJsonSha256": "f3ed9132a8ab4858548b1495923a49fd99015b359897c1200ffd827b06f902ac"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/http-errors",
+      "name": "http-errors",
+      "version": "2.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "d540721372bf8bf77b5fad31f6567a916e24d0aeeb78c81ba92b69feea9f1eef"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/https-proxy-agent",
+      "name": "https-proxy-agent",
+      "version": "5.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "d41d9127cbed43df8e2d404bfaf41361942a8afeb82eb57ccf8515e04eb33d1d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/iconv-lite",
+      "name": "iconv-lite",
+      "version": "0.7.3",
+      "license": "MIT",
+      "packageJsonSha256": "f24ad03476d51470a5b069e65b03ef6383d615897ffe2239edf22584ea0e3d03"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ieee754",
+      "name": "ieee754",
+      "version": "1.2.1",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "a8004b9c8dffe2e1b01a058ecf968a5d50beabcabc43cc98c655184ba6afc050"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/import-in-the-middle",
+      "name": "import-in-the-middle",
+      "version": "3.6.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "aefaadccbb4abe2d3f79574e3c94f847efba0b73284f47fe29da53726d1d0b06"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/inherits",
+      "name": "inherits",
+      "version": "2.0.4",
+      "license": "ISC",
+      "packageJsonSha256": "be645800bc94fd8de29c8ae91690549b316cc437100108aeea7b2f347693cc80"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ip-address",
+      "name": "ip-address",
+      "version": "10.7.6",
+      "license": "MIT",
+      "packageJsonSha256": "85f3a7d24c93003623069aa264408cc0802de18b41bc6b311c3e0160b5a8031d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ipaddr.js",
+      "name": "ipaddr.js",
+      "version": "1.9.1",
+      "license": "MIT",
+      "packageJsonSha256": "fc1071893728a0e78fa40ce0dbe04c5a1021179fdcb5b229f274e3556d6a87cd"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/is-extglob",
+      "name": "is-extglob",
+      "version": "2.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "8031afcd87f448d75ba8a5dd2cde9c68f982a94f406ebae8e5fb7cf6dfdeede2"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/is-fullwidth-code-point",
+      "name": "is-fullwidth-code-point",
+      "version": "3.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "5b48496ca129073ed44a677b777ea3b91366c8bc228bc75fe858749a78ac1a32"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/is-glob",
+      "name": "is-glob",
+      "version": "4.0.3",
+      "license": "MIT",
+      "packageJsonSha256": "1cce62b80db12fc033d85250b5881b1a288476229abda8e1abd983724befd56f"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/is-number",
+      "name": "is-number",
+      "version": "7.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "51c133f4e41df982aef69027249ff9d7262645029f437d079adc7c83328fb620"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/is-promise",
+      "name": "is-promise",
+      "version": "4.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "ae7a1bff928cb99f0b828f8a8236f623828f5f48ce930268ac5726554e083b50"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/is-safe-filename",
+      "name": "is-safe-filename",
+      "version": "0.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "6595946581cd7bde7877149ea99c42c018d74e7c78f3f68f4d7b8efa168a19a5"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/is-stream",
+      "name": "is-stream",
+      "version": "2.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "07cf93d9490a2d7ed7731810b49b1c314c760291bb66cdfbc0279258ceb65ec9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/isexe",
+      "name": "isexe",
+      "version": "2.0.0",
+      "license": "ISC",
+      "packageJsonSha256": "395c2af9abeeaafe7391974c1eacfb2a2bdeef187f21c3f5582c49e0368e59bf"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/isomorphic-ws",
+      "name": "isomorphic-ws",
+      "version": "5.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "dd92171c67f243d981a78204ffd0d64247267b97e6a261a4c6b5f1668c05d21c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/jose",
+      "name": "jose",
+      "version": "6.2.17",
+      "license": "MIT",
+      "packageJsonSha256": "8be1492307148d327523d8ec2458d87b0219a1dadfc1ec2cebbadcecd948a13e"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/json-schema",
+      "name": "json-schema",
+      "version": "0.4.0",
+      "license": "(AFL-2.1 OR BSD-3-Clause)",
+      "packageJsonSha256": "22fe1fdf2eb8925bb5ea40f4dbff8fbfcd695190362afeadb8ce1b7d79f6f3f0"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/json-schema-traverse",
+      "name": "json-schema-traverse",
+      "version": "1.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "156fb24af02845c190701360d06dfda35ef04282e34a734289ea9535ad9819ae"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/json-schema-typed",
+      "name": "json-schema-typed",
+      "version": "8.0.2",
+      "license": "BSD-2-Clause",
+      "packageJsonSha256": "8d04cdd834382b5b4e7d3e00fbc1da5654c430d04934c3031fe8f2d79a1625d9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/kuler",
+      "name": "kuler",
+      "version": "2.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "7c22c6fe3ddd0ba047218d864008b002eab3fce6b499351e7a4c63e2cf703ae7"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/kysely",
+      "name": "kysely",
+      "version": "0.29.8",
+      "license": "MIT",
+      "packageJsonSha256": "107328bc0dd60ef468df12853256bf88beb02c11931090d7d4a85c74b1706ca8"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/lodash.camelcase",
+      "name": "lodash.camelcase",
+      "version": "4.3.0",
+      "license": "MIT",
+      "packageJsonSha256": "9efa0aaf45881a9b6f8150e72e399a7d17732c8bdb772bb501204204821a22dd"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/logform",
+      "name": "logform",
+      "version": "2.7.0",
+      "license": "MIT",
+      "packageJsonSha256": "7fe3c68c465efc9460ce9abfbf95d5cacefc76fe159c7b171bf8923aa27e2660"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/logform/node_modules/@colors/colors",
+      "name": "@colors/colors",
+      "version": "1.6.0",
+      "license": "MIT",
+      "packageJsonSha256": "af67d5bc4fac331176780d7da47802a48d9bca01596d571685351b4a03a6b9c1"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/long",
+      "name": "long",
+      "version": "5.3.2",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "982e554a35d140981c7962fbba77855563e5890de200f8dc0a249135e4d9acb8"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/lru-cache",
+      "name": "lru-cache",
+      "version": "11.5.3",
+      "license": "BlueOak-1.0.0",
+      "packageJsonSha256": "c085d38560434a8915fd1817cd17cee316118078b07f40302b32ef4d8bc760f4"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/luxon",
+      "name": "luxon",
+      "version": "3.7.2",
+      "license": "MIT",
+      "packageJsonSha256": "bf8c55f4072d01467c1c0c49807722f79577680ac1ff7fa7c030a83716d3db4f"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/math-intrinsics",
+      "name": "math-intrinsics",
+      "version": "1.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "39d74aa5a354153130706286dd60a2d8409ce0c8f66546eff2edcac0afff17e1"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/media-typer",
+      "name": "media-typer",
+      "version": "1.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "532b2af00ae4de1bb2853f233a1ee6d3c19703d18d2c4e173cdc59f7a01e1bba"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/merge-descriptors",
+      "name": "merge-descriptors",
+      "version": "2.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "36d6d2cd304c06d5b690625af7ecc07995d5e220eba014ee3818af8c51421fed"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/merge2",
+      "name": "merge2",
+      "version": "1.4.1",
+      "license": "MIT",
+      "packageJsonSha256": "5424b2be337f1f0a1fa376fa67262bceaead62275d5f8df6ff82103e283cc358"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/micromatch",
+      "name": "micromatch",
+      "version": "4.0.8",
+      "license": "MIT",
+      "packageJsonSha256": "94dbc881c0329813f2481f35fcfa725a2285d45926d33e9b9b8b80b28487752b"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/mime-db",
+      "name": "mime-db",
+      "version": "1.54.0",
+      "license": "MIT",
+      "packageJsonSha256": "33bdbb99915697ac01df12490b9d479a55529123842e67975e6d76d0010aa142"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/mime-types",
+      "name": "mime-types",
+      "version": "3.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "644fc05ded7d8a20c069a07c7c61373593d4859c91b1386f544cbf247e39820c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/minipass",
+      "name": "minipass",
+      "version": "7.1.3",
+      "license": "BlueOak-1.0.0",
+      "packageJsonSha256": "b8ab116187d5e9375d494f17437eb862cbee4b329c21f15412c6a5170ec2f55c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/minizlib",
+      "name": "minizlib",
+      "version": "3.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "3e3b206f94f3bd444f18fed847d8caeacb84925c628ae3d87805bc1dd6c4c470"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/module-details-from-path",
+      "name": "module-details-from-path",
+      "version": "1.0.4",
+      "license": "MIT",
+      "packageJsonSha256": "5aeaa7c4788ddf1ca3edbbfd53ae1d464ee98ffd9ef09cc579400c461dae6930"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ms",
+      "name": "ms",
+      "version": "2.1.3",
+      "license": "MIT",
+      "packageJsonSha256": "1a6b4d9739790c0b94ab96c8cc0507e281c164c311ff4fbf5e57fb8d26290b40"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/negotiator",
+      "name": "negotiator",
+      "version": "1.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "2bc164db19aca1e7af967b7211f7d728940f48ff22d56aa75be587f3bb13ee56"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/negotiator/node_modules/content-type",
+      "name": "content-type",
+      "version": "2.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "33102772db7c8375395bdcc11e7004c597b4cdbe457d8dd0ae2e56f5a2d28637"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/node-addon-api",
+      "name": "node-addon-api",
+      "version": "8.9.2",
+      "license": "MIT",
+      "packageJsonSha256": "f26c85879016dd0cd6c2599d4cc79d579383051a82fc2684837cff2e1b6a0d29"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/node-forge",
+      "name": "node-forge",
+      "version": "1.4.3",
+      "license": "(BSD-3-Clause OR GPL-2.0)",
+      "packageJsonSha256": "c4932ae80bd4ce50a44bec3de158477982dbac36ee2436989e940e9f95a57b82"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/oauth4webapi",
+      "name": "oauth4webapi",
+      "version": "3.8.8",
+      "license": "MIT",
+      "packageJsonSha256": "0a587bac2f82a768669cdb7f9e47809eaf13a80dbd52fa35f5f48ed097e6164a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/object-assign",
+      "name": "object-assign",
+      "version": "4.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "5990bbffa235fc675debd925d50f6c3f48a2b4526d8c9f7555cadec9029d0d7f"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/object-inspect",
+      "name": "object-inspect",
+      "version": "1.13.4",
+      "license": "MIT",
+      "packageJsonSha256": "21c5c63f653705f44a60f5fe93752b231caf6ff07b01805740bd89b71b2d6d8a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/on-finished",
+      "name": "on-finished",
+      "version": "2.4.2",
+      "license": "MIT",
+      "packageJsonSha256": "72a8f458b98a063fe2205933df3c2aef16fbe4d08a79010a23eeca1e9428b876"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/once",
+      "name": "once",
+      "version": "1.4.0",
+      "license": "ISC",
+      "packageJsonSha256": "33840d74c14c94bfb75c76374765b635531b1eacb88d7f1f2f380c94d0ea1328"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/one-time",
+      "name": "one-time",
+      "version": "1.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "95f439060816dac444a0bd628e9849fd0894afe8e9eb4110bd737daadad46175"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/openai",
+      "name": "openai",
+      "version": "7.55.0",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "a0598ceb7e19b09d9aeff4b2b3f75ebc2ae4a6910741b9322c855cf2c6381353"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/openapi3-ts",
+      "name": "openapi3-ts",
+      "version": "4.6.2",
+      "license": "MIT",
+      "packageJsonSha256": "98252598c9f44ac6355ac9f1ad134c50f56f03b201cd96b17501ffb717692aa1"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/openid-client",
+      "name": "openid-client",
+      "version": "6.8.9",
+      "license": "MIT",
+      "packageJsonSha256": "17ce7652bd40848ad5201a99a97f8a283b24723034d8df64121e6c7bfe09a5cb"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/parallel-web",
+      "name": "parallel-web",
+      "version": "1.3.7",
+      "license": "MIT",
+      "packageJsonSha256": "ecbe120186f9f1a279a824418d7c18ca26c09fdde25b38382e1a3de79bc5c296"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/parse-passwd",
+      "name": "parse-passwd",
+      "version": "1.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "0ddfc8e12d83546f17c0a269d47eaad6f74aab078ab1da742097823fba730eee"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/parseurl",
+      "name": "parseurl",
+      "version": "1.3.3",
+      "license": "MIT",
+      "packageJsonSha256": "98c7b953c844cac7c0be2d5abc6559c6fd3a6075fd159b04c0f1bf46145bfed2"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/path-key",
+      "name": "path-key",
+      "version": "3.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "25594dab72681c910d9cc919263a4daf27d77a75e0d2c26a4d958d6d6b798f86"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/path-to-regexp",
+      "name": "path-to-regexp",
+      "version": "8.4.2",
+      "license": "MIT",
+      "packageJsonSha256": "3c37dce1e0587231f7c9f63e137dd0ed4d6f25552c89b5b5939c6a3d36113634"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/pathe",
+      "name": "pathe",
+      "version": "2.0.3",
+      "license": "MIT",
+      "packageJsonSha256": "6cccffe6bb2a39e2e4f257aefc3f5d553d98199a0c79558bdb5ea2880fa030a3"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/pg",
+      "name": "pg",
+      "version": "8.23.1",
+      "license": "MIT",
+      "packageJsonSha256": "b1e53333a3d0c2c47c49a5cb919d221135dc03145df740925b899bc2baacc435"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/pg-cloudflare",
+      "name": "pg-cloudflare",
+      "version": "1.4.1",
+      "license": "MIT",
+      "packageJsonSha256": "93b30ce3bed1ce3b836aa344c8afdaab74a42c03720e8d5baa801b6ae84ca3e7"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/pg-connection-string",
+      "name": "pg-connection-string",
+      "version": "2.14.1",
+      "license": "MIT",
+      "packageJsonSha256": "53d453c5a426e69a11ff479e0d8a293505faa1833e6eb3ff7ceefdaac569e3ea"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/pg-int8",
+      "name": "pg-int8",
+      "version": "1.0.1",
+      "license": "ISC",
+      "packageJsonSha256": "147155887a41bb6f69ff98b3dde827b7e6a8214c3a71938da4babf8e12adff2e"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/pg-pool",
+      "name": "pg-pool",
+      "version": "3.14.0",
+      "license": "MIT",
+      "packageJsonSha256": "0a9924def9e06f791b09a44eaefb227f323a39199887f6ce17b44cb5a9193134"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/pg-protocol",
+      "name": "pg-protocol",
+      "version": "1.16.1",
+      "license": "MIT",
+      "packageJsonSha256": "a4a4e23027b26c72be7729d045d0100ad9329959db0449c535fa7b2ba2e717c6"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/pg-types",
+      "name": "pg-types",
+      "version": "2.2.0",
+      "license": "MIT",
+      "packageJsonSha256": "3ec0293cb38cc8d9475e3eb32ac5f19d195bf9fccc8b19a0714e6ecd6e7c2cf0"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/pgpass",
+      "name": "pgpass",
+      "version": "1.0.5",
+      "license": "MIT",
+      "packageJsonSha256": "d75240eb4fe759c10db9f903838275348676a8bdc1f329e20a833713cd7c99bd"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/picomatch",
+      "name": "picomatch",
+      "version": "2.3.2",
+      "license": "MIT",
+      "packageJsonSha256": "63264d817e856a4bff57d4304f2b38d2964a4f6df520eb169e7bcdb619f13e9a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/pkce-challenge",
+      "name": "pkce-challenge",
+      "version": "5.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "74fd5b54078ebad49e15421f928d285f63926caae3220356d95a9afc6fa0e417"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/postgres-array",
+      "name": "postgres-array",
+      "version": "2.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "dcd6a505fcbc032b409ee2838ab2c776dea3a9cfe02b736364b6cb82a946665f"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/postgres-bytea",
+      "name": "postgres-bytea",
+      "version": "1.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "9125568c5fb51a65b8f11adb0080c2775b99ee82822d73bff8b56b2a9d47d7aa"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/postgres-date",
+      "name": "postgres-date",
+      "version": "1.0.7",
+      "license": "MIT",
+      "packageJsonSha256": "03f9edefa96697072075e02df045cc61ed4ca2f8dfffb1ff87f4070bc3404151"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/postgres-interval",
+      "name": "postgres-interval",
+      "version": "1.2.0",
+      "license": "MIT",
+      "packageJsonSha256": "cc3056db105e66c9128cb8a387cda782d5f1ae9281be90de0b8d26a90af89c57"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/prom-client",
+      "name": "prom-client",
+      "version": "15.1.3",
+      "license": "Apache-2.0",
+      "packageJsonSha256": "1e7e9aac3c44d9396a057924677e507f67ef293435d5c9e2beb7c4d3358b8d24"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/protobufjs",
+      "name": "protobufjs",
+      "version": "7.6.6",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "0e56b70de03bffc143e74311b42ae22b557370a4a1f4b5066568fbc77857639a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/proxy-addr",
+      "name": "proxy-addr",
+      "version": "2.0.8",
+      "license": "MIT",
+      "packageJsonSha256": "b2e305ca817ae4e8b088e07f38c5df1d7ad77aa3473809e4c37a9a1c83600225"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/proxy-from-env",
+      "name": "proxy-from-env",
+      "version": "2.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "d01e73f0bf86e192e7eab7ff3f6f9e1284695ecc713ace22d982f9a35c9be451"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/qs",
+      "name": "qs",
+      "version": "6.17.1",
+      "license": "BSD-3-Clause",
+      "packageJsonSha256": "863f2d7bdf692921c2d743280760cb486db0fad3984f41ea195486f152ffaa84"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/queue-microtask",
+      "name": "queue-microtask",
+      "version": "1.2.3",
+      "license": "MIT",
+      "packageJsonSha256": "e6d153dda4c9aee863e7d8cc59419d4eb94b9829277cda9289a40f96efb36c11"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/range-parser",
+      "name": "range-parser",
+      "version": "1.3.0",
+      "license": "MIT",
+      "packageJsonSha256": "3461c9c15204b32f459c97920bb678e42341e9e9675e4b748907ce4de740f26d"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/raw-body",
+      "name": "raw-body",
+      "version": "3.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "3072f77ab429d8b89e78c85e0cdefb6e3ef554a9fb19443d006a892a74361e78"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/readable-stream",
+      "name": "readable-stream",
+      "version": "3.6.2",
+      "license": "MIT",
+      "packageJsonSha256": "469ea81f64037d1f179bcd46412217903a2924dd2e7d7d9b728659b6f12c3e69"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/redis",
+      "name": "redis",
+      "version": "5.12.1",
+      "license": "MIT",
+      "packageJsonSha256": "02ec9b7a59d685d79e8cc032eab3746b4675cbda8e4ef8e3eddd2e39ea7772c1"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/require-directory",
+      "name": "require-directory",
+      "version": "2.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "5690bdddd6eb4abd795fa5319df7552279508df9d562d571e3132ddff3045a71"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/require-from-string",
+      "name": "require-from-string",
+      "version": "2.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "c0002f7d4c7d7e2a885cf0f97226344902417c3a0980f2beca41962d2bc1f6d8"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/require-in-the-middle",
+      "name": "require-in-the-middle",
+      "version": "8.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "ded84be62b95f78893a1efa58cee4a9f87aa1e99a0e46e633cef02f48a821abe"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/reusify",
+      "name": "reusify",
+      "version": "1.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "db69497e33cebb1296cd68a9202cc4df7b8d1dc895a423f2153e8c157068aa76"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/router",
+      "name": "router",
+      "version": "2.2.0",
+      "license": "MIT",
+      "packageJsonSha256": "b77062595f89476fab6acbcde5fa8dfac3be7d7b9b0b0b69d48c84ebc13c9a06"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/run-parallel",
+      "name": "run-parallel",
+      "version": "1.2.0",
+      "license": "MIT",
+      "packageJsonSha256": "a45d96ac517ff7b6612a6e9961b66fc3e6d74adb1eeba5242ae0d36f77a35b58"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/safe-buffer",
+      "name": "safe-buffer",
+      "version": "5.2.1",
+      "license": "MIT",
+      "packageJsonSha256": "e4018fdbfe625433371f48274fee26f520bbe865e0d8c85bf3aa07424134b90c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/safe-stable-stringify",
+      "name": "safe-stable-stringify",
+      "version": "2.5.0",
+      "license": "MIT",
+      "packageJsonSha256": "797e552ecb0f8ffe8ffb714e6c4888b28a8ca39eb9c0040836b2b6f640037798"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/safer-buffer",
+      "name": "safer-buffer",
+      "version": "2.1.2",
+      "license": "MIT",
+      "packageJsonSha256": "4247a3a63c45a6a7ced1557fe4dd9d2a163af4915d594b95e5867b69a53edb52"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/send",
+      "name": "send",
+      "version": "1.2.1",
+      "license": "MIT",
+      "packageJsonSha256": "303cfb195f13651e5174c23310e6a71e319b4bf85f9afe9e16b16567cbab02f8"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/serve-static",
+      "name": "serve-static",
+      "version": "2.2.1",
+      "license": "MIT",
+      "packageJsonSha256": "4f2884fa761dee155f31cb960d792c2900dbaa6aecbe6ebcc3bcfd7e754706b8"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/setprototypeof",
+      "name": "setprototypeof",
+      "version": "1.2.0",
+      "license": "ISC",
+      "packageJsonSha256": "5b39ddf23d2c12a751cb4af2ce12dd5c87314350be7526fff69b4a3ff2a2d538"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/shebang-command",
+      "name": "shebang-command",
+      "version": "2.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "44de390ae5ed6c5f9758b8b9c90b93fa53977d5361731600429f1de08f4b3f30"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/shebang-regex",
+      "name": "shebang-regex",
+      "version": "3.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "b8018c6b8cc9900dfd1ac18a54956ba34c453fdc2da5e5fe555ee8f04133a1c5"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/shell-quote",
+      "name": "shell-quote",
+      "version": "1.12.0",
+      "license": "MIT",
+      "packageJsonSha256": "fef9e75a4b1b4e3ee6e7b500c30b626d629e27d21c4c3c4ab270b500f64ce993"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/side-channel",
+      "name": "side-channel",
+      "version": "1.1.1",
+      "license": "MIT",
+      "packageJsonSha256": "14da3b013c3762da85cfd8b173290285394dfa41870bc4a1e8243aaa38316f2a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/side-channel-list",
+      "name": "side-channel-list",
+      "version": "1.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "90f0c08c6c17f4a3fa3dd61873223957b89da4201f01dc0c8b95b0b9e6a2a59a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/side-channel-map",
+      "name": "side-channel-map",
+      "version": "1.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "914a8bd732b82523d95bb697eec3e6d95badc5eb13b196fb0772e59354a3ab25"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/side-channel-weakmap",
+      "name": "side-channel-weakmap",
+      "version": "1.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "8c11f0a1c6cfa549588d991a5cb1b04d62953277ed29f47463d415d5946388a8"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/socket.io-client",
+      "name": "socket.io-client",
+      "version": "4.8.4",
+      "license": "MIT",
+      "packageJsonSha256": "8df41267a412d30761aea8850bb56e3d8b33aa7e0e4b1698565b080721c20ece"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/socket.io-parser",
+      "name": "socket.io-parser",
+      "version": "4.2.7",
+      "license": "MIT",
+      "packageJsonSha256": "26c2d96afa88fafe2a7fba00d73ed6c04a2dc11026a44fab27b6c84b4563a119"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/split2",
+      "name": "split2",
+      "version": "4.2.0",
+      "license": "ISC",
+      "packageJsonSha256": "87b734c3087c8d9ed5d76d1bff00db30f960831ba8705dd18d73b180d08d2140"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/stack-trace",
+      "name": "stack-trace",
+      "version": "0.0.10",
+      "license": "MIT",
+      "packageJsonSha256": "9d4ebf4546836593d64b8627bab4f12100a33e39810cec6e175f3e71f0825c16"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/statuses",
+      "name": "statuses",
+      "version": "2.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "dc2508da5568ba768d94b73126cd20a5df934bc0c651ad681022236484ca156c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/stream-browserify",
+      "name": "stream-browserify",
+      "version": "3.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "cab91da3e12d579c710604d760e51862a24726e832308ae005923c5d2bd71216"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/streamsearch",
+      "name": "streamsearch",
+      "version": "1.1.0",
+      "license": [
+        {
+          "type": "MIT",
+          "url": "http://github.com/mscdex/streamsearch/raw/master/LICENSE"
+        }
+      ],
+      "packageJsonSha256": "029b54b7db483222a64b99ab0e27b37d0ca59ca4a95d591b121b2cfb3a45eacb"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/string_decoder",
+      "name": "string_decoder",
+      "version": "1.3.0",
+      "license": "MIT",
+      "packageJsonSha256": "31984c85cd4f3df0aa75075acdec98c25961496897d1f46d04ed4a701f129c54"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/string-width",
+      "name": "string-width",
+      "version": "4.2.3",
+      "license": "MIT",
+      "packageJsonSha256": "6457a02418f004fe5d3fbbb19c7cbcc1450a8b887ff9a471dc6985ac83a48d36"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/strip-ansi",
+      "name": "strip-ansi",
+      "version": "6.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "0130850b9da0584f54cc20d3dab6365c807e9436ac78e016d5009efa99bd0530"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/tar",
+      "name": "tar",
+      "version": "7.5.22",
+      "license": "BlueOak-1.0.0",
+      "packageJsonSha256": "31b18f4fb83ba7183f54fa9e2cdca610897108c37ba80570c2c6fa7ccf112d97"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/tdigest",
+      "name": "tdigest",
+      "version": "0.1.3",
+      "license": "MIT",
+      "packageJsonSha256": "d11c659edbc51a0d681b6e8b75c592fb7455a17b9c40c0bee97d6d62852f3f04"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/text-hex",
+      "name": "text-hex",
+      "version": "1.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "84b96b962f6fa158dfb9d814778d0f8f1635c35d4ed0dd65fefc6afb30570eeb"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/to-regex-range",
+      "name": "to-regex-range",
+      "version": "5.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "766fc1bb34fffcd503c89f4194188ce059795c52fd0dc6753cd4b7dcfc3fe1ec"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/toidentifier",
+      "name": "toidentifier",
+      "version": "1.0.1",
+      "license": "MIT",
+      "packageJsonSha256": "f34c59f784d43da6e633390d85d14ca60539b4676159444f313c62fcfc3b68dc"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/triple-beam",
+      "name": "triple-beam",
+      "version": "1.4.1",
+      "license": "MIT",
+      "packageJsonSha256": "b7c3d5228846e6719feb034f1aa72f294f1804ef9cf1f3fd7e1659413b9b3950"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/tslib",
+      "name": "tslib",
+      "version": "2.8.1",
+      "license": "0BSD",
+      "packageJsonSha256": "f02b4851df316f29bdfcd404aa1eb41e4e216b5859015f81fcd3e91caf8be931"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/tweetnacl",
+      "name": "tweetnacl",
+      "version": "1.0.3",
+      "license": "Unlicense",
+      "packageJsonSha256": "929dc634f6c254c5881612db9a4c52e2ef16cc1b3e3da3343b9e31e6cf037448"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/type-is",
+      "name": "type-is",
+      "version": "2.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "87b5f716ec743cdf6d610487698c8558a608b6e0adac522e1a4315b94b081694"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/type-is/node_modules/content-type",
+      "name": "content-type",
+      "version": "2.1.0",
+      "license": "MIT",
+      "packageJsonSha256": "33102772db7c8375395bdcc11e7004c597b4cdbe457d8dd0ae2e56f5a2d28637"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ulid",
+      "name": "ulid",
+      "version": "3.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "9b500bfe63ffec5c30b816e7e62805c3add1f1c90e46691897b299dbb9fbe566"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/undici",
+      "name": "undici",
+      "version": "7.30.1",
+      "license": "MIT",
+      "packageJsonSha256": "0e62f63508558cd8bc44dbf61baee562907ff4bbd147bf837ded998c2bf62a28"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/undici-types",
+      "name": "undici-types",
+      "version": "8.9.0",
+      "license": "MIT",
+      "packageJsonSha256": "7f3c1a0498b1b7f74402f76d2958bf5a35fc89403036188dc5f8ede1b4e0638b"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/unpipe",
+      "name": "unpipe",
+      "version": "1.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "28b717f978d2a4fc72cd08236931443b63fe6586102df3d1967e2b21ea8c5e11"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/util-deprecate",
+      "name": "util-deprecate",
+      "version": "1.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "7bba467f049074957e693fc06672848b040c38fa071b6eed8690f5fbe090a8b2"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/vary",
+      "name": "vary",
+      "version": "1.1.2",
+      "license": "MIT",
+      "packageJsonSha256": "73edaee964d527117a9f69d6360fbe6cec534abd9127794be01a6af58a139daa"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/which",
+      "name": "which",
+      "version": "2.0.2",
+      "license": "ISC",
+      "packageJsonSha256": "43010039ed5e89f7186960be682b3cb5cda5ab6cdfb06cbfd4f081cf0e7b4260"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/winston",
+      "name": "winston",
+      "version": "3.19.0",
+      "license": "MIT",
+      "packageJsonSha256": "f96cc6b8da151f7237b2fe38629ed06f55b7f230b281a70ddfa128e1b2648e6c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/winston-transport",
+      "name": "winston-transport",
+      "version": "4.9.0",
+      "license": "MIT",
+      "packageJsonSha256": "212ebeebb9f3f301a77fe581c1c367ef9d70ec8b3d7c46593010b2fd2e89bda1"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/wrap-ansi",
+      "name": "wrap-ansi",
+      "version": "7.0.0",
+      "license": "MIT",
+      "packageJsonSha256": "0b0cf0bf62bd0cc71da2128e3269e63edd566feffdd501aa3692acd6db93c3c9"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/wrappy",
+      "name": "wrappy",
+      "version": "1.0.2",
+      "license": "ISC",
+      "packageJsonSha256": "712ac9c4c3cef8bc79f42cf6075ff18551f4cb768f35158214fd643853ad7abc"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/ws",
+      "name": "ws",
+      "version": "8.22.2",
+      "license": "MIT",
+      "packageJsonSha256": "91dd75e390b2d95f431ce8b8ea2df5228b05665c819bbf6f69b8a7f4fe514d78"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/xmlhttprequest-ssl",
+      "name": "xmlhttprequest-ssl",
+      "version": "2.1.2",
+      "license": [
+        {
+          "type": "MIT",
+          "url": "http://creativecommons.org/licenses/MIT/"
+        }
+      ],
+      "packageJsonSha256": "312ae0ac13ec79d5271b871d140fb8c21accd157eef39f8496d25d014080acc1"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/xtend",
+      "name": "xtend",
+      "version": "4.0.2",
+      "license": "MIT",
+      "packageJsonSha256": "b02ffef8cda96c5c3ee00a00390e63f608362c2ddfb3ed754e181d013a45d48a"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/y18n",
+      "name": "y18n",
+      "version": "5.0.8",
+      "license": "ISC",
+      "packageJsonSha256": "f65855d14daaf57947e398e132caa246f93bbf045ff3f8f9627114714729ad29"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/yallist",
+      "name": "yallist",
+      "version": "5.0.0",
+      "license": "BlueOak-1.0.0",
+      "packageJsonSha256": "1b9d47057ce39814531ff93f668823b4fa03e7d23945449c274a1ff6d4cc297f"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/yaml",
+      "name": "yaml",
+      "version": "2.9.1",
+      "license": "ISC",
+      "packageJsonSha256": "1c6441703d8204a23ded0d37ddf57c3b69d821dc392f20852d1f605bb9b8861c"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/yargs",
+      "name": "yargs",
+      "version": "17.7.3",
+      "license": "MIT",
+      "packageJsonSha256": "357c9c2e7725d86a137de13fa68441f88a750b5083313cc1482a7969bcb81584"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/yargs-parser",
+      "name": "yargs-parser",
+      "version": "21.1.1",
+      "license": "ISC",
+      "packageJsonSha256": "b6ee1fa4e1881d6f5388a3a52e34c2499a4c01d81615b69f08f12ca35289880b"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/zod",
+      "name": "zod",
+      "version": "4.6.7",
+      "license": "MIT",
+      "packageJsonSha256": "c2d190d9ee4e0bdb60332aaa2130a6a98d65ddb903fe1d29248b15de57832c45"
+    },
+    {
+      "path": "trueforge/runtime/node_modules/zod-to-json-schema",
+      "name": "zod-to-json-schema",
+      "version": "3.25.2",
+      "license": "ISC",
+      "packageJsonSha256": "1f78f7c62913083878cd5bb0e9d10b8f5893d5799bbe1295068046707c24de3c"
+    }
+  ],
+  "missingLicenseLabels": []
+}

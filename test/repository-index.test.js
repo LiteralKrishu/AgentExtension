@@ -81,3 +81,13 @@ test('branch changes, scope exclusions, symlinks, quotas and cancellation stay e
   const expired = new RepositoryIndex(f.workspace, f.storage, { timeoutMs: 0 });
   assert.equal((await expired.snapshot(new AbortController().signal)).coverage.reason, 'deadline');
 });
+
+test('two index writers use separate temporary files', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'index-writers-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const workspace = { root: '/same/workspace' };
+  const a = new RepositoryIndex(workspace, root), b = new RepositoryIndex(workspace, root);
+  await Promise.all([a.save(new AbortController().signal), b.save(new AbortController().signal)]);
+  assert.deepEqual((await fs.readdir(a.directory)).filter(name => name.endsWith('.tmp')), []);
+  assert.equal(JSON.parse(await fs.readFile(path.join(a.directory, 'inventory.json'), 'utf8')).version, 1);
+});

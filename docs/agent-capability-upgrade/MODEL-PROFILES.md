@@ -1,6 +1,8 @@
 # Observed Local Model Profiles
 
-Updated: 22 November 2026. These profiles describe measured configurations of three installed models. None qualifies for the roadmap's supported coding tier. No main profile is qualified.
+Updated: 23 November 2026. These profiles describe measured configurations of three installed models. None qualifies for the roadmap's supported coding tier. No main profile is qualified.
+
+The Claude handoff added larger-context smokes. All three completed the small task and failed the Flask task. GPT-OSS used 131,072 context; Qwen3 Coder used 32,768; Qwen 3.5 used 65,536. The full GPT-OSS batch stopped after six attempts when the Mac restarted. Four completed. The cause of the restart is unconfirmed. The [handoff record](evidence/handoff-2026-11-23.json) preserves these attempts separately. The trial script now defaults to 32,768 context and one prediction, preserves memory guards, and does not unload unrelated models. No live coding model was run in this continuation.
 
 The user authorized local models only and zero paid API spending. All live requests used the installed LM Studio 0.4.28+2 service on this computer. VS Code 1.146.0 supplied the native search executable. Coding trials use an extension host fixture; they are not interactive editor UI acceptance. The product's selected model did not change. See the [source-free profile record](evidence/model-profiles.json) and [evidence report](EVIDENCE.md).
 

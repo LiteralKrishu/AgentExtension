@@ -3,8 +3,9 @@ const path = require('node:path');
 const { z } = require('zod');
 const { digest } = require('./permissions');
 const { safePath } = require('./workspace');
-const { runWorkerSession, workerReadInput, WORKER_READ_LIMIT } = require('./worker-session');
+const { runWorkerSession, workerReadInput, workerSearchInput, WORKER_READ_LIMIT } = require('./worker-session');
 const { reason } = require('./policy');
+const { WorkerQueue } = require('./worker-queue');
 const { Draft } = require('./draft');
 
 const workerInput = z.strictObject({ question: z.string().trim().min(1).max(1_000),
@@ -87,6 +88,7 @@ async function snapshotFor(run, role, input, kind = ROLES[role]?.snapshot ?? 're
     }
     target.key = digest(target);
   } else if (kind === 'repository') {
+    target = { files: {} };
     const candidates = input.files.length ? input.files.map(file => ({ file, line: 1 })) : await run.search(input.question, 16);
     const seen = new Set();
     for (const candidate of candidates) {
@@ -94,6 +96,7 @@ async function snapshotFor(run, role, input, kind = ROLES[role]?.snapshot ?? 're
       safePath(candidate.file);
       seen.add(candidate.file);
       const text = await run.workspace.read(candidate.file);
+      target.files[candidate.file] = digest(text);
       if (readableFiles) readableFiles.set(candidate.file, text.slice(0, 12_000).split('\n').slice(0, 240));
       const lines = text.split('\n');
       const start = Math.max(1, candidate.line - 5);
@@ -172,17 +175,32 @@ function parseReport(text, snapshot) {
 }
 
 class WorkerPool {
-  constructor({ run, settings, roles, customRoles = [], onChange = () => {}, invoke = runWorkerSession, timeoutMs = 60_000 }) {
+  constructor({ run, settings, roles, customRoles = [], onChange = () => {}, invoke = runWorkerSession, timeoutMs = 60_000, concurrency = 2, roleModels = {} }) {
     // Local models can need more time. The setting allows 30 to 300 seconds.
     this.run = run; this.settings = settings; this.roles = new Set(roles); this.onChange = onChange; this.invoke = invoke;
     this.custom = new Map(customRoles.map(role => [role.id, role]));
     this.proposals = new Map();
+    this.queue = new WorkerQueue(concurrency);
+    this.controllers = new Map();
+    this.roleModels = new Map(Object.entries(roleModels).map(([role, model]) => {
+      if (typeof model !== 'string' || !/^[\w./:-]{1,200}$/.test(model)) throw new Error('Use a registered model name for each worker role.');
+      return [role, model];
+    }));
+    if (run.usage) { this.budgetTimer = setInterval(() => this.enforceBudget(), 100); this.budgetTimer.unref?.(); }
     this.timeoutMs = Math.min(300_000, Math.max(1, timeoutMs)); this.count = 0; this.generation = 0;
     this.active = new Map(); this.reports = []; this.pending = new Set(); this.closed = false;
     this.abort = () => this.cancelAll('Parent cancelled');
     run.signal.addEventListener('abort', this.abort, { once: true });
   }
   publish() { this.onChange(this.reports.map(report => ({ ...report }))); }
+  enforceBudget() {
+    const reached = this.run.usage?.exceeded();
+    if (reached && !this.budgetStopped) {
+      this.budgetStopped = `Worker budget reached: ${reached}.`;
+      this.cancelAll(this.budgetStopped);
+    }
+    return this.budgetStopped;
+  }
   execute(role, raw) {
     const input = workerInput.parse(raw);
     const custom = this.custom.get(role);
@@ -190,8 +208,9 @@ class WorkerPool {
     if (this.closed || !definition || (!custom && !this.roles.has(role))) throw new Error('This worker role is not enabled by an approved plugin.');
     if (this.run.readOnly && definition.snapshot !== 'repository') throw new Error('Scheduled reports can use only read-only repository workers.');
     this.run.signal.throwIfAborted();
+    if (this.enforceBudget()) throw new Error(this.budgetStopped);
     if (definition.snapshot === 'edit' && !input.files.length) throw new Error('Name the files the worker may edit.');
-    if (this.active.size >= 2 || this.count >= 4) throw new Error('Worker limit reached: two concurrent workers and four calls per run.');
+    if (this.count >= 4) throw new Error('Worker limit reached: four calls per run, including queued workers.');
     const action = this.run.permissions.action(role, definition.effect, this.run.permissions.workspace, input);
     this.run.permissions.require(action);
     const controller = new AbortController();
@@ -199,15 +218,18 @@ class WorkerPool {
     const id = randomUUID();
     const generation = this.generation;
     this.count++;
-    const row = { id, role, state: 'preparing', question: input.question };
-    this.reports.push(row); this.active.set(id, controller); this.publish();
+    const workerSettings = { ...this.settings, ...(this.roleModels.has(role) ? { model: this.roleModels.get(role) } : {}) };
+    const row = { id, role, model: workerSettings.model, state: 'queued', question: input.question };
+    this.reports.push(row); this.controllers.set(id, controller); this.publish();
     const timer = setTimeout(() => controller.abort(new Error(`Worker timed out after ${Math.round(this.timeoutMs / 1000)} seconds.`)), this.timeoutMs);
     const task = (async () => {
       try {
+        await this.queue.acquire(id, signal, () => { this.active.set(id, controller); row.state = 'preparing'; this.publish(); });
+        if (this.enforceBudget()) signal.throwIfAborted();
         await this.run.validateCapabilities?.();
         signal.throwIfAborted();
         const scopes = this.run.permissions.snapshot().scopes;
-        const readableFiles = definition.snapshot === 'repository' && custom?.tools?.includes('read_file') && input.files.length
+        const readableFiles = definition.snapshot === 'repository' && custom?.tools?.length && input.files.length
           && scopes.includes('workspace.read') && scopes.includes('worker.read') ? new Map() : undefined;
         const snapshot = await snapshotFor(this.run, role, input, definition.snapshot, readableFiles);
         if (generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker permission changed.');
@@ -218,14 +240,12 @@ class WorkerPool {
         this.publish();
         let reads = 0;
         let readOpen = true;
-        const read = readableFiles && (async (raw, toolSignal, sources) => {
+        const access = async (file, raw, toolSignal, tool) => {
           signal.throwIfAborted();
           toolSignal?.throwIfAborted();
           if (!readOpen || generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker read access ended.');
-          if (++reads > WORKER_READ_LIMIT) throw new Error('Worker read limit reached.');
-          const input = workerReadInput.parse(raw);
-          const { file, start_line: start, end_line: end } = input;
-          const target = this.run.permissions.action('worker.read_file', 'worker.read', file, input, { worker: id, snapshot: snapshot.digest });
+          const input = raw;
+          const target = this.run.permissions.action(tool, 'worker.read', file, input, { worker: id, snapshot: snapshot.digest });
           const lines = readableFiles.get(file);
           if (!lines) {
             this.run.permissions.record(target, 'deny', 'File is outside the named worker snapshot');
@@ -240,10 +260,25 @@ class WorkerPool {
           signal.throwIfAborted();
           toolSignal?.throwIfAborted();
           if (!readOpen || generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker read access ended.');
-          this.run.permissions.require(this.run.permissions.action('worker.read_file', 'workspace.read', file, input));
+          this.run.permissions.require(this.run.permissions.action(tool, 'workspace.read', file, input));
           this.run.permissions.require(target);
-          this.run.budget?.spend('worker.read_file');
-          this.run.usage?.tool('worker.read_file');
+          if (digest(await this.run.workspace.read(file)) !== snapshot.target.files[file]) throw new Error('Worker source changed. Start a fresh worker.');
+          signal.throwIfAborted(); toolSignal?.throwIfAborted();
+          if (!readOpen || generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker read access ended.');
+          return lines;
+        };
+        const charge = tool => {
+          signal.throwIfAborted();
+          if (!readOpen) throw new Error('Worker read access ended.');
+          if (++reads > WORKER_READ_LIMIT) throw new Error('Worker read limit reached.');
+          this.run.budget?.spend(tool); this.run.usage?.tool(tool);
+          this.enforceBudget(); signal.throwIfAborted();
+        };
+        const read = readableFiles && custom.tools.includes('read_file') && (async (raw, toolSignal, sources) => {
+          charge('worker.read_file');
+          const input = workerReadInput.parse(raw);
+          const { file, start_line: start, end_line: end } = input;
+          const lines = await access(file, input, toolSignal, 'worker.read_file');
           if (start > lines.length) throw new Error('That line is outside the captured worker input.');
           const text = lines.slice(start - 1, Math.min(start + 39, end ?? start + 39)).join('\n').slice(0, 1_800);
           const source = { file, start, end: start + text.split('\n').length - 1, text };
@@ -251,16 +286,33 @@ class WorkerPool {
           this.run.manifest?.add('worker tool result', file, text, { reason: `Read from the snapshot for ${role}`, limit: 1_800 });
           return source;
         });
+        const search = readableFiles && custom.tools.includes('search_workspace') && (async (raw, toolSignal, sources) => {
+          charge('worker.search_workspace');
+          const input = workerSearchInput.parse(raw);
+          const files = input.file ? [input.file] : [...readableFiles.keys()];
+          const matches = [];
+          for (const file of files) {
+            const lines = await access(file, input, toolSignal, 'worker.search_workspace');
+            for (let line = 0; line < lines.length && matches.length < input.limit; line++) {
+              if (!lines[line].includes(input.query)) continue;
+              const source = { file, start: line + 1, end: line + 1, text: lines[line].slice(0, 300) };
+              matches.push(source); sources.push(source);
+            }
+          }
+          return { matches, coverage: 'Only the captured prefix of each explicitly named file (up to 240 lines and 12,000 characters); other source is not searched.' };
+        });
         const attempt = async retry => {
+          if (this.enforceBudget()) signal.throwIfAborted();
           // A retry sends the same snapshot with a fixed note naming the rejected reply. It counts as the same worker call.
           const task = retry ? { ...snapshot, previous_reply_rejected: `${retry} Reply with only the JSON object your instructions describe. Do not call any tool.` } : snapshot;
           const readSources = [];
           let text;
           try {
-            text = await this.invoke(this.settings, task, signal, session => { row.session = session; this.publish(); },
+            text = await this.invoke(workerSettings, task, signal, session => { row.session = session; this.publish(); },
               { output: definition.output, instructions: definition.instructions, role: custom ? custom.name : role,
                 ...(read && !retry ? { read: (input, signal) => read(input, signal, readSources) } : {}),
-                onUsage: usage => this.run.usage?.model(usage, `worker:${role}`),
+                ...(search && !retry ? { search: (input, signal) => search(input, signal, readSources) } : {}),
+                onUsage: (usage, continuation) => { this.run.usage?.model(usage, `worker:${role}`, continuation); this.run.onUsage?.(); this.enforceBudget(); },
                 onTurnCost: metrics => this.run.usage?.turnCost(metrics) });
           } finally { readOpen = false; }
           this.run.onUsage?.();
@@ -278,7 +330,11 @@ class WorkerPool {
         if (generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker permission changed.');
         if (definition.output === 'edits') return this.propose(id, row, role, snapshot, parsed);
         const report = parsed;
-        const stale = definition.snapshot === 'diff' && (snapshot.target.key !== targetKey(this.run)
+        let sourceChanged = false;
+        if (definition.snapshot === 'repository') for (const [file, version] of Object.entries(snapshot.target.files)) {
+          try { if (digest(await this.run.workspace.read(file)) !== version) sourceChanged = true; } catch { sourceChanged = true; }
+        }
+        const stale = sourceChanged || definition.snapshot === 'diff' && (snapshot.target.key !== targetKey(this.run)
           || (typeof this.run.diffStillCurrent === 'function' && !await this.run.diffStillCurrent(signal)));
         signal.throwIfAborted();
         if (generation !== this.generation || !this.run.permissions.valid(action)) throw new Error('Worker permission changed.');
@@ -291,7 +347,7 @@ class WorkerPool {
         this.publish();
         throw new Error(row.error);
       } finally {
-        clearTimeout(timer); this.active.delete(id);
+        clearTimeout(timer); this.active.delete(id); this.controllers.delete(id); this.queue.release(id);
       }
     })();
     this.pending.add(task);
@@ -354,13 +410,15 @@ class WorkerPool {
   }
   cancelAll(reason = 'Parent attempt ended') {
     this.generation++;
-    for (const controller of this.active.values()) controller.abort(new Error(reason));
+    for (const controller of this.controllers.values()) controller.abort(new Error(reason));
     for (const report of this.reports) if (report.state === 'completed') report.state = 'stale';
     this.publish();
   }
   async close() {
     this.closed = true;
-    for (const controller of this.active.values()) controller.abort(new Error('Parent run ended'));
+    clearInterval(this.budgetTimer);
+    for (const controller of this.controllers.values()) controller.abort(new Error('Parent run ended'));
+    this.queue.close();
     await Promise.allSettled([...this.pending]);
     this.run.signal.removeEventListener('abort', this.abort);
   }

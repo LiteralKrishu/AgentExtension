@@ -3,6 +3,7 @@ const path = require('node:path');
 const { digest } = require('./permissions');
 const { version } = require('../package.json');
 const { z } = require('zod');
+const { withStorageLock } = require('./storage-lock');
 
 const MAX_BYTES = 2_000_000;
 const GENESIS = '0'.repeat(64);
@@ -87,24 +88,37 @@ class AuditLog {
     return undefined;
   }
   async write(event) {
-    await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
-    const previous = await this.last();
-    const record = { seq: (previous?.seq ?? 0) + 1, time: event.time ?? new Date().toISOString(), workspace: this.workspace,
-      ...Object.fromEntries(Object.entries(event).filter(([key]) => !['seq', 'workspace', 'prev', 'hash'].includes(key))), prev: previous?.hash ?? GENESIS };
-    const line = `${JSON.stringify({ ...record, hash: digest(record) })}\n`;
-    let size = 0;
-    try { size = (await fs.stat(this.file)).size; } catch { /* First record. */ }
-    // Keep one archive. The chain continues across the rotation.
-    if (size && size + line.length > this.maxBytes) await fs.rename(this.file, this.archive);
-    await fs.appendFile(this.file, line, { mode: 0o600 });
-    return record;
+    return withStorageLock(this.directory, async check => {
+      const previous = await this.last();
+      if (previous) {
+        const { hash, ...fields } = previous;
+        if (!Number.isSafeInteger(previous.seq) || previous.seq < 1 || digest(fields) !== hash) throw new Error('The audit tail failed verification. Preserve the log before investigating it.');
+      }
+      const record = { seq: (previous?.seq ?? 0) + 1, time: event.time ?? new Date().toISOString(), workspace: this.workspace,
+        ...Object.fromEntries(Object.entries(event).filter(([key]) => !['seq', 'workspace', 'prev', 'hash'].includes(key))), prev: previous?.hash ?? GENESIS };
+      const line = `${JSON.stringify({ ...record, hash: digest(record) })}\n`;
+      let size = 0;
+      try { size = (await fs.stat(this.file)).size; } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      // Keep one archive. The chain continues across the rotation.
+      check();
+      if (size && size + line.length > this.maxBytes) await fs.rename(this.file, this.archive);
+      check();
+      await fs.appendFile(this.file, line, { mode: 0o600 });
+      return record;
+    });
   }
   async lines(file) {
     let text = '';
-    try { text = await fs.readFile(file, 'utf8'); } catch { return []; }
-    return text.split('\n').filter(Boolean).flatMap(line => { try { return [JSON.parse(line)]; } catch { return [{ invalid: true }]; } });
+    try { text = await fs.readFile(file, 'utf8'); } catch (error) { if (error.code === 'ENOENT') return []; throw error; }
+    return text.split('\n').filter(Boolean).map(line => {
+      try { const row = JSON.parse(line); return row && typeof row === 'object' && !Array.isArray(row) ? row : { invalid: true }; }
+      catch { return { invalid: true }; }
+    });
   }
-  async read() { await this.queue; return [...await this.lines(this.archive), ...await this.lines(this.file)]; }
+  async read() {
+    await this.queue;
+    return withStorageLock(this.directory, async () => [...await this.lines(this.archive), ...await this.lines(this.file)]);
+  }
   static verify(records) {
     let previous;
     for (const [index, row] of records.entries()) {

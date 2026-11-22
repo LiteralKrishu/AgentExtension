@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-23",
+  "scope": "Queue mechanics only. Four independent read-only declarations; scripted 40 ms responses, not a coding model or quality benchmark.",
+  "apiSpend": 0,
+  "profiles": [
+    {
+      "concurrency": 1,
+      "repetitions": [
+        {
+          "elapsedMs": 173.06208400000003,
+          "maximumActive": 1,
+          "completed": 4,
+          "stale": 0,
+          "tokens": 480,
+          "modelCalls": 4,
+          "toolCalls": 0,
+          "conflicts": 0
+        },
+        {
+          "elapsedMs": 168.867458,
+          "maximumActive": 1,
+          "completed": 4,
+          "stale": 0,
+          "tokens": 480,
+          "modelCalls": 4,
+          "toolCalls": 0,
+          "conflicts": 0
+        },
+        {
+          "elapsedMs": 167.52966699999996,
+          "maximumActive": 1,
+          "completed": 4,
+          "stale": 0,
+          "tokens": 480,
+          "modelCalls": 4,
+          "toolCalls": 0,
+          "conflicts": 0
+        }
+      ]
+    },
+    {
+      "concurrency": 2,
+      "repetitions": [
+        {
+          "elapsedMs": 83.98879199999999,
+          "maximumActive": 2,
+          "completed": 4,
+          "stale": 0,
+          "tokens": 480,
+          "modelCalls": 4,
+          "toolCalls": 0,
+          "conflicts": 0
+        },
+        {
+          "elapsedMs": 82.37029199999995,
+          "maximumActive": 2,
+          "completed": 4,
+          "stale": 0,
+          "tokens": 480,
+          "modelCalls": 4,
+          "toolCalls": 0,
+          "conflicts": 0
+        },
+        {
+          "elapsedMs": 82.35287500000004,
+          "maximumActive": 2,
+          "completed": 4,
+          "stale": 0,
+          "tokens": 480,
+          "modelCalls": 4,
+          "toolCalls": 0,
+          "conflicts": 0
+        }
+      ]
+    },
+    {
+      "concurrency": 3,
+      "repetitions": [
+        {
+          "elapsedMs": 82.62816700000008,
+          "maximumActive": 3,
+          "completed": 4,
+          "stale": 0,
+          "tokens": 480,
+          "modelCalls": 4,
+          "toolCalls": 0,
+          "conflicts": 0
+        },
+        {
+          "elapsedMs": 81.810291,
+          "maximumActive": 3,
+          "completed": 4,
+          "stale": 0,
+          "tokens": 480,
+          "modelCalls": 4,
+          "toolCalls": 0,
+          "conflicts": 0
+        },
+        {
+          "elapsedMs": 85.18495899999994,
+          "maximumActive": 3,
+          "completed": 4,
+          "stale": 0,
+          "tokens": 480,
+          "modelCalls": 4,
+          "toolCalls": 0,
+          "conflicts": 0
+        }
+      ]
+    }
+  ],
+  "releaseDefault": 2,
+  "releaseMaximum": 2,
+  "conclusion": "Keep current defaults. This fixture does not measure local model throughput, task quality, token estimation, or in-flight usage overshoot. The three-worker profile is test-only."
+}

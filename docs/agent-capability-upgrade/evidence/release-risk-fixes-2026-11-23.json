@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-23",
+  "implementationDigest": "e8f8a513f1a962c1f57986ae699b7cc84e912c11248543ee98f9ff0f68aa3fbc",
+  "evaluationDigest": "1615c74942ef5d7e37c39911e43144c7e311d31413988e9e91da00ada5e57b97",
+  "scope": "Four must-fix release risks: macOS signals, checkpoint ownership, transitive Python dependency inputs, and cross-process audit sequencing.",
+  "resolved": [
+    "macos-host-process-signals",
+    "checkpoint-cross-window-ownership",
+    "nested-python-requirements-cache",
+    "multi-process-audit-sequence"
+  ],
+  "fullSuite": {
+    "tests": 471,
+    "passed": 453,
+    "failed": 0,
+    "skipped": 18,
+    "durationMs": 177418.889917,
+    "sourceBinding": "Full regression before the final preservation and non-overwriting creation guards. The final 19-case storage run covers those additions. This is not a frozen model qualification."
+  },
+  "finalCheckpointAudit": {
+    "tests": 19,
+    "passed": 19,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 11404.992125,
+    "scope": "Final checkpoint, audit, and cross-process cases, including non-overwriting first creation and damaged/unsupported records."
+  },
+  "crossProcessAndCache": {
+    "tests": 27,
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 11406.7695,
+    "realCrashRecoveryMs": 10597.447584
+  },
+  "macSignalAndCancellation": {
+    "tests": 10,
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 479.59225
+  },
+  "editorFocused": {
+    "tests": 12,
+    "passed": 12,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 12314.900459
+  },
+  "realDocker": {
+    "tests": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 6396.48075,
+    "nestedRequirementVersionBefore": "1.17.0",
+    "nestedRequirementVersionAfter": "1.16.0"
+  },
+  "sourceTypeLint": "passed",
+  "package": {
+    "artifact": "/tmp/agentextension-release-risk-fixes-final.vsix",
+    "bytes": 102071036,
+    "sha256": "c03d59d0208dc9859f246c09977bf916dca53a08996a126af68c0f97e09ae845",
+    "status": "passed",
+    "platform": "darwin-arm64",
+    "node": "v24.18.0",
+    "tests": 29,
+    "passed": 29,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 26015.732584,
+    "implementationDigest": "e8f8a513f1a962c1f57986ae699b7cc84e912c11248543ee98f9ff0f68aa3fbc",
+    "scope": "Extracted bundle: checkpoint ownership and two-window cancellation, multi-window audit verification, run/check/review/apply/undo, questions, workers, recovery, compiled coding runner, and saved connection. Scripted local models."
+  },
+  "linux": {
+    "artifact": "/tmp/agentextension-release-linux-output/agentextension-release-risks-linux-arm64.vsix",
+    "bytes": 107081574,
+    "sha256": "2ce7a238c6e061ec4c00b386262515ef3f96aa6943b9ebecf68465318fa7c183",
+    "status": "passed-limited",
+    "platform": "Debian 12 arm64 container",
+    "node": "v22.23.5",
+    "unit": {
+      "tests": 31,
+      "passed": 31,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 11002.401922
+    },
+    "packageConnection": {
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 2550.905043
+    },
+    "bundleSha256": "4918ac558f248d25e86a7fbfd756d753ec76711dc0d3065af81fd0507ca891e8",
+    "matchesMacBundle": true,
+    "archiveIntegrity": "passed",
+    "implementationDigest": "e8f8a513f1a962c1f57986ae699b7cc84e912c11248543ee98f9ff0f68aa3fbc",
+    "initialFailure": "The first container lacked Git, which a fixture requires. The corrected container passed all cases. No acceptance threshold was changed."
+  },
+  "apiSpend": 0,
+  "pushed": false,
+  "limits": [
+    "Old extension windows and runners must stop before upgrading; old writers do not use this protocol.",
+    "Previously damaged audit history is preserved, not rewritten.",
+    "Real coding models, physical second-device acceptance, Windows and other architectures are not qualified by these checks."
+  ],
+  "bundledStorageLicenses": "docs/licenses/storage-lock.txt",
+  "bundledStorageDependencies": [
+    {
+      "name": "proper-lockfile",
+      "version": "4.1.2",
+      "license": "MIT"
+    },
+    {
+      "name": "graceful-fs",
+      "version": "4.2.11",
+      "license": "ISC"
+    },
+    {
+      "name": "retry",
+      "version": "0.12.0",
+      "license": "MIT"
+    },
+    {
+      "name": "signal-exit",
+      "version": "3.0.7",
+      "license": "ISC"
+    }
+  ],
+  "rawLogs": [
+    {
+      "artifact": "/tmp/agentextension-release-risks-full.log",
+      "bytes": 48664,
+      "sha256": "947c43a8305bf8df6db13639aef16e296c019055f5411a56b07becedd5042aef"
+    },
+    {
+      "artifact": "/tmp/agentextension-release-storage-atomic-final.log",
+      "bytes": 2023,
+      "sha256": "c47b7f92e542f0ecfb387547da0623792f60a47d9f27f0c32a3a55b9f2ef90c9"
+    },
+    {
+      "artifact": "/tmp/agentextension-release-signal.log",
+      "bytes": 1046,
+      "sha256": "987d81b0d8e418fcebab1a066421420c3e5a53b3a806bd1b3d41c66b7e2a8954"
+    },
+    {
+      "artifact": "/tmp/agentextension-release-python-docker.log",
+      "bytes": 426,
+      "sha256": "4b9e5dfde255193d0f9edec4fb5ad347de6912a5156cf2c265364d992b58e1f5"
+    },
+    {
+      "artifact": "/tmp/agentextension-release-risk-package-final.log",
+      "bytes": 3219,
+      "sha256": "f5050ac6b2b1e109c48421aedf399c975cabc1b90d22bc7d61cf740575c62bdf"
+    },
+    {
+      "artifact": "/tmp/agentextension-release-linux-frozen.log",
+      "bytes": 20770,
+      "sha256": "a5302bffe381ce1bf8c50c145ceb7b71b4bb181b80a1e9bfcb2ffc83ae0c3f3c"
+    },
+    {
+      "artifact": "/tmp/agentextension-release-linux-integrity.log",
+      "bytes": 129,
+      "sha256": "074f1b43cc07b983ecf803efd5f99256bff3fe06811a269a5b22eba71ea89803"
+    },
+    {
+      "artifact": "/tmp/agentextension-release-frozen-check.log",
+      "bytes": 2382,
+      "sha256": "5d5564c1c17a4dee8e39a920fd68c12a4c91268cde09f57c71f3d3b8d37746e7"
+    }
+  ],
+  "finalImplementationDigest": "e8f8a513f1a962c1f57986ae699b7cc84e912c11248543ee98f9ff0f68aa3fbc",
+  "finalEvaluationDigest": "1615c74942ef5d7e37c39911e43144c7e311d31413988e9e91da00ada5e57b97",
+  "cleanup": {
+    "dedicatedRuntimeStopped": true,
+    "remainingTestContainers": 0
+  },
+  "localLinks": {
+    "checked": 402,
+    "broken": 0
+  }
+}

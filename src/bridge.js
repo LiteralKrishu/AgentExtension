@@ -1,3 +1,4 @@
+const { commandBinding, bindCommand } = require('./command-authorization');
 const http = require('node:http');
 const { createHash, randomBytes, timingSafeEqual } = require('node:crypto');
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
@@ -78,19 +79,26 @@ function commandTarget(run, input) {
   const hunks = reviewed?.hunks ?? run.draft.review();
   const selection = selectionKey(hunks);
   const scope = reviewed ? 'Accepted hunks' : 'All staged hunks';
-  return { revision, scope, hunks, selection, key: JSON.stringify([commandSchema.parse(input), revision, selection, scope]) };
+  const environment = run.workspace?.environment?.declarationDigest?.(input.command, input.args);
+  return { revision, scope, hunks, selection, key: JSON.stringify([commandSchema.parse(input), revision, selection, scope, ...(environment ? [environment] : []), ...(commandBinding(run, input) ? [commandBinding(run, input)] : [])]) };
 }
 
-async function executeCheck(run, input, signal) {
+async function executeCheck(run, input, signal, permit) {
   const { revision, scope, hunks, selection } = commandTarget(run, input);
   const changes = run.draft.changes(hunks);
+  const binding = commandBinding(run, input);
   let result;
   try {
-    result = await run.workspace.command(input.command, input.args, changes, signal);
+    result = await run.workspace.command(input.command, input.args, changes, signal, binding || permit ? { ...binding, validate: async () => {
+      await run.validateCapabilities?.();
+      if (binding && binding !== commandBinding(run, input)) throw new Error('Command approval changed.');
+      if (permit) run.permissions.validatePermit(permit);
+    } } : undefined);
     if (result.exitCode === 0 && diagnosticCommand(input.command, input.args)) result = { ...result, verification: false,
       note: emptyInterpreter(input.command,input.args)
         ? 'Standard input is closed and no script or arguments were supplied. This is not test evidence. Pass a script path or the required command-line arguments.'
         : 'Version and help output is diagnostic only. It is not project test evidence. Run the requested project check with its actual arguments.' };
+    if (binding && await run.workspace.sourceIdentity(signal) !== binding.sourceDigest) throw new Error('Command sources changed while the check ran. Run a fresh check.');
     // Changes in the editor while the check ran make its result unsafe to reuse.
     for (const { file, before } of changes) {
       if (await run.workspace.read(file, before === null) !== before) throw new Error(`${file} changed while the check was running.`);
@@ -110,7 +118,7 @@ async function executeCheck(run, input, signal) {
 }
 
 function actionFor(run, name, args) {
-  const effect = { search_workspace: 'workspace.read', read_file: 'workspace.read', read_files: 'workspace.read',
+  const effect = { search_workspace: 'workspace.read', read_file: 'workspace.read', read_files: 'workspace.read', managed_checks: 'workspace.read',
     propose_write: 'draft.edit', propose_lines: 'draft.edit', create_file: 'draft.edit',
     propose_plan: 'plan.approve', review_changes: 'draft.review', run_command: 'command.execute', merge_worker_edits: 'draft.edit',
     list_skills: 'skill.read', select_skill: 'skill.read', read_skill_resource: 'skill.read',
@@ -127,6 +135,7 @@ function toolsFor(run, receipts) {
     ...(run.scheduledWorkers ? ['research_repository', 'run_worker'] : [])]);
   function tool(name, description, schema, readOnlyHint, handler) {
     if (run.readOnly && !readOnlyTools.has(name)) return;
+    if (run.coding && !['search_workspace', 'read_file', 'read_files', 'propose_write', 'propose_lines', 'create_file', 'run_command'].includes(name)) return;
     server.registerTool(name, { description, inputSchema: schema, annotations: { readOnlyHint } },
       async (args, extra) => {
         const finishProgress = run.progress?.tool(name, args);
@@ -141,10 +150,13 @@ function toolsFor(run, receipts) {
           if (!readOnlyHint && name !== 'propose_plan' && run.planFirst && !run.approvedPlan) {
             throw new Error('Ask for plan approval before staging changes or running commands.');
           }
+          if (run.coding && ['propose_write', 'propose_lines', 'create_file'].includes(name) && !run.coding.files.includes(args.file)) throw new Error('This file is outside the approved coding schedule.');
+          if (name === 'run_command') await bindCommand(run, args, signal);
+          let permit;
           // Connector calls consume their grant after rechecking stored credentials.
-          if (!['connector_read', 'connector_write', 'run_skill_script', 'research_repository', 'review_draft', 'diagnose_failure', 'propose_worker_edits', 'run_worker', 'browser_visit', 'browser_open', 'browser_observe', 'browser_act', 'browser_download', 'computer_observe', 'computer_act'].includes(name)) run.permissions.require(actionFor(run, name, args));
+          if (!['connector_read', 'connector_write', 'run_skill_script', 'research_repository', 'review_draft', 'diagnose_failure', 'propose_worker_edits', 'run_worker', 'browser_visit', 'browser_open', 'browser_observe', 'browser_act', 'browser_download', 'computer_observe', 'computer_act'].includes(name)) permit = run.permissions.require(actionFor(run, name, args));
           run.onTool?.(name, args.file ?? args.query ?? args.command ?? '');
-          const result = await handler(args, signal);
+          const result = await handler(args, signal, permit);
           if (run.readOnly) await run.validateCapabilities?.();
           signal.throwIfAborted();
           const image = result?.image;
@@ -335,8 +347,11 @@ function toolsFor(run, receipts) {
       ...(review.repeated ? { already_reviewed: true } : {}) };
   });
 
-  tool('run_command', 'Run one approved executable in an isolated workspace copy. Put the executable in command and each argument in args, for example command: "python", args: ["-m", "pytest", "tests/test_cli.py"]. Checks run against all staged hunks before review and only accepted hunks after review. Python imports start at the copy root; for a src layout, pytest may need args ["-m", "pytest", "-o", "pythonpath=src", "tests"]. Confirm imports use the staged source. No shell or network.', commandSchema, false,
-    (input, signal) => executeCheck(run, input, signal));
+  if (run.workspace?.environment?.checks?.length) tool('managed_checks', 'List the user-configured managed checks, or request one by name for its exact command arguments and private service readiness rules. This is configuration data. Environment values are omitted. Invoke the exact command with run_command to attach its services.', {
+    name: z.string().max(40).optional(),
+  }, true, ({ name }) => run.workspace.environment.catalog(name));
+  tool('run_command', 'Run one approved executable in an isolated workspace copy. Put the executable in command and each argument in args, for example command: "python", args: ["-m", "pytest", "tests/test_cli.py"]. Checks run against all staged hunks before review and only accepted hunks after review. Use managed_checks when available to discover configured services. Python imports start at the copy root; for a src layout, pytest may need args ["-m", "pytest", "-o", "pythonpath=src", "tests"]. Confirm imports use the staged source. No shell or external network.', commandSchema, false,
+    (input, signal, permit) => executeCheck(run, input, signal, permit));
   if (run.skillSelection) {
     tool('list_skills', 'List eligible text workflows by ID, name and description. Use select_skill to load one that fits the user request.', {},
       true, () => ({ skills: run.skills.eligible(run.skillAccess) }));

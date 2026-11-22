@@ -362,7 +362,7 @@ Support real builds without giving the existing check runner general host access
 ### Tasks
 
 - [x] Define a managed environment profile with image/toolchain identity, input manifest, quotas, credential scope, and a separate setup network policy. Images resolve to a repository digest; only setup has network.
-- [x] Implement the first Linux-container adapter. Support a documented Node.js fixture and Python fixture with pinned dependency inputs. Docker adapter; real-engine fixtures run with AGENTEXTENSION_TEST_DOCKER=1 and are not yet run.
+- [x] Implement the first Linux-container adapter. Support a documented Node.js fixture and Python fixture with pinned dependency inputs. Real Docker fixtures passed on this Mac, including an empty Node project.
 - [x] Make lifecycle scripts and package-registry destinations explicit. Reuse caches only when their environment and dependency digests match. Registries are named in each install command; destinations are not network-enforced.
 - [x] Show the effective environment before use. Keep the existing isolated runner available. Reject unsupported adapters clearly.
 
@@ -382,10 +382,10 @@ Verify projects that need a dev server, database fixture, or browser smoke test.
 
 ### Tasks
 
-- [ ] Add declared check commands, working directories, environment inputs, service dependencies, and service readiness checks to the managed profile.
-- [ ] Track process groups and leases. Bound service lifetime, output, ports, network destinations, and disk usage. Allow only declared service-to-service traffic.
-- [ ] Run one service-backed integration test and one browser smoke test inside the managed environment. Keep the interactive browser's existing origin and action rules separate.
-- [ ] Record startup, check, and cleanup outcomes independently. Revoke access and stop child processes on cancel or expiry.
+- [x] Add declared check commands, working directories, environment inputs, service dependencies, and service readiness checks to the managed profile.
+- [x] Track process groups and leases. Bound service lifetime, output, ports, network destinations, and disk usage. The first backend keeps all services inside one job's loopback network, with no host ports or external network. Processes inside that job share its loopback; there is no per-process port firewall.
+- [x] Run one service-backed integration test and one browser smoke test inside the managed environment. Keep the interactive browser's existing origin and action rules separate.
+- [x] Record startup, check, and cleanup outcomes independently. Revoke access and stop child processes on cancel or expiry. Host-confirmed container removal is separate from process-reported service status.
 
 ### Success Criteria
 
@@ -393,7 +393,7 @@ A fixture starts its service, reaches readiness, passes its check, and leaves no
 
 ### Files Likely Affected
 
-[Workspace](../../src/workspace.js), [bridge](../../src/bridge.js), [reports](../../src/reports.js), [surface access](../../src/surface-access.js); proposed src/execution-services.js and test/execution-services.test.js.
+[Workspace](../../src/workspace.js), [bridge](../../src/bridge.js), [reports](../../src/reports.js), [surface access](../../src/surface-access.js), [managed services](../../src/execution-services.js), [service tests](../../test/execution-services.test.js), and [usage guide](../managed-checks.md).
 
 ## Phase 14: Add a Budgeted Worker Queue
 
@@ -403,14 +403,16 @@ Improve useful parallel work before increasing the current worker limits.
 
 ### Tasks
 
-- [ ] Add queued, running, completed, stale, and cancelled states with one aggregate time, token, and tool budget. Keep current limits as defaults.
-- [ ] Let approved research roles use the scoped search and read interface. Bind access to the captured scope and current source versions. Add optional per-role model profiles.
-- [ ] Keep edit proposals in separate drafts. Rebase only non-overlapping proposals with verified source bases. Keep parent merge decisions and user hunk review.
+- [x] Add queued, running, completed, stale, and cancelled states with one aggregate time, token, and tool budget. Keep current limits as defaults.
+- [x] Let approved research roles use the scoped search and read interface. Bind access to the captured scope and current source versions. Add optional per-role model profiles.
+- [x] Keep edit proposals in separate drafts. Rebase only non-overlapping proposals with verified source bases. Keep parent merge decisions and user hunk review.
 - [ ] Compare one worker, current defaults, and a higher bounded profile on independent tasks. Record extra cost, conflicts, and elapsed time before changing defaults.
+
+Queue mechanics were compared at one, two, and three active workers using four independent scripted tasks. Three workers did not improve this fixture over two. This does not measure local model quality or throughput. The release setting remains at most two. A real model comparison is pending. See [worker evidence](evidence/worker-queue-2026-11-23.json).
 
 ### Success Criteria
 
-Independent research tasks can progress through the queue without overspending the parent budget. Cancellation stops queued and active work. A stale or overlapping proposal cannot merge. Higher concurrency ships only if the measured result justifies it. Nested delegation and inherited credentials remain unavailable by default.
+Independent research tasks can progress through the queue under the shared parent budget. Reported usage stops new and active work at its limit. A provider can report usage after an in-flight response has already spent tokens, so an exact token ceiling is not established. Cancellation stops queued and active work. A stale or overlapping proposal cannot merge. Higher concurrency ships only if the measured result justifies it. Nested delegation and inherited credentials remain unavailable by default.
 
 ### Files Likely Affected
 
@@ -424,10 +426,10 @@ Reduce repeated decisions for unchanged scope while keeping clear control over c
 
 ### Tasks
 
-- [ ] Measure approval counts and wait time by action. Reuse the current exact-command workspace allow rules before adding another grant mechanism.
-- [ ] Add optional expiring grants for a declared run and execution profile. Bind grants to executable, arguments, target, source/environment identity, and policy version as applicable.
-- [ ] Present the active scope, expiry, recent actions, and one revoke control. Keep planning questions separate from approval requests.
-- [ ] Keep draft apply explicit. Keep external writes separately scoped. Do not add automatic action screening until deterministic grants have measured value.
+- [x] Measure approval counts and wait time by action. Reuse the current exact-command workspace allow rules before adding another grant mechanism.
+- [x] Add optional expiring grants for a declared run and execution profile. Bind grants to executable, arguments, target, source/environment identity, and policy version as applicable.
+- [x] Present the active scope, expiry, recent actions, and one revoke control. Keep planning questions separate from approval requests.
+- [x] Keep draft apply explicit. Keep external writes separately scoped. Do not add automatic action screening until deterministic grants have measured value.
 
 ### Success Criteria
 
@@ -445,10 +447,12 @@ Extend background work from reports to reviewable coding results after the core 
 
 ### Tasks
 
-- [ ] Add a versioned coding-schedule type. Keep existing schedule migration read-only. Declare source base, permitted paths, commands, environment, budgets, and output policy.
-- [ ] Run coding schedules in a separate managed checkout. Store patch and verification evidence without applying to the user's active workspace.
-- [ ] Reuse occurrence claims, expiry, cancellation, and history. Add a review-inbox entry with the patch, base, check status, and unresolved questions.
-- [ ] Return questions as needs-input results. Resume through an interactive review with fresh protected-action decisions.
+- [x] Add a versioned coding-schedule type. Keep existing schedule migration read-only. Declare source base, permitted paths, commands, environment, budgets, and output policy.
+- [x] Run coding schedules in a separate managed checkout. Store patch and verification evidence without applying to the user's active workspace.
+- [x] Reuse occurrence claims, expiry, cancellation, and history. Add a review-inbox entry with the patch, base, check status, and unresolved questions.
+- [x] Return questions as needs-input results. Resume through an interactive review with fresh protected-action decisions.
+
+The runner uses a source-bound private copy and managed container checks. The standalone CLI can produce a draft while the editor is closed. The inbox imports a checkpoint with fresh review and permissions. Existing report stores stay read-only. See the [usage guide](../scheduled-coding.md) and [current evidence](EVIDENCE.md). The core release gate remains open.
 
 ### Success Criteria
 
@@ -466,10 +470,10 @@ Make a checked result easy to review and deliver without rebuilding source-contr
 
 ### Tasks
 
-- [ ] Export a base-bound patch, check summary, and reviewer notes. Import them through the existing stale-base and hunk-review path.
-- [ ] Add an optional branch handoff in a managed checkout. Separate local branch creation, commit, push, and pull-request actions.
-- [ ] Use an existing configured Git provider connector for remote actions. Present the exact repository, branch, patch, and destination before an authorized write.
-- [ ] Handle dirty checkouts, wrong remotes, rejected pushes, and lost responses. Reconcile remote state before retrying uncertain writes.
+- [x] Export a base-bound patch, check summary, and reviewer notes. Import them through the existing stale-base and hunk-review path.
+- [x] Add an optional branch handoff in a managed checkout. Separate local branch creation, commit, push, and pull-request actions.
+- [x] Use an existing configured Git provider connector for remote actions. Present the exact repository, branch, patch, and destination before an authorized write.
+- [x] Handle dirty checkouts, wrong remotes, rejected pushes, and lost responses. Reconcile remote state before retrying uncertain writes.
 
 ### Success Criteria
 
@@ -571,10 +575,10 @@ Improve reuse and setup without treating another product's configuration as trus
 
 ### Tasks
 
-- [ ] Build compatibility fixtures for supported SKILL.md metadata, references, named workflows, and MCP read/write tool schemas.
-- [ ] Add an import preview for supported portable inputs. Report unsupported model settings, hooks, or agent roles instead of silently dropping them.
-- [ ] Preserve publisher/version/content digests, explicit-only skill settings, script isolation, connector account scope, and fresh approval after changes.
-- [ ] Document supported subsets and migration examples. Keep a folder/package distribution path; do not make a public marketplace a prerequisite.
+- [x] Build compatibility fixtures for supported SKILL.md metadata, references, named workflows, and MCP read/write tool schemas.
+- [x] Add an import preview for supported portable inputs. Report unsupported model settings, hooks, or agent roles instead of silently dropping them.
+- [x] Preserve publisher/version/content digests, explicit-only skill settings, script isolation, connector account scope, and fresh approval after changes.
+- [x] Document supported subsets and migration examples. Keep a folder/package distribution path; do not make a public marketplace a prerequisite.
 
 ### Success Criteria
 
@@ -584,6 +588,8 @@ A supported portable skill works with the same content and declared limits. Unsu
 
 [Skills](../../src/skills.js), [plugins](../../src/plugins.js), [packages](../../src/plugin-packages.js), [connectors](../../src/connectors.js), [skill tests](../../test/skills.test.js), [package tests](../../test/plugin-packages.test.js), [README](../../README.md).
 
+The [compatibility guide](../interoperability.md) defines the supported import subset. Foreign model, hook, agent-role, and tool-permission settings are shown as unsupported. Four new portable import cases cover preview, content pins, scripts, and invalid inputs. Existing plugin workflow and MCP cases remain part of the regression.
+
 ## Phase 23: Verify Packaged Platforms and Runtime Versions
 
 ### Objective and Rationale
@@ -592,7 +598,7 @@ Make installation and support claims match tested packages, not source-only chec
 
 ### Tasks
 
-- [ ] Publish a capability matrix for macOS arm64, macOS x64, Linux, Windows native, and WSL. Mark unverified or unsupported combinations explicitly.
+- [x] Publish a capability matrix for macOS arm64, macOS x64, Linux, Windows native, and WSL. Mark unverified or unsupported combinations explicitly.
 - [ ] Test extracted platform packages with bundled runtime and optional search binaries. Verify first connection, credential restore, agent run, check, review, apply, undo, cancel, and restart.
 - [ ] Add a server/SDK compatibility test matrix for approval pauses, streaming, questions, compaction, workers, and recovery. Keep current pins until a candidate passes.
 - [ ] Reconcile package, README, features, remaining-work, and release versions. Test the current browser/connector flows and macOS helper on their supported platform. Record dependency licenses and package provenance.
@@ -605,6 +611,8 @@ Every claimed platform and architecture has an installer result and a capability
 
 [Packaging](../../scripts/package-vsix.cjs), [managed runtime](../../src/managed-forge.js), [server package](../../trueforge/server/package.json), [manifest](../../package.json), [CI](../../.github/workflows/check.yml), [README](../../README.md), [features](../features.md), [releases](../releases/v0.7.1.md); new platform acceptance records.
 
+The [platform and runtime matrix](PLATFORM-MATRIX.md) records the current Mac fixture and unverified platforms. The final Mac package passed 27 automated cases. A Linux arm64 container package passed its connection fixture. Current package acceptance does not close the platform phase.
+
 ## Phase 24: Publish an Independent Comparison and Release Evidence
 
 ### Objective and Rationale
@@ -616,7 +624,7 @@ Show which gaps closed and which remain, using the same task contract across pro
 - [ ] Run the frozen task set on the selected AgentExtension release, Cursor, and Codex versions where access is available. Use clean repositories and comparable interaction budgets.
 - [ ] Match models and settings when products permit it. Otherwise publish separate product comparisons and same-model harness comparisons. Record restrictions and missing data.
 - [ ] Report complete passes, first-attempt passes, user interventions, approval wait, active time, tokens/cost availability, failure classes, and task-by-task outcomes. Publish all attempts and task-set limits.
-- [ ] Update release notes, feature support, open verification, and rollback guidance. Remove a gap from the inventory only after its acceptance evidence is linked.
+- [x] Update release notes, feature support, open verification, and rollback guidance. Remove a gap from the inventory only after its acceptance evidence is linked.
 
 ### Success Criteria
 
@@ -625,6 +633,8 @@ Every closed gap has a reproducible record. Missing competitor access is reporte
 ### Files Likely Affected
 
 [Live harness](../../test/model/run.cjs), [milestones](../milestones.md), [features](../features.md), [remaining work](../remaining-work.md), [README](../../README.md); proposed docs/evaluations/ and the selected release notes.
+
+The [comparison status](../evaluations/2026-11-23-status.md) fixes the task contract and lists missing results. No new real coding-model or competitor run was performed. The [unreleased notes](../releases/capability-upgrade-unreleased.md) record scope and rollback.
 
 ## Release Gates and Stop Conditions
 

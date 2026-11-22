@@ -245,7 +245,7 @@ test('the extension creates, approves, runs on its timer, records and re-approve
   const context = {
     subscriptions: [], extensionPath: path.join(__dirname, '..'), extensionUri: { fsPath: path.join(__dirname, '..') },
     globalStorageUri: { fsPath: storage },
-    globalState: { get: (key, fallback) => stateValues.get(key) ?? fallback, update: async (key, value) => stateValues.set(key, value) },
+    globalState: { keys: () => [...stateValues.keys()], get: (key, fallback) => stateValues.get(key) ?? fallback, update: async (key, value) => stateValues.set(key, value) },
     secrets: { get: async key => secrets.get(key), store: async (key, value) => { secrets.set(key, value); secretListeners.forEach(listener => listener({ key })); },
       delete: async key => { secrets.delete(key); secretListeners.forEach(listener => listener({ key })); },
       onDidChange: listener => { secretListeners.push(listener); return { dispose() {} }; } },
@@ -255,6 +255,8 @@ test('the extension creates, approves, runs on its timer, records and re-approve
   t.after(() => { Module._load = load; for (const item of context.subscriptions) item.dispose?.(); });
   delete require.cache[require.resolve('../src/extension.js')];
   delete require.cache[require.resolve('../src/schedule-controller.js')];
+  delete require.cache[require.resolve('../src/coding-controller.js')];
+  delete require.cache[require.resolve('../src/handoff-controller.js')];
   const { activate } = require('../src/extension.js');
   const { secretKey } = require('../src/connectors');
   activate(context);

@@ -308,7 +308,10 @@ window.addEventListener('message', ({ data }) => {
   byId('permissions').hidden = !state.permissions;
   byId('permission-scope').textContent = state.permissions
     ? `${state.permissions.closed ? 'Access closed' : state.permissions.scopes.join(', ')} · ${state.permissions.workspace}` : '';
-  byId('permission-list').replaceChildren(...(state.permissions?.events ?? []).slice(-30).reverse()
+  const grants = (state.permissions?.runGrants ?? []).map(grant => element('li', `${grant.label} · scope ${grant.scope.slice(0, 8)} · expires ${new Date(grant.expires).toLocaleTimeString()}`));
+  const approvals = Object.entries(state.permissions?.approvalMetrics ?? {}).map(([tool, metric]) =>
+    element('li', `${tool} · ${metric.prompts} prompts · ${(metric.waitMs / 1000).toFixed(1)}s waiting · ${metric.reused} reused · ${metric.policyAllowed} allowed by rules`));
+  byId('permission-list').replaceChildren(...grants, ...approvals, ...(state.permissions?.events ?? []).slice(-30).reverse()
     .map(event => element('li', `${event.decision} · ${event.tool} · ${event.reason}`)));
   byId('manifest').hidden = !state.manifest?.length;
   byId('manifest-retention').hidden = !state.manifest?.some(entry => entry.compactionTiming);

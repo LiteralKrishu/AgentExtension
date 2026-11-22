@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-23",
+  "implementationDigest": "b211cada32a14fd1baf71116abf4eabf8b40a812ca08463ad5ac5bc2a881a37e",
+  "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce",
+  "scope": "Phase 14 queue implementation, Phase 15 command approvals, and Phase 16 schema/store foundation; no new real coding-model qualification.",
+  "fullSuite": {
+    "tests": 435,
+    "passed": 418,
+    "failed": 0,
+    "skipped": 17,
+    "durationMs": 124637.090458,
+    "sourceBinding": "The run overlapped the final manual-check permit pass-through. That path passed a separate 27-case runtime run. This is regression evidence, not a frozen model qualification."
+  },
+  "sourceTypeLint": "passed on final source",
+  "realEngine": {
+    "tests": 9,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 16034.656458,
+    "editorTwoChecksOnePromptMs": 1656.300208
+  },
+  "runtimeFocused": {
+    "tests": 20,
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 5979.395167
+  },
+  "workerComparison": "worker-queue-2026-11-23.json",
+  "approvals": {
+    "fixedWorkflowChecks": 2,
+    "withoutRunGrantPrompts": 2,
+    "withRunGrantPrompts": 1,
+    "fixtureWaitMs": 25,
+    "maximumTtlMs": 300000,
+    "onlyManagedCommandChecks": true
+  },
+  "limitations": [
+    "Worker comparison uses scripted responses; real model quality and throughput are not established.",
+    "Token usage can arrive after an in-flight model response has spent tokens.",
+    "Real engine verification covers macOS arm64 and Linux arm64 containers only.",
+    "No native UI or physical second-device acceptance."
+  ],
+  "apiSpend": 0,
+  "pushed": false,
+  "package": {
+    "artifact": "/tmp/agentextension-workers-grants-final.vsix",
+    "bytes": 101970955,
+    "sha256": "ea1a2c3b0507581d99db0780881e14e9d3423efc8ba837001e23901295169608",
+    "tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 3697.889,
+    "scope": "Extracted VSIX saved-connection and bundled-runtime fixture on macOS arm64. No interactive editor or other-platform acceptance."
+  },
+  "currentImplementationDigest": "b211cada32a14fd1baf71116abf4eabf8b40a812ca08463ad5ac5bc2a881a37e",
+  "postSuiteVerification": {
+    "tests": 31,
+    "passed": 31,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 617.259417,
+    "scope": "Six coding-schedule foundation cases, grant acceptance and expiry-count regression, existing permission and policy cases."
+  },
+  "phase16": {
+    "status": "foundation-only",
+    "schemaVersion": 1,
+    "type": "coding-draft",
+    "tests": 6,
+    "passed": 6,
+    "automaticDispatch": false,
+    "isolatedRunner": false,
+    "reviewInbox": false
+  },
+  "finalRuntimeFocused": {
+    "tests": 27,
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 4678.854791,
+    "scope": "Final manual accepted-hunk checks, grant boundaries, and existing editor/TrueForge flows."
+  },
+  "cleanup": {
+    "dedicatedRuntimeStopped": true,
+    "remainingTestContainers": 0
+  },
+  "localLinks": {
+    "checked": 240,
+    "broken": 0
+  }
+}

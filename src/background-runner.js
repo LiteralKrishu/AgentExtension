@@ -17,8 +17,8 @@ const { version } = require('../package.json');
 
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 
-async function workspaceStores(storage) {
-  const directory = path.join(storage, 'schedules');
+async function workspaceStores(storage, coding = false) {
+  const directory = path.join(storage, coding ? 'coding-schedules' : 'schedules');
   const entries = await fs.readdir(directory, { withFileTypes: true }).catch(error => {
     if (error.code === 'ENOENT') return [];
     throw error;
@@ -34,7 +34,7 @@ async function workspaceStores(storage) {
       records = JSON.parse(await fs.readFile(file, 'utf8'));
     } catch { continue; }
     const identity = Array.isArray(records) && records.find(record => typeof record?.workspace === 'string')?.workspace;
-    if (identity && path.isAbsolute(identity) && digest(identity).slice(0, 24) === entry.name) stores.push(new ScheduleStore(storage, identity));
+    if (identity && path.isAbsolute(identity) && digest(identity).slice(0, 24) === entry.name) stores.push(coding ? new (require('./coding-schedules').CodingScheduleStore)(storage, identity) : new ScheduleStore(storage, identity));
   }
   return stores;
 }
@@ -303,9 +303,10 @@ function backgroundScheduler({ storage, store, now, onChange, fetchFn, signal })
 
 async function runBackground({ storage, signal, once, onChange, onError = () => {}, intervalMs = 30_000 }) {
   do {
-    for (const store of await workspaceStores(storage)) {
+    for (const store of [...await workspaceStores(storage), ...await workspaceStores(storage, true)]) {
       if (signal.aborted) return;
-      const scheduler = backgroundScheduler({ storage, store, onChange, signal });
+      const scheduler = store.directory.includes(`${path.sep}coding-schedules${path.sep}`)
+        ? require('./coding-run').codingScheduler({ store, onChange, signal }) : backgroundScheduler({ storage, store, onChange, signal });
       const cancel = () => scheduler.stop();
       signal.addEventListener('abort', cancel, { once: true });
       try { await scheduler.tick(); }
@@ -318,8 +319,8 @@ async function runBackground({ storage, signal, once, onChange, onError = () => 
 
 async function controlBackground(storage, action, id, connectorId, token) {
   if (!UUID.test(id ?? '')) throw new Error('Use the schedule ID shown by the runner status command.');
-  for (const store of await workspaceStores(storage)) {
-    const schedule = (await store.list()).find(item => item.id === id && item.background);
+  for (const store of [...await workspaceStores(storage), ...await workspaceStores(storage, true)]) {
+    const schedule = (await store.list()).find(item => item.id === id && (item.background || item.type === 'coding-draft'));
     if (!schedule) continue;
     const credentials = new BackgroundCredentials(store, schedule);
     if (action === 'token') {

@@ -1,17 +1,39 @@
 #!/usr/bin/env bash
-# Phase 10 local trials with the largest context each installed model can load. Local models only, $0 spend.
-# Usage: bash scripts/phase10-local-trials.sh            (smoke all models, then the full corpus on the best one)
+# Phase 10 local trials with bounded context and one prediction per model. Local models only, $0 spend.
+# Usage: bash scripts/phase10-local-trials.sh            (smoke all models; full corpus only after a complete smoke)
+#        FULL_CORPUS=1 bash scripts/phase10-local-trials.sh (also measure an unqualified profile)
+#        MAX_CONTEXT_LENGTH=65536 ...                    (explicit larger profile; Coder remains capped at 32768)
 #        SMOKE_ONLY=1 bash scripts/phase10-local-trials.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
 LMS="${LMS:-$(command -v lms || echo "$HOME/.lmstudio/bin/lms")}"
-FORGE=http://127.0.0.1:8790
+FORGE=${AGENTEXTENSION_TEST_FORGE_URL:-http://127.0.0.1:18790}
 LMURL=http://127.0.0.1:1234/v1
-STAMP=$(date +%Y%m%d-%H%M)
+STAMP="$(date +%Y%m%d-%H%M%S)-$$"
 export AGENTEXTENSION_TEST_FORGE_URL=$FORGE
 export AGENTEXTENSION_TEST_EDITOR_APP_ROOT="/Applications/Visual Studio Code.app/Contents/Resources/app"
 export AGENTEXTENSION_TEST_FLASK_ROOT="${AGENTEXTENSION_TEST_FLASK_ROOT:-/private/tmp/agentextension-upgrade-flask}"
+
+contextCap=${MAX_CONTEXT_LENGTH:-32768}
+case "$contextCap" in 32768|49152|65536) ;; *) echo "MAX_CONTEXT_LENGTH must be 32768, 49152, or 65536." >&2; exit 1 ;; esac
+ceiling() {
+  case "$1" in *coder-30b*) echo 32768 ;; *) echo "$contextCap" ;; esac
+}
+# A read-only diagnostic used before any server or model is touched.
+if [ "${1:-}" = --print-context-caps ]; then
+  shift
+  for key in "$@"; do echo "$key=$(ceiling "$key")"; done
+  exit 0
+fi
+activeModelId="" testServerPid=""
+cleanup() {
+  if [ -n "$activeModelId" ]; then "$LMS" unload "$activeModelId" >/dev/null 2>&1 || true; fi
+  if [ -n "$testServerPid" ]; then kill "$testServerPid" 2>/dev/null || true; fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+mkdir -p test-results/phase10-runtime
 
 [ -x "$LMS" ] || { echo "LM Studio CLI (lms) not found. In LM Studio run: Developer > Install lms CLI."; exit 1; }
 curl -sf -m 5 "$LMURL/models" >/dev/null || "$LMS" server start >/dev/null 2>&1 || true
@@ -30,12 +52,14 @@ fi
 export PATH="$VENV/bin:$PATH"
 python -c "import flask, pytest, click, dotenv" || { echo "Could not prepare Python for the Flask checks."; exit 1; }
 
-# Start TrueForge on 8790 unless it is already running.
-# Same settings as the extension's managed server: IPv4 loopback, and local model URLs allowed past the SSRF guard.
-# Restart a server this script started earlier so it picks up these settings.
-pkill -f 'trueforge.*--port 8790' 2>/dev/null && sleep 2 || true
+# Use a separate test runtime. Reuse an explicitly supplied endpoint without restarting its owner.
+node -e 'require("./src/forge").localUrl(process.argv[1])' "$FORGE"
 if ! curl -s -m 3 -o /dev/null "$FORGE"; then
-  (cd trueforge/server && HOST=127.0.0.1 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost","[::1]"]' SENTRY_ENABLED=false nohup npx --no-install @truefoundry/trueforge --port 8790 > "$ROOT/test-results/trueforge-$STAMP.log" 2>&1 &)
+  testPort=$(node -e 'console.log(new URL(process.argv[1]).port || 18790)' "$FORGE")
+  HOST=127.0.0.1 PORT="$testPort" OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost","[::1]"]' \
+    SQLITE_PATH="$ROOT/test-results/phase10-runtime/trueforge.db" APP_DATA_DIR_SUFFIX=agentextension-trials SENTRY_ENABLED=false \
+    node trueforge/server/node_modules/@truefoundry/trueforge/dist/main.js > "$ROOT/test-results/trueforge-$STAMP.log" 2>&1 &
+  testServerPid=$!
   for _ in $(seq 60); do curl -s -m 2 -o /dev/null "$FORGE" && break; sleep 2; done
   curl -s -m 3 -o /dev/null "$FORGE" || { echo "TrueForge did not start; see test-results/trueforge-$STAMP.log"; exit 1; }
 fi
@@ -50,17 +74,13 @@ if [ -z "${MODELS:-}" ]; then
 fi
 echo "Models: $MODELS"
 
-ceiling() {  # largest context each model fits in 24 GiB; the Coder at 131k crashed this Mac
-  case "$1" in *gpt-oss*) echo 131072 ;; *coder-30b*) echo 32768 ;; *9b*) echo 65536 ;; *) echo 32768 ;; esac
-}
-
-load_max() {  # load at the largest context up to the model's ceiling; prints the context length used
+load_max() {  # Stay within the declared ceiling and preserve the model manager's resource guard.
   local key=$1 id=$2 max
   max=$(ceiling "$key")
-  "$LMS" unload --all >/dev/null 2>&1 || true
-  for ctx in 131072 98304 65536 49152 32768; do
+  if [ -n "$activeModelId" ]; then "$LMS" unload "$activeModelId" >/dev/null 2>&1 || true; fi
+  for ctx in 65536 49152 32768; do
     [ "$ctx" -le "$max" ] || continue
-    if "$LMS" load "$key" --identifier "$id" --context-length "$ctx" -y >/dev/null 2>&1; then echo "$ctx"; return 0; fi
+    if "$LMS" load "$key" --identifier "$id" --context-length "$ctx" --parallel 1 </dev/null >/dev/null 2>&1; then echo "$ctx"; return 0; fi
   done
   return 1
 }
@@ -77,8 +97,13 @@ register() {  # TrueForge provider for one loaded model with its real context le
 
 run_corpus() {  # provider, results dir, extra args
   local provider=$1 dir=$2; shift 2
+  local status=0
   AGENTEXTENSION_TEST_MODEL="$provider/main" AGENTEXTENSION_TEST_RESULTS_DIR="$dir" \
-    caffeinate -i node test/model/run.cjs --corpus "$@" || true
+    caffeinate -i node test/model/run.cjs --corpus "$@" || status=$?
+  if [ ! -f "$dir/model-latest.json" ]; then
+    echo "The runner ended without a batch report (exit $status). Stopping instead of selecting a stale result." >&2
+    return 1
+  fi
 }
 
 SUMMARY=test-results/phase10-max-context-$STAMP.txt
@@ -87,6 +112,7 @@ for key in $MODELS; do
   short=$(echo "$key" | tr -c 'a-zA-Z0-9\n' '-' | tr 'A-Z' 'a-z' | cut -c1-40 | sed 's/-*$//')
   id="agentextension-max-$short"; provider="local-max-$short"
   if ! ctx=$(load_max "$key" "$id"); then echo "$key: could not load at 32k or above" | tee -a "$SUMMARY"; continue; fi
+  activeModelId="$id"
   register "$provider" "$id" "$ctx"
   dir="test-results/phase10-max-$short-smoke-$STAMP"
   run_corpus "$provider" "$dir" --only edit-and-check,flask-task-b --repetitions 1
@@ -95,12 +121,16 @@ for key in $MODELS; do
   if [ "$score" -gt "$bestScore" ]; then best=$key bestScore=$score bestCtx=$ctx; fi
 done
 
-if [ -n "$best" ] && [ -z "${SMOKE_ONLY:-}" ]; then
+if [ -n "$best" ] && [ -z "${SMOKE_ONLY:-}" ] && { [ "$bestScore" -eq 2 ] || [ "${FULL_CORPUS:-0}" = 1 ]; }; then
   short=$(echo "$best" | tr -c 'a-zA-Z0-9\n' '-' | tr 'A-Z' 'a-z' | cut -c1-40 | sed 's/-*$//')
-  load_max "$best" "agentextension-max-$short" >/dev/null
+  ctx=$(load_max "$best" "agentextension-max-$short")
+  activeModelId="agentextension-max-$short"
+  register "local-max-$short" "$activeModelId" "$ctx"
   dir="test-results/phase10-max-$short-full-$STAMP"
-  echo "Full corpus (20 tasks x 3) on $best at context $bestCtx -> $dir" | tee -a "$SUMMARY"
+  echo "Full corpus (20 tasks x 3) on $best at context $ctx -> $dir" | tee -a "$SUMMARY"
   run_corpus "local-max-$short" "$dir"
 fi
-"$LMS" unload --all >/dev/null 2>&1 || true
+if [ "$bestScore" -lt 2 ] && [ "${FULL_CORPUS:-0}" != 1 ]; then
+  echo "No model completed both smoke tasks. Full qualification was not started; FULL_CORPUS=1 enables a diagnostic full batch."
+fi
 echo "Done. Summary: $SUMMARY"

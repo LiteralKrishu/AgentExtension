@@ -135,3 +135,25 @@ test('a repository worker reads named snapshot lines and is denied a tool outsid
     assert.ifError(model.state.error);
   } finally { await pool.close(); }
 });
+
+test('approved research search stays inside named source versions through the real tool bridge', options, async t => {
+  const { scriptedModel } = require('./helpers/host.cjs');
+  const model = await scriptedModel(t, baseUrl, ({ tools, round, call, say, results }) => {
+    assert.ok(tools.some(name => name.endsWith('search_workspace')));
+    assert.ok(!tools.some(name => name.endsWith('read_file')));
+    if (round === 0) return call('search_workspace', { query: 'line 55', limit: 2 });
+    const data = JSON.parse(results.at(-1).content);
+    assert.equal(data.matches[0].start, 55); assert.match(data.coverage, /captured prefix/);
+    return say(JSON.stringify({ summary: 'Found the named line.', findings: [{ file: 'main.js', line: 55, severity: 'info', message: 'Captured match.' }] }));
+  });
+  const signal = new AbortController().signal;
+  const permissions = new PermissionBroker({ workspace: '/fixture', signal });
+  for (const effect of ['workspace.read', 'worker.custom', 'worker.read']) permissions.allowScope(effect);
+  const run = { permissions, signal, workspace: { read: async () => Array.from({ length: 80 }, (_, i) => `// line ${i + 1}`).join('\n') } };
+  const role = { id: 'test/search', name: 'search', instructions: 'Inspect named files.', snapshot: 'repository', tools: ['search_workspace'] };
+  const pool = new WorkerPool({ run, settings: { serverUrl: baseUrl, model: model.model }, roles: [], customRoles: [role] });
+  try {
+    const result = await pool.execute(role.id, { question: 'Find line 55', files: ['main.js'] }).catch(error => { throw model.state.error ?? error; });
+    assert.equal(result.findings[0].line, 55); assert.equal(result.stale, false); assert.ifError(model.state.error);
+  } finally { await pool.close(); }
+});

@@ -67,6 +67,16 @@ class RunReport {
       const stale = check.revision !== revision || check.selection !== selection || digest(check.changes ?? []) !== digest(changes);
       lines.push(`| ${stale ? `stale (${outcome})` : outcome} | ${escape(check.command)} | ${escape(check.scope)} · revision ${check.revision} | [Checked patch](${name}) · [Full changed files](check-${index + 1}.json) · ${digest(check.changes ?? [])} |`);
     }
+    const managed = this.checks.filter(check => check.lifecycle);
+    if (managed.length) {
+      lines.push('', '## Managed check lifecycle', '', 'Service status is reported by the container runner. Container removal is confirmed separately by the host.', '');
+      for (const check of managed) {
+        const lifecycle = check.lifecycle;
+        const startup = (lifecycle.startup ?? []).map(service => `${escape(service.name)}: ${escape(service.status)}`).join(', ') || 'not completed';
+        lines.push(`- ${escape(check.managedCheck ?? check.command)} · startup ${startup} · check ${escape(lifecycle.check?.status)} · process cleanup ${escape(lifecycle.cleanup?.status)} · container removal ${escape(lifecycle.cleanup?.container ?? check.cleanup)}`);
+        if (check.environmentDigest) lines.push(`  Environment digest: ${escape(check.environmentDigest)}.`);
+      }
+    }
     lines.push('', '## Scoped browser and computer activity', '', 'Targets are hashed. Page text, typed values, upload contents, credentials, and command output are not copied into this log.', '');
     for (const event of this.events) lines.push(`- ${escape(event.time)} · ${escape(event.kind)} · ${escape(event.status)} · ${escape(event.target)}`);
     if (!this.events.length) lines.push('No browser or computer operation ran.');
@@ -97,6 +107,11 @@ class RunReport {
       if (usage.breakdown) lines.push(`- Last parent input by source: ${Object.entries(usage.breakdown).map(([key, value]) => `${escape(key)} ${Number(value).toLocaleString('en-US')}`).join(' · ')}`);
       lines.push(...compactionLines(usage.compactions, compactionSources));
       if (usage.reached) lines.push(`- Limit reached: ${escape(usage.reached)}`);
+    }
+    const approvalMetrics = Object.entries(permissions?.approvalMetrics ?? {});
+    if (approvalMetrics.length) {
+      lines.push('', '## Approval use', '', '| Action | Prompts | Wait (ms) | Reused run grant | Allowed by rule |', '| --- | --- | --- | --- | --- |');
+      for (const [tool, metric] of approvalMetrics) lines.push(`| ${escape(tool)} | ${metric.prompts} | ${metric.waitMs} | ${metric.reused} | ${metric.policyAllowed} |`);
     }
     if (policy) lines.push('', `Permission policy: ${escape(policy.slice(0, 16))}.`);
     lines.push('', `Permission log: ${permissions?.events?.length ?? 0} recent decisions. Access is closed at run end.`, '',

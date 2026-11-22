@@ -308,6 +308,10 @@ function activate(context) {
       panel.update({ configuringModel: false });
     }
   }
+  const coding = require('./coding-controller').createCodingController({ storage: context.globalStorageUri.fsPath, chooseFolder, makeWorkspace, runSettings, policyFor, tell,
+    busy: () => Boolean(active || ready || starting || applying || schedules.runningName), resume: () => resumeRun() });
+  const handoff = require('./handoff-controller').createHandoffController({ context, chooseFolder, makeWorkspace, policyFor, connectorAccounts, tell,
+    busy: () => Boolean(active || starting || applying || schedules.runningName), readyDraft: () => ready, resume: () => resumeRun() });
   const commands = {
     open: () => panel.show(),
     configureModel: async () => { await panel.show(); await modelSetup(); },
@@ -320,6 +324,8 @@ function activate(context) {
     fixDiagnostic: input => fixDiagnostic(input),
     reviewGit: () => exclusive(reviewGit),
     scheduledReports: schedules.manage,
+    codingSchedules: coding.manage,
+    handoff: handoff.manage,
     permissionRules: () => managePolicy(),
     rebuildIndex: async () => {
       if (active || ready) return tell('Finish or discard the current run before clearing its index.');
@@ -373,8 +379,11 @@ function activate(context) {
         checkController?.abort();
         void refreshPolicy();
       }
-      if (['model', 'fallbackModel', 'serverUrl', 'compaction', 'turnTimeoutSeconds', 'workerTimeoutSeconds', 'readConnectors',
+      if (['model', 'fallbackModel', 'serverUrl', 'compaction', 'turnTimeoutSeconds', 'workerTimeoutSeconds', 'workerConcurrency', 'workerRoleModels', 'readConnectors',
         'skillRoots', 'pluginRoots', 'userInstructions', 'permissionRules'].some(key => event.affectsConfiguration(`agentextension.${key}`))) refreshSchedules();
+      if (['model', 'serverUrl', 'compaction', 'turnTimeoutSeconds', 'executionEnvironment', 'container.checks'].some(key => event.affectsConfiguration(`agentextension.${key}`))) {
+        void coding.refresh().catch(error => audit.error(`Coding schedules: ${error.message}`));
+      }
       if (event.affectsConfiguration('agentextension.scheduledReports')) {
         if (!vscode.workspace.getConfiguration('agentextension').get('scheduledReports', true)) schedules.cancel('Scheduled reports turned off');
         refreshSchedules();
@@ -510,7 +519,8 @@ function activate(context) {
         .map(uri => path.relative(folder.uri.fsPath, uri.fsPath).split(path.sep).join('/')));
     const config = vscode.workspace.getConfiguration('agentextension', folder.uri);
     if (config.get('executionEnvironment', 'isolated') === 'container') {
-      workspace.environment = new ContainerEnvironment({ allowScripts: config.get('container.allowLifecycleScripts', false) === true });
+      workspace.environment = new ContainerEnvironment({ allowScripts: config.get('container.allowLifecycleScripts', false) === true,
+        checks: config.get('container.checks', []) });
     }
     return workspace;
   }
@@ -989,6 +999,8 @@ function activate(context) {
       { label: 'Review working-tree changes', run: () => exclusive(reviewGit) },
       { label: 'Notes', description: panel.state.memorySummary, run: memory },
       { label: 'Scheduled reports', description: panel.state.scheduleSummary, run: schedules.manage },
+      { label: 'Scheduled coding drafts', description: 'Approvals and review inbox', run: coding.manage },
+      { label: 'Draft handoff', description: 'Export, import, or prepare a separate Git branch', run: handoff.manage },
       { label: 'Open saved run report', run: openReport },
       { label: 'Export audit log', run: exportAudit },
       { label: 'Export plugin package', run: exportPlugin },
@@ -1025,8 +1037,8 @@ function activate(context) {
     if (importingPlugin) return tell('A plugin import is already in progress.');
     importingPlugin = true;
     try {
-      const [source] = await vscode.window.showOpenDialog({ title: 'Import AgentExtension plugin package',
-        canSelectMany: false, canSelectFiles: true, canSelectFolders: false, filters: { 'Plugin package': ['json'] } }) ?? [];
+      const [source] = await vscode.window.showOpenDialog({ title: 'Import plugin package or portable SKILL.md',
+        canSelectMany: false, canSelectFiles: true, canSelectFolders: false, filters: { 'Plugin package or skill': ['json', 'md'] } }) ?? [];
       if (!source) return;
       if (source.scheme !== 'file') return tell('Choose a plugin package on the local file system.');
       const plugin = await pluginPackages.import(source.fsPath, connectorConfigs(), async candidate => {
@@ -1037,7 +1049,7 @@ function activate(context) {
           if (busy()) throw new Error('Finish or discard the run before importing a plugin.');
         };
         await check();
-        const detail = `${pluginIdentity(candidate)}\nReview the plugin version before you enable it in a workspace.`;
+        const detail = `${pluginIdentity(candidate)}\n${candidate.importWarnings.join('\n')}\nReview the plugin version before you enable it in a workspace.`;
         if (await vscode.window.showWarningMessage(`Import ${candidate.id} ${candidate.version}?`, { modal: true, detail }, 'Import plugin') !== 'Import plugin') return false;
         await check();
         return true;
@@ -1194,15 +1206,6 @@ function activate(context) {
     let policy;
     try { policy = await policyFor(workspace.root, signal); }
     catch (error) { starting = false; return tell(`${error.message} No run started.`); }
-    if (followUp) {
-      let claimed = false;
-      try {
-        if (!vscode.workspace.isTrusted || workspace.root !== followUp.workspace) return tell('The workspace changed. Select the question again.');
-        if (!runSettings().model) return tell('Connect a model before starting a follow-up.');
-        claimed = await followUp.claim();
-        if (!claimed) return tell('This question has already been handled.');
-      } finally { if (!claimed) starting = false; }
-    }
     const permissions = new PermissionBroker({ workspace: workspace.root, signal, policy, loadPolicy: () => policyFor(workspace.root, signal),
       onChange: permissions => panel.update({ permissions }), audit: event => auditDecision(event, workspace.root) });
     // Starting a run authorizes reads and in-memory proposals in this workspace.
@@ -1267,12 +1270,28 @@ function activate(context) {
       },
     };
     const checkpoints = new CheckpointStore(context.globalStorageUri.fsPath, workspace.root);
+    run.checkpoints = checkpoints;
     run.claimSessionTurn = (sessionId, turnId) => checkpoints.claimSessionTurn(sessionId, turnId);
     // Saves the request, plan and draft so an interrupted run can resume. No grants are saved.
     run.checkpoint = (phase = 'running') => checkpoints.save(snapshotRun(run, {
       request, planFirst, phase, text: panel.state.text || (run.projectContinuation ? resume?.summary : ''),
-    })).catch(error => audit.error(`Checkpoint save failed: ${error.message}`));
+    })).catch(error => {
+      run.revocationReason = error.message;
+      controller.abort(error);
+      audit.error(`Checkpoint save failed: ${error.message}`);
+    });
     run.resetDraft();
+    try {
+      await checkpoints.save(snapshotRun(run, { request, planFirst, phase: 'running', text: resume?.summary ?? '' }), { expected: resume });
+      if (followUp) {
+        if (!vscode.workspace.isTrusted || workspace.root !== followUp.workspace) throw new Error('The workspace changed. Select the question again.');
+        if (!await followUp.claim()) throw new Error('This question has already been handled.');
+      }
+    } catch (error) {
+      await checkpoints.clear().catch(cleanup => audit.error(`Checkpoint cleanup failed: ${cleanup.message}`));
+      starting = false; controller.abort(error); retrieval.close(); permissions.revokeAll('Run did not start');
+      return tell(`${error.message} No run started.`);
+    }
     panel.update({ runActive: true, checkpoint: null, checkpointConflicts: false });
     // Refresh elapsed time and cancel the run at 125% of its time limit.
     const usageTimer = setInterval(() => {
@@ -1369,6 +1388,7 @@ function activate(context) {
       }
       run.validateCapabilities = async () => {
         try {
+          await checkpoints.assertOwned();
           if (!vscode.workspace.isTrusted || scriptNode() !== run.scriptNode) throw new Error('Workspace trust or script runtime settings changed.');
           await permissions.refreshPolicy();
           await enabledRegistry.verify(pins, selectedConnectors);
@@ -1413,6 +1433,8 @@ function activate(context) {
       if (customRoles.some(role => role.tools.length)) permissions.allowScope('worker.read');
       const workerSeconds = Math.min(300, Math.max(30, Number(config.get('workerTimeoutSeconds', 60)) || 60));
       run.workers = new WorkerPool({ run, roles: allowedRoles, customRoles, timeoutMs: workerSeconds * 1000,
+        concurrency: Math.min(2, Math.max(1, Number(config.get('workerConcurrency', 2)) || 2)),
+        roleModels: config.get('workerRoleModels', {}),
         settings: { ...settings, timeoutSeconds: workerSeconds },
         onChange: workers => panel.update({ workers }) });
       const ask = async ({ title, detail }, accessSignal) => {
@@ -1493,18 +1515,22 @@ function activate(context) {
           if (selection) void panel.preview(run.draft, [hunks[0]], `Hunk at line ${hunks[0].line}`).catch(() => {});
           return new Promise(resolve => { run.reviewReply = resolve; });
         },
-        command: ({ command, args }, { revision, scope, rule, unreviewed = 0 }) => new Promise(resolve => {
+        containerSetup: image => vscode.window.showWarningMessage('Download this check environment?', { modal: true,
+          detail: `${image}\nDocker will download this image. The command still needs a separate approval.` }, 'Download image').then(answer => !signal.aborted && answer === 'Download image'),
+        command: ({ command, args }, { revision, scope, rule, reusable = false, unreviewed = 0 }) => new Promise(resolve => {
           const shown = [command, ...args.map(arg => JSON.stringify(arg))].join(' ');
           signal.addEventListener('abort', () => resolve(false), { once: true });
           // A rule that requires a prompt also prevents saving an allow rule for the same command.
           // Rule targets treat * as a wildcard, so a command with * in it cannot be saved as an exact rule.
           const exact = !commandSubject({ command, args }).includes('*');
           const buttons = rule || !exact ? ['Run command'] : ['Run command', 'Always allow in this workspace'];
+          if (reusable && !rule) buttons.push('Allow unchanged checks for 5 minutes');
           const detail = [
             unreviewed ? `This runs code from ${unreviewed} staged hunk${unreviewed === 1 ? '' : 's'} you have not reviewed yet.` : '',
-            run.workspace?.environment ? run.workspace.environment.describe()
+            run.workspace?.environment ? run.workspace.environment.describe(command, args)
               : 'The command cannot use the network or read your home folder or the real workspace.',
             rule ? `A ${rule.source} rule requires approval each time.` : '',
+            reusable ? 'The five-minute option applies only to this run, command, draft selection, source contents, and container image. Source or policy changes require a new decision. Use Revoke access to stop it.' : '',
             !rule && !exact ? 'Contains *, so it cannot be saved as an exact rule.' : '',
           ].filter(Boolean).join('\n');
           void vscode.window.showWarningMessage(`Run in an isolated workspace copy?\n${shown}\n${scope} · draft ${revision}`,
@@ -1514,7 +1540,8 @@ function activate(context) {
                 await addWorkspaceRule(workspace.root, { effect: 'command.execute', target: commandSubject({ command, args }), decision: 'allow',
                   note: 'Saved from a command approval' });
               }
-              resolve(answer === 'Run command' || answer === 'Always allow in this workspace');
+              resolve(answer === 'Allow unchanged checks for 5 minutes' ? { allow: true, reuseForMs: 300_000 }
+                : answer === 'Run command' || answer === 'Always allow in this workspace');
             });
         }),
         skillScript: ({ skill, script, runtime, sourceDigest, input }) => new Promise(resolve => {
@@ -1558,7 +1585,7 @@ function activate(context) {
     } catch (error) {
       // Keep a checkpoint when the run stopped for a reason other than the user's cancel and there is work to resume.
       // The runtime resets the draft after a failed attempt, so use the last saved checkpoint.
-      const saved = await checkpoints.load();
+      const saved = await checkpoints.load({ owned: true });
       const keep = !run.userCancelled && Boolean(saved?.files.length || saved?.approvedPlan || saved?.projectContinuation);
       if (keep) {
         const { version, workspace: _, savedAt, ...state } = saved;
@@ -1654,10 +1681,10 @@ function activate(context) {
   }
 
   async function discardCheckpoint() {
-    const { store } = await latestCheckpoint();
+    const { store, checkpoint } = await latestCheckpoint();
     if (!store) return;
     if (await vscode.window.showWarningMessage('Discard the interrupted run?', { modal: true, detail: 'Its saved plan and draft will be deleted. Workspace files are not changed.' }, 'Discard') !== 'Discard') return;
-    await store.clear();
+    if (!await store.clear(checkpoint)) return tell('The checkpoint changed during review. Open its current version before discarding it.');
     await refreshCheckpoint();
     tell('Interrupted run discarded.');
   }
@@ -2058,14 +2085,14 @@ function activate(context) {
     if (hookController) { hookController.abort(); return; }
     if (checkController) { checkController.abort(); return; }
     if (active) active.userCancelled = true;
-    else if (ready && !applying && !ready.run.projectHandoff) void new CheckpointStore(context.globalStorageUri.fsPath, ready.workspace.root).clear().then(() => refreshCheckpoint());
+    else if (ready && !applying && !ready.run.projectHandoff) void ready.run.checkpoints.clear().then(() => refreshCheckpoint());
     cancel();
   }
 
   function cancel() {
     hookController?.abort();
     checkController?.abort();
-    schedules.cancel('Cancelled by you');
+    schedules.cancel('Cancelled by you'); coding.cancel('Cancelled by you'); handoff.cancel('Cancelled by you');
     if (active) {
       active.controller.abort();
       active.planReply?.(false);
@@ -2116,7 +2143,7 @@ function activate(context) {
     } : ready.beforeWrite);
     lastApply = { workspace, changes, run: ready.run };
     if (!run.projectHandoff) {
-      await new CheckpointStore(context.globalStorageUri.fsPath, workspace.root).clear();
+      await run.checkpoints.clear();
       await recordCompletedSession(run, panel.state.request, run.planFirst);
     }
     try { await saveReport(ready.run, 'applied', true); } catch (error) { tell(`Applied changes. Report update failed: ${error.message}`); }
@@ -2162,9 +2189,9 @@ function activate(context) {
       await run.validateCapabilities?.();
       signal.throwIfAborted();
       if ((await policyFor(workspace.root, signal)).digest !== policy.digest) throw new Error('Permission rules changed. Approve the check again.');
-      permissions.require(actionFor(check, call.name, call.args));
+      const permit = permissions.require(actionFor(check, call.name, call.args));
       tell('Checking the accepted hunks…');
-      const result = await executeCheck(check, choice.input, signal);
+      const result = await executeCheck(check, choice.input, signal, permit);
       tell(result.exitCode === 0 ? 'The accepted changes passed the check.' : `The check failed with exit code ${result.exitCode}.`);
     } catch (error) {
       tell(signal.aborted ? 'Check cancelled. Accepted changes are still ready for review.' : error.message);
@@ -2231,7 +2258,7 @@ function activate(context) {
       run.manifest = new ContextManifest(workspace.root, manifest => panel.update({ manifest: [...manifest], manifestTotals: run.manifest.totals() }));
       run.validateCapabilities = () => permissions.refreshPolicy();
       const settings = await prepareRunSettings(runSettings(), signal, tell);
-      run.workers = new WorkerPool({ run, roles: ['diff-review'], settings: { ...settings, timeoutSeconds: settings.workerTimeoutSeconds },
+      run.workers = new WorkerPool({ run, roles: ['diff-review'], roleModels: vscode.workspace.getConfiguration('agentextension').get('workerRoleModels', {}), settings: { ...settings, timeoutSeconds: settings.workerTimeoutSeconds },
         onChange: workers => panel.update({ workers }) });
       const result = await run.workers.execute('diff-review', { question: 'Review the selected working-tree changes against Git HEAD. Report concrete problems and missing checks.', files });
       signal.throwIfAborted();
@@ -2282,6 +2309,7 @@ function activate(context) {
   }
 
   async function refreshPolicy() {
+    await coding.refresh().catch(error => audit.error(`Coding schedules: ${error.message}`));
     const run = active;
     const identity = run?.workspace?.root ?? (vscode.workspace.workspaceFolders?.[0] ? await fs.realpath(vscode.workspace.workspaceFolders[0].uri.fsPath).catch(() => undefined) : undefined);
     let summary;

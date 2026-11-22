@@ -1,4 +1,5 @@
 const fs = require('node:fs/promises');
+const { createReadStream } = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { execFile, spawn } = require('node:child_process');
@@ -16,6 +17,11 @@ const EXCLUDED = /(?:^|\/)(?:\.[^/]+|node_modules|vendor|dist|build|coverage|__p
 const LOCKFILE = /\.lock$/i;
 const SNAPSHOT_QUOTA = Object.freeze({ files: 100_000, bytes: 2_000_000_000 });
 const quotaError = message => Object.assign(new Error(message), { code: 'ESNAPSHOTQUOTA' });
+async function hashFile(file, signal) {
+  const hash = createHash('sha256');
+  for await (const chunk of createReadStream(file, { signal })) hash.update(chunk);
+  return hash.digest('hex');
+}
 const sha256 = data => createHash('sha256').update(data).digest('hex');
 const sameFile = (a, b) => a.size === b.size && a.mtimeMs === b.mtimeMs && a.ctimeMs === b.ctimeMs && a.ino === b.ino;
 const NON_SOURCE = /\.(?:svg|map|jsonl|csv|png|jpe?g|gif|webp|pdf|zip|tgz|woff2?|ico)$/i;
@@ -154,6 +160,30 @@ class Workspace {
     return files;
   }
 
+  // Bind a command approval to the same permitted files and open buffers used by snapshots.
+  async sourceIdentity(signal) {
+    const quota = this.quota ?? SNAPSHOT_QUOTA;
+    const paths = await this.paths(signal, { limit: quota.files + 1, lockfiles: true });
+    if (paths.length > quota.files) throw quotaError(`The command snapshot needs more than its ${quota.files}-file limit.`);
+    const sources = new Map(); let bytes = 0;
+    this.hashes ??= new Map();
+    for (const file of paths) {
+      signal.throwIfAborted();
+      let source;
+      try { source = await this.resolve(file, false, { lockfiles: true }); } catch { continue; }
+      const stat = await fs.stat(source); bytes += stat.size;
+      if (bytes > quota.bytes) throw quotaError(`The command snapshot exceeds its ${quota.bytes}-byte limit.`);
+      const open = this.openText(source);
+      const cached = this.hashes.get(source);
+      const hash = open !== undefined ? sha256(open) : cached && sameFile(cached.stat, stat) ? cached.hash : await hashFile(source, signal);
+      if (!sameFile(stat, await fs.stat(source))) throw new Error(`${file} changed during command authorization.`);
+      if (open === undefined) this.hashes.set(source, { stat, hash });
+      sources.set(file, hash);
+    }
+    signal.throwIfAborted();
+    return sha256(JSON.stringify([...sources].sort(([a], [b]) => a.localeCompare(b))));
+  }
+
   // Materializes every permitted file and lockfile into a private copy-on-write folder, overlays open editors, and
   // applies the draft. It fails with a quota reason rather than checking a partial tree. The caller removes the folder.
   async snapshot(changes, signal, { overlay = true } = {}) {
@@ -208,11 +238,15 @@ class Workspace {
     }
   }
 
-  async command(command, args, changes, signal) {
-    const { directory, inputs } = await this.snapshot(changes, signal);
+  async command(command, args, changes, signal, authorization = {}) {
+    const { directory, inputs, sources } = await this.snapshot(changes, signal);
     try {
+      const sourceDigest = sha256(JSON.stringify([...sources].sort(([a], [b]) => a.localeCompare(b))));
+      if (authorization.sourceDigest && sourceDigest !== authorization.sourceDigest) throw new Error('Command sources changed after approval. Approve a fresh check.');
+      await authorization.validate?.();
+      signal.throwIfAborted();
       // A configured container environment never falls back to the host runner.
-      const result = this.environment ? await this.environment.run(command, args, directory, signal)
+      const result = this.environment ? await this.environment.run(command, args, directory, signal, authorization)
         : await runIsolated(command, args, directory, signal, { hidden: [await fs.realpath(this.root)] });
       // Bind the result to its exact inputs and to the toolchain environment that ran it.
       const inputDigest = sha256(JSON.stringify([...inputs].sort(([a], [b]) => a.localeCompare(b))));
@@ -270,6 +304,7 @@ async function sandboxArguments(command, args, cwd, { hidden = [], platform = pr
     const profile = ['(version 1) (allow default) (deny network*) (deny file-write*)',
       `(deny mach-lookup) (allow mach-lookup ${DARWIN_SERVICES.map(name => `(global-name ${quote(name)})`).join(' ')})`,
       '(deny appleevent-send) (deny lsopen)',
+      '(deny signal) (allow signal (target same-sandbox))',
       ...folders.map(folder => `(deny file-read* (subpath ${quote(folder)}))`),
       ...readable.map(folder => `(allow file-read* (subpath ${quote(folder)}))`),
       // Path resolution needs the metadata, not the contents, of the folders above the copy and toolchains.

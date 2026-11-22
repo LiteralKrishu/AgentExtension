@@ -67,7 +67,11 @@ test('two concurrent workers are bounded and parent cancellation reaches both', 
   const first = f.pool.execute('repository-research', input);
   const second = f.pool.execute('repository-research', input);
   const results = Promise.allSettled([first, second]);
-  assert.throws(() => f.pool.execute('repository-research', input), /two concurrent/);
+  const third = f.pool.execute('repository-research', input);
+  const fourth = f.pool.execute('repository-research', input);
+  third.catch(() => {}); fourth.catch(() => {});
+  assert.equal(f.pool.reports.filter(row => row.state === 'queued').length, 2);
+  assert.throws(() => f.pool.execute('repository-research', input), /four calls/);
   await new Promise(resolve => setImmediate(resolve));
   f.controller.abort();
   assert.ok((await results).every(result => result.status === 'rejected'));
@@ -233,7 +237,6 @@ test('worker reads use a bounded snapshot, honor parent scope, and expire when t
   const f = roleFixture(async (_, options) => {
     read = options.read;
     if (read) {
-      f.disk.set('calc.js', 'changed after the snapshot\n');
       assert.match((await read({ file: 'calc.js', start_line: 1 })).text, /export const add/);
       await assert.rejects(read({ file: 'calc.test.js', start_line: 1 }), /explicitly named/);
       assert.equal((await read({ file: 'calc.js', start_line: 2, end_line: 2 })).end, 2);
@@ -267,6 +270,8 @@ test('plugin custom roles declare only repository read tools and matching capabi
   const withRead = { ...role, tools: ['read_file'] };
   await write({ roles: [withRead], capabilities: ['worker.custom', 'worker.read'] });
   assert.deepEqual((await loadPlugin(root)).roles[0].tools, ['read_file']);
+  await write({ roles: [{ ...withRead, tools: ['read_file', 'search_workspace'] }], capabilities: ['worker.custom', 'worker.read'] });
+  assert.deepEqual((await loadPlugin(root)).roles[0].tools, ['read_file', 'search_workspace']);
   for (const [manifest, message] of [[{ roles: [{ ...role, tools: ['run_command'] }] }, /read_file/],
     [{ roles: [withRead] }, /Capabilities must match/],
     [{ roles: [{ ...withRead, snapshot: 'diff' }], capabilities: ['worker.custom', 'worker.read'] }, /Only repository snapshots/],
@@ -328,4 +333,113 @@ test('the worker deadline follows the configured timeout and names it when it ex
     await assert.rejects(f.pool.execute('repository-research', input), /Worker timed out after 2 seconds\./);
     assert.equal(new WorkerPool({ run: f.run, settings: {}, roles: [], timeoutMs: 900_000 }).timeoutMs, 300_000);
   } finally { await f.pool.close(); }
+});
+
+test('queued workers start in order and select only the configured role model', async () => {
+  const release = []; const started = [];
+  const f = fixture(async (settings, task) => { started.push([task.question, settings.model]); await new Promise(resolve => release.push(resolve)); return JSON.stringify(report); },
+    { concurrency: 1, roleModels: { 'repository-research': 'local/research' } });
+  const tasks = [1, 2, 3, 4].map(n => f.pool.execute('repository-research', { ...input, question: `Task ${n}` }));
+  const done = Promise.all(tasks);
+  try {
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.pool.reports.filter(row => row.state === 'queued').length, 3);
+    for (let n = 0; n < 4; n++) { assert.equal(started.length, n + 1); release[n](); await new Promise(resolve => setImmediate(resolve)); }
+    assert.equal((await done).length, 4);
+    assert.deepEqual(started, [1, 2, 3, 4].map(n => [`Task ${n}`, 'local/research']));
+    assert.ok(f.pool.reports.every(row => row.state === 'completed'));
+  } finally { await f.pool.close(); }
+  assert.throws(() => fixture(async () => '', { roleModels: { research: 'https://secret@example.invalid' } }), /registered model/);
+});
+
+test('permission revocation prevents a waiting worker from starting a model session', async () => {
+  let release; let calls = 0;
+  const f = fixture(async () => { calls++; await new Promise(resolve => { release = resolve; }); return JSON.stringify(report); }, { concurrency: 1 });
+  const first = f.pool.execute('repository-research', input);
+  const second = f.pool.execute('repository-research', input);
+  const done = Promise.allSettled([first, second]);
+  await new Promise(resolve => setImmediate(resolve));
+  f.run.permissions.revokeAll('Test revoked'); release();
+  assert.ok((await done).every(result => result.status === 'rejected'));
+  assert.equal(calls, 1);
+  await f.pool.close();
+});
+
+test('aggregate parent token and tool limits cancel active and queued workers', async () => {
+  const { RunUsage } = require('../src/usage');
+  for (const limit of ['tokens', 'tools', 'time']) {
+    const hooks = [];
+    const f = fixture(async (_, task, signal, session, options) => {
+      hooks.push(options); return new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+    });
+    let now = 0;
+    f.run.usage = new RunUsage({ maxTokens: 10, maxToolCalls: 2, maxMinutes: 1 }, () => now);
+    const done = Promise.allSettled([1, 2, 3, 4].map(() => f.pool.execute('repository-research', input)));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(hooks.length, 2);
+    if (limit === 'tokens') { f.run.usage.model({ inputTokens: 6 }); hooks[0].onUsage({ outputTokens: 4 }); }
+    else if (limit === 'tools') { f.run.usage.tool('parent'); f.run.usage.tool('parent'); f.pool.enforceBudget(); }
+    else { now = 60_000; f.pool.enforceBudget(); }
+    assert.ok((await done).every(result => result.status === 'rejected'));
+    assert.ok(f.pool.reports.every(row => row.state === 'cancelled'));
+    assert.equal(hooks.length, 2, 'No queued model request starts after the shared limit');
+    assert.throws(() => f.pool.execute('repository-research', input), /budget reached/);
+    await f.pool.close();
+  }
+});
+
+test('scoped worker search shares read limits, rejects changed sources and marks advice stale', async () => {
+  const role = { id: 'review/search', name: 'search', instructions: 'Inspect named files.', snapshot: 'repository', tools: ['read_file', 'search_workspace'] };
+  let savedSearch;
+  const f = fixture(async (_, task, signal, session, options) => {
+    savedSearch = options.search;
+    const found = await options.search({ query: 'one' });
+    assert.equal(found.matches.length, 1); assert.match(found.coverage, /captured prefix/);
+    await assert.rejects(options.search({ query: 'x', file: 'outside.js' }), /explicitly named/);
+    f.disk.set('one.js', 'changed\n');
+    await assert.rejects(options.read({ file: 'one.js', start_line: 1 }), /source changed/);
+    await assert.rejects(options.search({ query: 'one' }), /limit reached/);
+    return JSON.stringify(report);
+  }, { customRoles: [role] });
+  for (const scope of ['worker.custom', 'worker.read', 'workspace.read']) f.run.permissions.allowScope(scope);
+  try {
+    const result = await f.pool.execute(role.id, input);
+    assert.equal(result.stale, true); assert.equal(f.pool.reports[0].state, 'stale');
+    await assert.rejects(savedSearch({ query: 'one' }), /access ended/);
+  } finally { await f.pool.close(); }
+});
+
+test('reported streaming usage is charged once per message and can grow before completion', () => {
+  const { workerUsageReporter } = require('../src/worker-session');
+  const { RunUsage } = require('../src/usage');
+  const usage = new RunUsage();
+  const charge = workerUsageReporter((delta, continuation) => usage.model(delta, 'worker', continuation));
+  charge({ id: 'a' });
+  charge({ id: 'a', usage: { inputTokens: 5, outputTokens: 1 } });
+  charge({ id: 'a', usage: { inputTokens: 5, outputTokens: 4, cacheReadTokens: 2 } });
+  charge({ id: 'a', usage: { inputTokens: 5, outputTokens: 4, cacheReadTokens: 2 } });
+  charge({ id: 'a', usage: { inputTokens: 3, outputTokens: 1 } });
+  charge({ id: 'b', usage: { inputTokens: 2, outputTokens: 3 } });
+  assert.equal(usage.total, 14); assert.equal(usage.modelCalls, 2); assert.equal(usage.tokens.cacheRead, 2);
+  assert.deepEqual(usage.actors.worker, { input: 7, output: 7, calls: 2 });
+});
+
+test('queued cancellation and expiry never start another model while a prior worker is still stopping', async () => {
+  let calls = 0;
+  const f = fixture(async (_, task, signal) => {
+    calls++;
+    await new Promise(resolve => signal.addEventListener('abort', () => setTimeout(resolve, 40), { once: true }));
+    signal.throwIfAborted();
+  }, { concurrency: 1, timeoutMs: 10 });
+  const first = f.pool.execute('repository-research', input);
+  const second = f.pool.execute('repository-research', input);
+  const third = f.pool.execute('repository-research', input);
+  const done = Promise.allSettled([first, second, third]);
+  const queued = f.pool.reports.at(-1);
+  f.pool.controllers.get(queued.id).abort(new Error('Queued cancellation'));
+  assert.ok((await done).every(result => result.status === 'rejected'));
+  assert.equal(calls, 1);
+  assert.match(f.pool.reports[1].error, /timed out/);
+  assert.match(f.pool.reports[2].error, /Queued cancellation/);
+  await f.pool.close();
 });

@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawn } = require('node:child_process');
 const { Workspace, runIsolated, sandboxArguments, readableToolchains } = require('../src/workspace');
 const { PolicyEngine, commandSubject } = require('../src/policy');
 const { PermissionBroker } = require('../src/permissions');
@@ -38,6 +38,7 @@ test('sandbox arguments hide home and the real workspace on both platforms', asy
   for (const folder of ['/Users', '/private/tmp', '/private/var/folders']) assert.ok(profile.includes(`(deny file-read* (subpath "${folder}"))`), folder);
   assert.match(profile, /\(deny mach-lookup\) \(allow mach-lookup \(global-name "com\.apple\.system\.opendirectoryd\.libinfo"\)/);
   assert.match(profile, /\(deny appleevent-send\) \(deny lsopen\)/);
+  assert.match(profile, /\(deny signal\) \(allow signal \(target same-sandbox\)\)/);
   const linux = await sandboxArguments('node', ['t.js'], '/tmp/copy', { hidden: ['/work/repo'], platform: 'linux', searchPath: '' });
   const args = linux.parameters.join(' ');
   assert.ok(args.includes(`--tmpfs ${home}`) && args.includes('--tmpfs /work/repo'));
@@ -129,4 +130,15 @@ test('browser write approvals show the body and keep the site CSP', () => {
   const csp = scopedCsp("script-src 'nonce-abc'");
   assert.ok(csp.startsWith("script-src 'nonce-abc', default-src 'self'"));
   assert.ok(scopedCsp(undefined).startsWith("default-src 'self'"));
+});
+
+test('macOS checks cannot signal an unrelated host process but can stop their own children', {skip:process.platform!=='darwin',timeout:15000},async t=>{
+ const copy=await temporary(t,'agentextension-signal-');
+ const decoy=spawn(process.execPath,['-e','process.on("SIGUSR2",()=>console.log("signalled"));console.log("ready");setInterval(()=>{},1000);'],{stdio:['ignore','pipe','pipe']});
+ t.after(()=>decoy.kill('SIGKILL'));let received='';decoy.stdout.on('data',data=>{received+=data;});
+ await new Promise((resolve,reject)=>{decoy.once('error',reject);decoy.stdout.once('data',resolve);});assert.match(received,/ready/);
+ const probe=`try{process.kill(${decoy.pid},'SIGUSR2');throw Error('host signal allowed');}catch(error){if(error.code!=='EPERM')throw error;}const{spawn}=require('node:child_process');const child=spawn(process.execPath,['-e','setInterval(()=>{},1000)']);child.on('spawn',()=>child.kill('SIGTERM'));child.on('close',()=>console.log('own child stopped'));`;
+ const result=await runIsolated(process.execPath,['-e',probe],copy,new AbortController().signal);
+ assert.equal(result.exitCode,0,result.output);assert.match(result.output,/own child stopped/);assert.doesNotMatch(received,/signalled/);
+ decoy.kill('SIGUSR2');await new Promise(resolve=>setTimeout(resolve,100));assert.match(received,/signalled/,'The decoy signal handler works outside the sandbox.');
 });

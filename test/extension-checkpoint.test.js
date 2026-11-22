@@ -148,3 +148,30 @@ test('a model failure keeps the checkpoint until the user discards it', live, as
   await host.send({ type: 'discard-checkpoint' });
   await host.waitFor(state => state.checkpoint === null && /discarded/.test(state.status), 10_000, 'discarded');
 });
+
+test('a second window cannot start over an active checkpoint, and late cancel cannot delete resumed work',live,async t=>{
+ const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'agentextension-checkpoint-windows-')));
+ const storage=await fs.mkdtemp(path.join(os.tmpdir(),'agentextension-checkpoint-shared-'));
+ t.after(()=>Promise.all([fs.rm(root,{recursive:true,force:true}),fs.rm(storage,{recursive:true,force:true})]));
+ await fs.writeFile(path.join(root,'a.txt'),'alpha\n');
+ const model=await scriptedModel(t,baseUrl,({round,all,call,say})=>{
+  if(all.includes('RESUMED RUN'))return round===0?call('review_changes',{}):say('Reviewed resumed work.');
+  return round===0?call('propose_write',{file:'a.txt',old_text:'alpha',new_text:'ALPHA'}):call('ask_user_question',{question:'Keep this casing?'});
+ });
+ const settings={serverUrl:baseUrl,model:model.model,fallbackModel:'',compaction:false,turnTimeoutSeconds:60,automaticSkills:false};
+ const first=await startHost(t,{root,storage,settings});await first.send({type:'run',prompt:'Uppercase alpha.'});
+ await first.waitFor(state=>state.phase==='question',10000,'first window question');
+ const second=await startHost(t,{root,storage,settings});await second.waitFor(state=>state.checkpoint,5000,'existing checkpoint');
+ const before=model.state.requests.length;await second.send({type:'run',prompt:'Replace that task.'});
+ await second.waitFor(state=>/checkpoint changed in another window/.test(state.status??''),5000,'new task refused');assert.equal(model.state.requests.length,before);
+ await second.send({type:'resume-run'});const review=await second.waitFor(state=>state.phase==='review',10000,'resumed review');
+ await first.send({type:'cancel'});await first.waitFor(state=>!state.runActive,10000,'old window stopped');
+ const {CheckpointStore}=require('../src/checkpoint');const saved=await new CheckpointStore(storage,root).load();
+ assert.equal(saved.runId,review.permissions.runId);assert.equal(saved.files[0].text,'ALPHA\n');
+ for(const hunk of review.hunks)await second.send({type:'decision',id:hunk.id,value:'accept'});await second.send({type:'continue'});
+ await second.waitFor(state=>state.phase==='ready'&&!state.runActive,10000,'new owner ready');
+ await second.send({type:'cancel'});await second.waitFor(state=>state.phase==='cancelled',5000,'discarded by owner');
+ assert.equal(await new CheckpointStore(storage,root).load(),undefined);assert.ifError(model.state.error);
+ const {AuditLog}=require('../src/audit');const records=await new AuditLog(storage,root).read();
+ assert.equal(AuditLog.verify(records).ok,true);assert.ok(new Set(records.map(record=>record.runId)).size>1);
+});

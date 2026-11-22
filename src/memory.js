@@ -142,10 +142,15 @@ class SuggestedNotes {
     this.storage = storage;
     this.workspace = workspace;
     this.key = `suggestions.v1.${digest(workspace)}`;
+    this.prefix = `${this.key}.entry.`;
   }
   list() {
     const items = this.storage.get(this.key, []);
-    return Array.isArray(items) ? items.filter(item => typeof item?.id === 'string' && typeof item.text === 'string').slice(0, 20).map(item => structuredClone(item)) : [];
+    const individual = this.storage.keys().filter(key => key.startsWith(this.prefix)).map(key => this.storage.get(key));
+    const merged = new Map((Array.isArray(items) ? items : []).map(item => [item?.id, item]));
+    for (const entry of individual) if (entry?.id) { if (entry.discarded) merged.delete(entry.id); else merged.set(entry.id, entry); }
+    return [...merged.values()].filter(item => typeof item?.id === 'string' && typeof item.text === 'string')
+      .slice(0, 20).map(item => structuredClone(item));
   }
   async add(input, { runId, session } = {}) {
     const parsed = suggestionSchema.parse(input);
@@ -155,10 +160,14 @@ class SuggestedNotes {
     if (items.some(item => item.text === parsed.text && item.scope === parsed.scope)) throw new Error('This note is already waiting for review.');
     const item = { id: randomUUID(), text: parsed.text, scope: parsed.scope, reason: parsed.reason, references, runId, session,
       suggestedAt: new Date().toISOString() };
-    await this.storage.update(this.key, [...items, item]);
+    await this.storage.update(this.prefix + item.id, item);
     return item;
   }
-  async discard(id) { await this.storage.update(this.key, this.list().filter(item => item.id !== id)); }
+  async discard(id) {
+    if (!/^[a-f0-9-]{36}$/.test(id)) throw new Error('Invalid suggestion ID.');
+    const legacy = this.storage.get(this.key, []).some(item => item?.id === id);
+    await this.storage.update(this.prefix + id, legacy ? { id, discarded: true } : undefined);
+  }
   async approve(id, text) {
     const item = this.list().find(entry => entry.id === id);
     if (!item) throw new Error('This suggestion no longer exists.');

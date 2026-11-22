@@ -10,7 +10,8 @@ const { setTimeout: sleep } = require('node:timers/promises');
 // A small VS Code host stub. It loads the real extension and drives it through registered commands, the webview
 // message channel, quick picks, input boxes and modal dialogs. Answers are scripted in order.
 async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, storage: shared, storedSecrets = [],
-  extensionPath = path.join(__dirname, '..', '..'), extensionEntry = path.join(extensionPath, 'src', 'extension.js') }) {
+  extensionPath = process.env.AGENTEXTENSION_TEST_PACKAGED_PATH ?? path.join(__dirname, '..', '..'),
+  extensionEntry = path.join(extensionPath, 'src', require('node:fs').existsSync(path.join(extensionPath, 'src', 'extension.bundle.cjs')) ? 'extension.bundle.cjs' : 'extension.js') }) {
   const answers = [];
   const listeners = { config: [], folders: [], trust: [] };
   const commands = new Map();
@@ -86,7 +87,7 @@ async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, 
       findFiles: async () => (await fs.readdir(root, { recursive: true, withFileTypes: true }))
         .filter(entry => entry.isFile()).map(entry => uri(path.join(entry.parentPath ?? entry.path, entry.name))),
       getWorkspaceFolder: () => undefined,
-      openTextDocument: async file => ({ getText: () => require('node:fs').readFileSync(file.fsPath ?? file, 'utf8'), isDirty: false }),
+      openTextDocument: async file => ({ getText: () => typeof file.content === 'string' ? file.content : require('node:fs').readFileSync(file.fsPath ?? file, 'utf8'), isDirty: false }),
       applyEdit: async () => true,
     },
   };
@@ -98,7 +99,7 @@ async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, 
   const context = {
     subscriptions: [], extensionPath, extensionUri: uri(extensionPath),
     globalStorageUri: { fsPath: storage },
-    globalState: { get: (key, fallback) => stateValues.get(key) ?? fallback, update: async (key, value) => stateValues.set(key, value), values: stateValues },
+    globalState: { keys: () => [...stateValues.keys()], get: (key, fallback) => stateValues.get(key) ?? fallback, update: async (key, value) => stateValues.set(key, value), values: stateValues },
     secrets: { get: async key => secrets.get(key), store: async (key, value) => { secrets.set(key, value); secretListeners.forEach(listener => listener({ key })); },
       delete: async key => { secrets.delete(key); secretListeners.forEach(listener => listener({ key })); },
       onDidChange: listener => { secretListeners.push(listener); return disposable; } },

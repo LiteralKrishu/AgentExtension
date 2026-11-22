@@ -268,60 +268,44 @@
       "postSmokeChange": "The final implementation extends short version-flag diagnostic classification. The final full suite covers this change; it was added after the last live model smoke."
     },
     "current": {
+      "evidence": "workers-grants-2026-11-23.json",
+      "implementationDigest": "b211cada32a14fd1baf71116abf4eabf8b40a812ca08463ad5ac5bc2a881a37e",
+      "evaluationDigest": "15da2ba8593de336835d317838ff9b580a7ec5727c368b19dcfa09bcf2f615ce",
+      "sourceTypeLint": "passed on final source",
       "fullSuite": {
-        "tests": 367,
-        "passed": 350,
-        "skipped": 17,
+        "tests": 435,
+        "passed": 418,
         "failed": 0,
-        "durationMs": 107885.4975,
-        "nativeSearchEnabled": true,
-        "flaskAcceptanceEnabled": true
-      },
-      "previousFullSuite": {
-        "tests": 364,
-        "passed": 347,
         "skipped": 17,
-        "failed": 0,
-        "durationMs": 105015.317708
+        "durationMs": 124637.090458,
+        "sourceBinding": "The run overlapped the final manual-check permit pass-through. That path passed a separate 27-case runtime run. This is regression evidence, not a frozen model qualification."
       },
-      "fullSuiteStatus": "Passed before the next frozen model smoke.",
-      "sourceTypeLint": "passed",
-      "focusedTests": {
-        "passed": 19,
+      "finalRuntimeFocused": {
+        "tests": 27,
+        "passed": 27,
+        "failed": 0,
         "skipped": 0,
-        "failed": 0
+        "durationMs": 4678.854791,
+        "scope": "Final manual accepted-hunk checks, grant boundaries, and existing editor/TrueForge flows."
       },
       "package": {
-        "artifact": "/tmp/agentextension-command-source-upgrade.vsix",
-        "bytes": 101925899,
-        "sha256": "79c82186525f9c02d1155d01db0b1610cfe2ffb6ff6a41681d17e28fba91d079",
-        "implementationDigest": "92361f0925d22f7616938e20ce9d87c68727a87649751afbb065700d1ec33289",
+        "artifact": "/tmp/agentextension-workers-grants-final.vsix",
+        "bytes": 101970955,
+        "sha256": "ea1a2c3b0507581d99db0780881e14e9d3423efc8ba837001e23901295169608",
+        "tests": 1,
         "passed": 1,
-        "skipped": 0,
         "failed": 0,
-        "durationMs": 3730.958625,
-        "scope": "Extracted package, bundled runtime, saved model credentials, connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform claim.",
-        "setupFailure": "The initial Python ZIP extraction did not preserve executable permissions. Repeated with unzip; the fixture passed. Original failed log retained."
-      },
-      "previousPackage": {
-        "artifact": "/tmp/agentextension-anchor-recovery-upgrade.vsix",
-        "bytes": 101914882,
-        "sha256": "15ae31e0ab4c668bf78f2cb4a10507147d9e1aaa5c5a946e510db5e784760e1b",
-        "passed": 1,
         "skipped": 0,
-        "failed": 0,
-        "durationMs": 3622.709042,
-        "scope": "Extracted package, bundled runtime, saved connection, model connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform acceptance."
+        "durationMs": 3697.889,
+        "scope": "Extracted VSIX saved-connection and bundled-runtime fixture on macOS arm64. No interactive editor or other-platform acceptance."
       },
-      "packageStatus": "Fresh package built and permission-preserving extracted-package fixture passed.",
-      "realModelTrialStatus": "Completed: small task passed in 64 seconds; Flask timed out in 721 seconds without checks or review. Coding model unloaded.",
-      "sourceDigests": {
-        "implementation": "92361f0925d22f7616938e20ce9d87c68727a87649751afbb065700d1ec33289",
-        "evaluator": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
+      "localLinks": {
+        "checked": 240,
+        "broken": 0
       },
-      "roadmapLocalLinks": {
-        "resolved": 223,
-        "missing": 0
+      "cleanup": {
+        "dedicatedRuntimeStopped": true,
+        "remainingTestContainers": 0
       }
     },
     "judgmentAuditFullSuite": {
@@ -605,6 +589,63 @@
       "realModelTrialStatus": "Completed source-hint smoke: small task complete; Flask timed out. Test model unloaded and dedicated server stopped.",
       "sourceDigests": {
         "implementation": "fe92e42d9ce83072ba64905366058ab0d282c0c125e0f6e9e901cb60fb11facb",
+        "evaluator": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
+      },
+      "roadmapLocalLinks": {
+        "resolved": 223,
+        "missing": 0
+      }
+    },
+    "beforeClaudeHandoff": {
+      "fullSuite": {
+        "tests": 367,
+        "passed": 350,
+        "skipped": 17,
+        "failed": 0,
+        "durationMs": 107885.4975,
+        "nativeSearchEnabled": true,
+        "flaskAcceptanceEnabled": true
+      },
+      "previousFullSuite": {
+        "tests": 364,
+        "passed": 347,
+        "skipped": 17,
+        "failed": 0,
+        "durationMs": 105015.317708
+      },
+      "fullSuiteStatus": "Passed before the next frozen model smoke.",
+      "sourceTypeLint": "passed",
+      "focusedTests": {
+        "passed": 19,
+        "skipped": 0,
+        "failed": 0
+      },
+      "package": {
+        "artifact": "/tmp/agentextension-command-source-upgrade.vsix",
+        "bytes": 101925899,
+        "sha256": "79c82186525f9c02d1155d01db0b1610cfe2ffb6ff6a41681d17e28fba91d079",
+        "implementationDigest": "92361f0925d22f7616938e20ce9d87c68727a87649751afbb065700d1ec33289",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0,
+        "durationMs": 3730.958625,
+        "scope": "Extracted package, bundled runtime, saved model credentials, connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform claim.",
+        "setupFailure": "The initial Python ZIP extraction did not preserve executable permissions. Repeated with unzip; the fixture passed. Original failed log retained."
+      },
+      "previousPackage": {
+        "artifact": "/tmp/agentextension-anchor-recovery-upgrade.vsix",
+        "bytes": 101914882,
+        "sha256": "15ae31e0ab4c668bf78f2cb4a10507147d9e1aaa5c5a946e510db5e784760e1b",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0,
+        "durationMs": 3622.709042,
+        "scope": "Extracted package, bundled runtime, saved connection, model connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform acceptance."
+      },
+      "packageStatus": "Fresh package built and permission-preserving extracted-package fixture passed.",
+      "realModelTrialStatus": "Completed: small task passed in 64 seconds; Flask timed out in 721 seconds without checks or review. Coding model unloaded.",
+      "sourceDigests": {
+        "implementation": "92361f0925d22f7616938e20ce9d87c68727a87649751afbb065700d1ec33289",
         "evaluator": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
       },
       "roadmapLocalLinks": {
@@ -3037,5 +3078,8 @@
     "sourceManifest": "test/retrieval/corpora/v2/source.json",
     "freezeRecord": "test/retrieval/corpora/v2/freeze.json",
     "historicalVersion1Unchanged": true
-  }
+  },
+  "currentHandoff": "handoff-2026-11-23.json",
+  "updatedDate": "2026-11-23",
+  "currentImplementationRecord": "release-risk-fixes-2026-11-23.json"
 }

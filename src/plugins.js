@@ -18,8 +18,8 @@ const roleCapability = { 'repository-research': 'worker.research', 'diff-review'
 // Repository workers may ask for more lines from explicitly named snapshot files.
 const customRole = z.strictObject({
   name: slug, description: z.string().trim().min(1).max(200), instructions: z.string().trim().min(1).max(2_000),
-  snapshot: z.enum(['repository', 'diff', 'check']), tools: z.array(z.literal('read_file')).max(1),
-}).refine(role => !role.tools.length || role.snapshot === 'repository', 'Only repository snapshots can expose read_file.');
+  snapshot: z.enum(['repository', 'diff', 'check']), tools: z.array(z.enum(['read_file', 'search_workspace'])).max(2).refine(tools => new Set(tools).size === tools.length, 'Duplicate worker tool.'),
+}).refine(role => !role.tools.length || role.snapshot === 'repository', 'Only repository snapshots can expose read_file or search_workspace.');
 const manifestSchema = z.strictObject({
   schemaVersion: z.literal(1), id: slug, publisher: z.string().trim().min(1).max(80),
   version: z.string().regex(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[a-zA-Z0-9.-]+)?$/).max(60),

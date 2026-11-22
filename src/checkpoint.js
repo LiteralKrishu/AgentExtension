@@ -3,10 +3,13 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { digest } = require('./permissions');
 const { splitHunks, applyHunks, MAX_TEXT, MAX_SELECTION_TEXT } = require('./draft');
+const { withStorageLock } = require('./storage-lock');
 
 const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 const VERSION = 2;
 const LEGACY_VERSION = 1;
+const checkpointId = value => value.checkpointId ?? digest(value);
+const ownershipError = () => Object.assign(new Error('The recovery checkpoint changed in another window. Resume its current version instead of overwriting it.'), { code: 'ECHECKPOINTOWNERSHIP' });
 
 function validInlineCheckpoint({ selection, files }) {
   if (selection === undefined) return true;
@@ -26,42 +29,67 @@ class CheckpointStore {
     this.directory = path.join(storage, 'checkpoints', digest(workspace).slice(0, 24));
     this.file = path.join(this.directory, 'checkpoint.json');
     this.queue = Promise.resolve();
+    this.owner = undefined;
   }
-  save(state, { exclusive = false } = {}) {
-    const next = this.queue.then(async () => {
-      await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
-      const value = { version: VERSION, workspace: this.workspace, savedAt: new Date(this.now()).toISOString(), ...state };
+  serial(operation) {
+    const next = this.queue.then(() => withStorageLock(this.directory, operation));
+    this.queue = next.catch(() => {});
+    return next;
+  }
+  async readStored() {
+    let text;
+    try { text = await fs.readFile(this.file, 'utf8'); } catch (error) { if (error.code === 'ENOENT') return undefined; throw error; }
+    try {
+      const value = JSON.parse(text);
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error();
+      return value;
+    } catch { throw Object.assign(new Error('The recovery checkpoint is invalid. Restore or back up that file before starting a new run.'), { code: 'ECHECKPOINTINVALID' }); }
+  }
+  save(state, { exclusive = false, expected } = {}) {
+    return this.serial(async check => {
+      const current = await this.readStored();
+      if (exclusive && current) throw new Error('A local checkpoint already exists. Finish or discard it before importing a continuation.');
+      const owner = expected?.checkpointId ?? this.owner;
+      if (current ? !owner || checkpointId(current) !== owner : owner) throw ownershipError();
+      const value = { ...state, version: VERSION, workspace: this.workspace, savedAt: new Date(this.now()).toISOString(), checkpointId: randomUUID() };
       const temporary = `${this.file}.${randomUUID()}.tmp`;
       try {
         await fs.writeFile(temporary, JSON.stringify(value), { mode: 0o600, flag: 'wx' });
-        if (exclusive) {
-          await fs.link(temporary, this.file).catch(error => {
-            if (error.code === 'EEXIST') throw new Error('A local checkpoint already exists. Finish or discard it before importing a continuation.');
-            throw error;
-          });
-        } else await fs.rename(temporary, this.file);
+        check();
+        if (current) await fs.rename(temporary, this.file);
+        else await fs.link(temporary, this.file).catch(error => { if (error.code === 'EEXIST') throw ownershipError(); throw error; });
+        this.owner = value.checkpointId;
       } finally { await fs.rm(temporary, { force: true }); }
       return value;
     });
-    this.queue = next.catch(() => {});
-    return next;
   }
-  async load() {
-    await this.queue;
-    let value;
-    try { value = JSON.parse(await fs.readFile(this.file, 'utf8')); } catch { return undefined; }
-    const supported = value?.version === VERSION || (value?.version === LEGACY_VERSION && value.selection === undefined);
-    if (!supported || value.workspace !== this.workspace || typeof value.request !== 'string' || !Array.isArray(value.files)
-      || !validInlineCheckpoint(value) || this.now() - Date.parse(value.savedAt) > MAX_AGE) {
-      await this.clear();
-      return undefined;
-    }
-    return value;
+  load({ owned = false } = {}) {
+    return this.serial(async check => {
+      let value;
+      try { value = await this.readStored(); } catch (error) { if (error.code === 'ECHECKPOINTINVALID') return undefined; throw error; }
+      if (!value) return undefined;
+      const supported = value?.version === VERSION || (value?.version === LEGACY_VERSION && value.selection === undefined);
+      if (!supported || value.workspace !== this.workspace || typeof value.request !== 'string' || !Array.isArray(value.files)
+        || !validInlineCheckpoint(value) || !Number.isFinite(Date.parse(value.savedAt))) return undefined;
+      if (this.now() - Date.parse(value.savedAt) > MAX_AGE) {
+        check(); await fs.rm(this.file, { force: true });
+        if (this.owner === checkpointId(value)) this.owner = undefined;
+        return undefined;
+      }
+      const result = { ...value, checkpointId: checkpointId(value) };
+      return owned && !this.owns(result) ? undefined : result;
+    });
   }
-  clear() {
-    const next = this.queue.then(() => fs.rm(this.file, { force: true }));
-    this.queue = next.catch(() => {});
-    return next;
+  owns(value) { return Boolean(this.owner && value?.checkpointId === this.owner); }
+  async assertOwned() { if (!await this.load({ owned: true })) throw ownershipError(); }
+  clear(expected) {
+    return this.serial(async check => {
+      const current = await this.readStored();
+      if (!current) return true;
+      if (checkpointId(current) !== (expected?.checkpointId ?? this.owner)) return false;
+      check(); await fs.rm(this.file, { force: true });
+      return true;
+    });
   }
 
   async claimSessionTurn(sessionId, turnId) {

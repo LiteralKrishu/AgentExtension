@@ -1,17 +1,25 @@
 # Agent Capability Upgrade Evidence
 
-Updated: 22 November 2026. Source baseline: 5c5fe67. This is a local implementation record. It does not establish parity with Cursor or Codex.
+Updated: 23 November 2026. Source baseline: 5c5fe67. This is a local implementation record. It does not establish parity with Cursor or Codex.
 
 ## Current decision
 
-The core components for Phases 1–9 are implemented. The optional semantic configuration was rejected after measurement. Phase 2's reopened retrieval-data work is complete: version 2 resolves the source findings and freezes fresh held-out queries. The core qualification gate remains open. The fresh held-out set is unmeasured, and no local model profile qualifies. Only one physical computer is available. Phases 18–20 cannot pass physical-device acceptance in this environment.
+The core components for Phases 1–9 are implemented. No local model profile qualifies. During the Claude handoff, balanced retrieval reached 85.00% overall, 87.50% held-out, and 100% exact success. The overall target remains unmet. Version 2 held-out queries are now exposed. The full coding batch stopped after six attempts; four completed. That partial batch cannot qualify. Only one physical computer is available. Phases 18–20 retain their physical-device dependency.
+
+The [23 November handoff record](evidence/handoff-2026-11-23.json) records the managed-execution milestone. Snapshots passed on this Mac. All eight real dependency and service acceptance cases passed with Docker Desktop 29.6.2, including Chromium, cancellation, and stale source. The full suite passed 391 tests, with 17 skipped and zero failures. The [worker and grant record](evidence/workers-grants-2026-11-23.json) adds the later 435-test run: 418 passed, 17 skipped, zero failures. Twenty-seven focused runtime cases verified the final manual-check boundary. That record covers only the Phase 16 foundation. The later [scheduled coding and handoff record](evidence/scheduled-handoff-2026-11-23.json) covers the completed runner, review inbox, Git handoff, portable skill subset, and three should-fix audit items. The final 462-test regression passed 444 tests with 18 skipped and zero failures. All 24 affected cases passed after policy reconciliation, followed by eight final Git guard cases. The final extracted Mac package passed all 27 selected contract and workflow cases, including the compiled coding runner and managed Git branch. The Linux arm64 container package passed its saved-connection fixture. Its exported ZIP passed integrity checks. Both extension bundles have the same SHA-256 hash. Those four must-fix findings are now resolved by the [release-risk fixes](RELEASE-RISK-FIXES.md), with the latest [machine-readable evidence](evidence/release-risk-fixes-2026-11-23.json). The [platform matrix](PLATFORM-MATRIX.md) and [comparison status](../evaluations/2026-11-23-status.md) retain the release limits. The sections below retain earlier results as history.
 
 The [source-free result summary](evidence/local-results.json) records the main measurements. Raw source-bearing reports remain under ignored test-results folders. The [progress tracker](PROGRESS.md) records each open phase.
+
+
+The latest [release-risk record](evidence/release-risk-fixes-2026-11-23.json) closes the four listed must-fix findings. The full regression passed 453 of 471 tests with 18 skipped and zero failures. Nineteen final storage cases cover the last preservation and creation guards. The final Mac installer passed 29 cases. Linux passed 31 storage/cache cases and one installer connection fixture. These checks do not qualify real coding models or physical-device collaboration.
 
 ## Validation
 
 | Check | Observed result |
 | --- | --- |
+| Scheduled coding, handoff, portable imports, and audit fixes | 462-test regression: 444 passed, 18 skipped, zero failures; affected suite: 24 passed; final Git guard: eight passed |
+| Final extracted Mac package contracts and workflow | 27 passed, zero skipped or failed; scripted local models and a disposable host |
+| Final Linux arm64 container package connection | One passed, zero skipped or failed; Node 22.23.5; no current Linux command or desktop acceptance |
 | Current command validation and Python source guidance | 367 tests: 350 passed, 17 skipped, zero failures; 19 focused tests passed |
 | Current command/source package and bundled runtime | One passed, zero skipped or failed; macOS arm64 host fixture |
 | Full suite after registration guidance and scan stress fix | 364 tests: 347 passed, 17 skipped, zero failures |

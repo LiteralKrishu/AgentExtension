@@ -1,5 +1,6 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { randomUUID } = require('node:crypto');
 const { digest } = require('./permissions');
 const { safePath } = require('./workspace');
 
@@ -61,18 +62,20 @@ class RepositoryIndex {
   async save(signal) {
     signal.throwIfAborted();
     await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
+    const write = async (file, value) => {
+      const temporary = `${file}.${randomUUID()}.tmp`;
+      try { await fs.writeFile(temporary, JSON.stringify(value), { mode: 0o600, flag: 'wx' }); await fs.rename(temporary, file); }
+      finally { await fs.rm(temporary, { force: true }); }
+    };
     for (const shard of this.dirty) {
       signal.throwIfAborted();
       const values = Object.fromEntries([...this.bodies].filter(([hash]) => hash.startsWith(shard)));
       const file = path.join(this.directory, shard + '.json');
-      const temporary = file + '.tmp';
-      await fs.writeFile(temporary, JSON.stringify(values), { mode: 0o600 });
-      await fs.rename(temporary, file);
+      await write(file, values);
     }
     const file = path.join(this.directory, 'inventory.json');
-    await fs.writeFile(file + '.tmp', JSON.stringify({ version: VERSION, root: this.workspace.root, branch: this.branch,
-      generation: this.generation, entries: [...this.entries.values()] }), { mode: 0o600 });
-    await fs.rename(file + '.tmp', file);
+    await write(file, { version: VERSION, root: this.workspace.root, branch: this.branch,
+      generation: this.generation, entries: [...this.entries.values()] });
     this.dirty.clear();
   }
   snapshot(signal) {

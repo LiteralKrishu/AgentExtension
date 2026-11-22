@@ -31,10 +31,28 @@ test('pinned Node.js fixture installs, runs offline, and reuses its environment'
   assert.equal(offline.exitCode, 3, 'checks have no network');
 });
 
-test('pinned Python fixture installs wheels only and cannot see host folders', { skip, timeout: 900_000 }, async t => {
-  const directory = await fixture(t, { 'requirements.txt': 'six==1.17.0\n',
+test('nested Python requirements install wheels, invalidate changed inputs, and cannot see host folders', { skip, timeout: 900_000 }, async t => {
+  const directory = await fixture(t, { 'requirements.txt': '-r extra.txt\n-c constraints.txt\n', 'extra.txt': 'six==1.17.0\n', 'constraints.txt': 'six<2\n',
     'check.py': 'import os, six; print(six.__version__, os.path.exists("/Users"), os.path.exists(os.path.expanduser("~/.ssh")))' });
-  const result = await new ContainerEnvironment().run('python', ['check.py'], directory, signal());
+  const environment = new ContainerEnvironment();
+  const result = await environment.run('python', ['check.py'], directory, signal());
   assert.equal(result.exitCode, 0, result.output);
   assert.equal(result.output.trim(), '1.17.0 False False');
+  await fs.writeFile(path.join(directory, 'extra.txt'), 'six==1.16.0\n');
+  const changed = await environment.run('python', ['check.py'], directory, signal());
+  assert.equal(changed.exitCode, 0, changed.output);
+  assert.equal(changed.output.trim(), '1.16.0 False False');
+  assert.notEqual(changed.environment.dependencies, result.environment.dependencies);
+  assert.equal((await environment.prepare(directory, signal())).cached, true);
+});
+
+test('a Node.js project without dependencies still has a valid read-only cache mount', { skip, timeout: 900_000 }, async t => {
+  const directory = await fixture(t, { 'package.json': '{"name":"empty-fixture","version":"1.0.0"}',
+    'package-lock.json': JSON.stringify({ name: 'empty-fixture', lockfileVersion: 3, requires: true,
+      packages: { '': { name: 'empty-fixture', version: '1.0.0' } } }) });
+  const environment = new ContainerEnvironment();
+  const result = await environment.run('node', ['-e', 'console.log("empty project passed")'], directory, signal());
+  assert.equal(result.exitCode, 0, result.output);
+  assert.equal(result.output.trim(), 'empty project passed');
+  assert.equal((await environment.prepare(directory, signal())).cached, true);
 });

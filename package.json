@@ -108,6 +108,14 @@
       {
         "command": "agentextension.inlineSuggestionStats",
         "title": "AgentExtension: Show Inline Suggestion Statistics"
+      },
+      {
+        "command": "agentextension.codingSchedules",
+        "title": "AgentExtension: Scheduled Coding Drafts"
+      },
+      {
+        "command": "agentextension.handoff",
+        "title": "AgentExtension: Draft Handoff"
       }
     ],
     "keybindings": [
@@ -181,7 +189,10 @@
         },
         "agentextension.inlineSuggestions.mode": {
           "type": "string",
-          "enum": ["manual", "automatic"],
+          "enum": [
+            "manual",
+            "automatic"
+          ],
           "default": "manual",
           "scope": "language-overridable",
           "description": "Manual suggests only when you run Trigger Inline Suggestion. Automatic suggests while you type; its latency target is not yet measured."
@@ -201,7 +212,10 @@
         },
         "agentextension.executionEnvironment": {
           "type": "string",
-          "enum": ["isolated", "container"],
+          "enum": [
+            "isolated",
+            "container"
+          ],
           "default": "isolated",
           "scope": "window",
           "description": "Where checks run. Isolated uses the host sandbox. Container uses Docker with dependencies from package-lock.json or requirements.txt; it never falls back to the host."
@@ -211,6 +225,144 @@
           "default": false,
           "scope": "machine",
           "description": "Allow package install scripts (npm lifecycle scripts, Python source builds) during container dependency setup. Setup is the only step with network access."
+        },
+        "agentextension.container.checks": {
+          "type": "array",
+          "default": [],
+          "maxItems": 8,
+          "scope": "window",
+          "description": "Optional declared Node.js checks and local services. An exact command and argument match runs the check and its services in one private container with no network or host ports. See the managed checks guide for the declaration format.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "command"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,39}$"
+              },
+              "command": {
+                "type": "string",
+                "pattern": "^[\\w.+-]{1,60}$"
+              },
+              "args": {
+                "type": "array",
+                "maxItems": 20,
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "profile": {
+                "type": "string",
+                "enum": [
+                  "node",
+                  "browser"
+                ],
+                "default": "node"
+              },
+              "cwd": {
+                "type": "string",
+                "default": "."
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "default": {}
+              },
+              "leaseSeconds": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 120,
+                "default": 120
+              },
+              "services": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "command",
+                    "ready"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9-]{0,39}$"
+                    },
+                    "command": {
+                      "type": "string",
+                      "pattern": "^[\\w.+-]{1,60}$"
+                    },
+                    "args": {
+                      "type": "array",
+                      "maxItems": 20,
+                      "items": {
+                        "type": "string",
+                        "maxLength": 500
+                      }
+                    },
+                    "cwd": {
+                      "type": "string",
+                      "default": "."
+                    },
+                    "env": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "default": {}
+                    },
+                    "ready": {
+                      "type": "object",
+                      "required": [
+                        "port"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "http",
+                            "tcp"
+                          ],
+                          "default": "http"
+                        },
+                        "port": {
+                          "type": "number",
+                          "minimum": 1,
+                          "maximum": 65535
+                        },
+                        "path": {
+                          "type": "string",
+                          "default": "/"
+                        },
+                        "status": {
+                          "type": "number",
+                          "minimum": 200,
+                          "maximum": 399,
+                          "default": 200
+                        },
+                        "timeoutMs": {
+                          "type": "number",
+                          "minimum": 100,
+                          "maximum": 20000,
+                          "default": 10000
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
         "agentextension.fallbackModel": {
           "type": "string",
@@ -262,12 +414,25 @@
               "oauth": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["issuer", "clientId", "scopes"],
+                "required": [
+                  "issuer",
+                  "clientId",
+                  "scopes"
+                ],
                 "description": "Optional OpenID Connect sign-in using a registered public desktop client and a loopback redirect.",
                 "properties": {
-                  "issuer": { "type": "string" },
-                  "clientId": { "type": "string" },
-                  "scopes": { "type": "array", "items": { "type": "string" } }
+                  "issuer": {
+                    "type": "string"
+                  },
+                  "clientId": {
+                    "type": "string"
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
                 }
               },
               "writeTools": {
@@ -276,12 +441,30 @@
                 "items": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["name", "targetArgument", "targets"],
+                  "required": [
+                    "name",
+                    "targetArgument",
+                    "targets"
+                  ],
                   "properties": {
-                    "name": { "type": "string" },
-                    "targetArgument": { "type": "string" },
-                    "targets": { "type": "array", "items": { "type": "string" } },
-                    "extraArguments": { "type": "array", "items": { "type": "string" } }
+                    "name": {
+                      "type": "string"
+                    },
+                    "targetArgument": {
+                      "type": "string"
+                    },
+                    "targets": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "extraArguments": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
                   }
                 }
               },
@@ -323,12 +506,29 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id", "node", "entryPoint", "sha256", "tools"],
+            "required": [
+              "id",
+              "node",
+              "entryPoint",
+              "sha256",
+              "tools"
+            ],
             "properties": {
-              "id": { "type": "string" },
-              "node": { "type": "string", "description": "Absolute path to the installed Node.js executable." },
-              "entryPoint": { "type": "string", "description": "Absolute path to a self-contained .cjs server file." },
-              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "id": {
+                "type": "string"
+              },
+              "node": {
+                "type": "string",
+                "description": "Absolute path to the installed Node.js executable."
+              },
+              "entryPoint": {
+                "type": "string",
+                "description": "Absolute path to a self-contained .cjs server file."
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
               "tools": {
                 "type": "array",
                 "minItems": 1,
@@ -336,11 +536,24 @@
                 "items": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["name", "targetArgument", "targets"],
+                  "required": [
+                    "name",
+                    "targetArgument",
+                    "targets"
+                  ],
                   "properties": {
-                    "name": { "type": "string" },
-                    "targetArgument": { "type": "string" },
-                    "targets": { "type": "array", "items": { "type": "string" } }
+                    "name": {
+                      "type": "string"
+                    },
+                    "targetArgument": {
+                      "type": "string"
+                    },
+                    "targets": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
                   }
                 }
               }
@@ -355,7 +568,7 @@
           "default": [],
           "maxItems": 7,
           "scope": "machine",
-          "description": "Approved local folders containing plugin directories with plugin.json. Review and enable a plugin's version, content digest, and capabilities under Tools → Plugins."
+          "description": "Approved local folders containing plugin directories with plugin.json. Review and enable a plugin's version, content digest, and capabilities under Tools \u2192 Plugins."
         },
         "agentextension.browserOrigins": {
           "type": "array",
@@ -486,12 +699,31 @@
           "default": "",
           "scope": "machine",
           "description": "Optional absolute Chrome or Chromium executable path. Empty uses installed Google Chrome. The extension always creates its own profile."
+        },
+        "agentextension.workerConcurrency": {
+          "type": "integer",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 2,
+          "scope": "machine",
+          "description": "Maximum active workers. Up to four worker calls share the run budget, including queued calls."
+        },
+        "agentextension.workerRoleModels": {
+          "type": "object",
+          "default": {},
+          "maxProperties": 8,
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_./:-]{1,200}$"
+          },
+          "scope": "machine",
+          "description": "Optional role ID to registered model name map. Uses the current local runtime connection. Model names cannot declare endpoints or credentials."
         }
       }
     }
   },
   "scripts": {
-    "check": "node --check src/extension.js && node --check media/panel.js && node --check src/permissions.js && node --check src/skills.js && node --check src/prompt.js && node --check src/memory.js && node --check src/memory-sync.js && node --check src/connectors.js && node --check src/connector-oauth.js && node --check src/connector-local.js && node --check src/isolated-node.js && node --check src/script-runner.js && node --check src/skill-script.js && node --check src/plugins.js && node --check src/plugin-packages.js && node --check src/plugin-hooks.js && node --check src/workers.js && node --check src/worker-session.js && node --check src/browser.js && node --check src/computer.js && node --check src/surface-access.js && node --check src/reports.js && node --check src/schedules.js && node --check src/scheduled-run.js && node --check src/schedule-scope.js && node --check src/schedule-notifications.js && node --check src/background-runner.js && node --check src/background-cli.js && node --check src/policy.js && node --check src/instructions.js && node --check src/usage.js && node --check src/audit.js && node --check src/organization.js && node --check src/organization-service.js && node --check src/collaboration.js && node --check src/collaboration-service.js && node --check src/workspace-sync.js && node --check src/checkpoint.js && node --check src/schedule-controller.js && node --check src/run-progress.js && node --check src/task-state.js && node --check src/recovery.js && node --check src/search.js && node --check src/repository-index.js && node --check src/lexical-index.js && node --check src/relationships.js && node --check src/embedding-provider.js && node --check src/inline-completion.js && node --check src/execution-environment.js && npm run typecheck && npm run lint",
+    "check": "node --check src/extension.js && node --check media/panel.js && node --check src/command-authorization.js && node --check src/permissions.js && node --check src/skills.js && node --check src/prompt.js && node --check src/memory.js && node --check src/memory-sync.js && node --check src/connectors.js && node --check src/connector-oauth.js && node --check src/connector-local.js && node --check src/isolated-node.js && node --check src/script-runner.js && node --check src/skill-script.js && node --check src/plugins.js && node --check src/plugin-packages.js && node --check src/plugin-hooks.js && node --check src/worker-queue.js && node --check src/workers.js && node --check src/worker-session.js && node --check src/browser.js && node --check src/computer.js && node --check src/surface-access.js && node --check src/reports.js && node --check src/coding-controller.js && node --check src/coding-run.js && node --check src/coding-schedules.js && node --check src/schedules.js && node --check src/scheduled-run.js && node --check src/schedule-scope.js && node --check src/schedule-notifications.js && node --check src/background-runner.js && node --check src/background-cli.js && node --check src/policy.js && node --check src/instructions.js && node --check src/usage.js && node --check src/audit.js && node --check src/organization.js && node --check src/organization-service.js && node --check src/collaboration.js && node --check src/collaboration-service.js && node --check src/workspace-sync.js && node --check src/checkpoint.js && node --check src/schedule-controller.js && node --check src/run-progress.js && node --check src/task-state.js && node --check src/recovery.js && node --check src/search.js && node --check src/repository-index.js && node --check src/lexical-index.js && node --check src/relationships.js && node --check src/embedding-provider.js && node --check src/inline-completion.js && node --check src/execution-environment.js && node --check src/execution-services.js && node --check src/execution-service-runner.js && node --check src/git-handoff.js && node --check src/handoff-controller.js && node --check src/portable-skill.js && node --check src/storage-lock.js && npm run typecheck && npm run lint",
     "typecheck": "tsc --project jsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "node --test test/*.test.js test/retrieval/*.test.js",
@@ -510,6 +742,7 @@
     "diff": "8.0.4",
     "jose": "6.2.16",
     "playwright-core": "1.62.1",
+    "proper-lockfile": "4.1.2",
     "yaml": "2.9.1",
     "zod": "4.6.7"
   },

@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-23",
+  "implementationDigest": "b19cd9e19fb5ccf7a4394f4a3959f09189cfddc6b1da3493cbb2e85f6599102f",
+  "evaluationDigest": "1615c74942ef5d7e37c39911e43144c7e311d31413988e9e91da00ada5e57b97",
+  "scope": "Phase 16 scheduled coding runner and inbox; Phase 17 supported Git handoff; Phase 22 portable import; three audit should-fix items; partial Phases 23\u201324.",
+  "fullSuite": {
+    "tests": 462,
+    "passed": 444,
+    "failed": 0,
+    "skipped": 18,
+    "durationMs": 194404.14075,
+    "sourceBinding": "The final Git filter guard was refined while this run was active. Its eight cases passed in this suite and in the separate final-source run below. This is implementation regression evidence, not a frozen real-model qualification."
+  },
+  "finalAffectedSuite": {
+    "tests": 24,
+    "passed": 24,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 43666.7495,
+    "scope": "Nine coding cases, two policy cases, two schedule cases, seven Git handoff cases, four portable import cases."
+  },
+  "sourceTypeLint": "passed on final source",
+  "phase16": {
+    "status": "implementation-acceptance-passed",
+    "isolatedRunner": true,
+    "reviewInbox": true,
+    "automaticApply": false,
+    "modelQualification": false
+  },
+  "phase17": {
+    "status": "supported-adapter-acceptance-passed",
+    "realRemoteWrites": 0,
+    "connectorFixture": "loopback MCP"
+  },
+  "phase22": {
+    "status": "supported-subset-acceptance-passed"
+  },
+  "audit": {
+    "shouldFixResolved": [
+      "image-download-before-command-approval",
+      "suggested-note-list-overwrite",
+      "index-temporary-file-collision"
+    ],
+    "mustFixStillOpen": [
+      "macos-process-signals",
+      "checkpoint-cross-window-ownership",
+      "nested-python-requirements-cache",
+      "multi-process-audit-sequence"
+    ]
+  },
+  "package": {
+    "artifact": "/tmp/agentextension-scheduled-handoff-release-candidate.vsix",
+    "bytes": 102038512,
+    "sha256": "fd80e3ebf18767ba2c92372d8bbfef7e588d0f9a0959d4604819a5b97fff7825",
+    "status": "passed",
+    "platform": "darwin-arm64",
+    "node": "v24.18.0",
+    "implementationDigest": "b19cd9e19fb5ccf7a4394f4a3959f09189cfddc6b1da3493cbb2e85f6599102f",
+    "evaluationDigest": "1615c74942ef5d7e37c39911e43144c7e311d31413988e9e91da00ada5e57b97",
+    "tests": 27,
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 23676.678708,
+    "scope": "Extracted Mac installer: saved-connection restore, bundled runtime, compiled coding CLI, policy reconciliation, portable import, questions, compaction, workers, restart, recovery, real isolated checks, review, managed Git branch and local commit without inherited filters, apply, undo, and cancel. Scripted local models and a VS Code host fixture."
+  },
+  "apiSpend": 0,
+  "pushed": false,
+  "limitations": [
+    "Scripted local models only. Core gate remains open.",
+    "One physical computer. Phases 18\u201320 remain deferred.",
+    "Automatic inline suggestions remain unqualified.",
+    "No new interactive or other-platform installer acceptance."
+  ],
+  "packageCandidate": {
+    "tests": 14,
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 15301.073416,
+    "scope": "Extracted macOS arm64 bundle; scripted local runtime, saved-connection restore, check/review/apply/undo/cancel, questions, compaction, workers, restart and recovery.",
+    "initialSetupFailure": "The first run started before the dedicated runtime was ready: 10 connection-refused failures. Repeated after the health check; all 14 passed.",
+    "implementationDigest": "505881ec0d4cb8e795b1b63e2d0658b6d8a803e4065b47f6df884f959cd8d39b"
+  },
+  "licenseInventory": "package-licenses-2026-11-23.json",
+  "previousFullSuite": {
+    "tests": 460,
+    "passed": 442,
+    "failed": 0,
+    "skipped": 18,
+    "durationMs": 160564.37825,
+    "sourceBinding": "Full regression before final editor-policy reconciliation. Final affected paths passed the separate run below; do not describe this full run as a frozen final-source model qualification."
+  },
+  "finalGitSuite": {
+    "tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 1453.871125
+  },
+  "linuxPackage": {
+    "artifact": "/tmp/agentextension-phase23-linux/agentextension-0.7.1-linux-arm64.vsix",
+    "bytes": 107048703,
+    "sha256": "ae78a6ffc6477fff99909da076d35f4546dfcb9310313544759377a51d003fb6",
+    "status": "passed-limited",
+    "platform": "linux-arm64-container",
+    "distribution": "Debian 12",
+    "node": "v22.23.5",
+    "implementationDigest": "b19cd9e19fb5ccf7a4394f4a3959f09189cfddc6b1da3493cbb2e85f6599102f",
+    "tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 2332.019376,
+    "scope": "Extracted Linux package first connection, saved credential restore, bundled runtime and authenticated loopback endpoint. No current Linux command/review/apply or interactive desktop acceptance.",
+    "bundleSha256": "6d93c3a4eb795ad895acd965f647c829b86387ac9dbbdceb243b35d225613458",
+    "matchesMacExtensionBundle": true,
+    "archiveIntegrity": "passed on exported host archive",
+    "failedAttempt": "A prior shared-output archive failed ZIP extraction and was discarded. A later same-source build passed extraction, its connection fixture, and host-side archive integrity. The failure cause is not established."
+  },
+  "rawLogs": [
+    {
+      "artifact": "/tmp/agentextension-scheduled-handoff-final-full.log",
+      "bytes": 47727,
+      "sha256": "c64fbbc6066408c1b6ce8cbfef6d05f89b2566c126e16444e366ff894b8e588e"
+    },
+    {
+      "artifact": "/tmp/agentextension-phase16-policy-verified.log",
+      "bytes": 2737,
+      "sha256": "486ac26486124fd949136778783189afb4f40f5d3088a6eac730f2aa06783774"
+    },
+    {
+      "artifact": "/tmp/agentextension-phase17-all-filters-final.log",
+      "bytes": 977,
+      "sha256": "6e30f86071209a615f358dd8f8e454c89d358601b747c2539edd67f263498007"
+    },
+    {
+      "artifact": "/tmp/agentextension-final-check.log",
+      "bytes": 2346,
+      "sha256": "82721de4af81ba4a5c8dff1c6b8c3037b474c9d1571e405cfbfd54cd972a43f2"
+    },
+    {
+      "artifact": "/tmp/agentextension-final-package-acceptance.log",
+      "bytes": 2966,
+      "sha256": "14cfaabd7c3475ab22e5f78863a7571706e131f232be9f8ba42a84c6c2cf402a"
+    },
+    {
+      "artifact": "/tmp/agentextension-phase23-linux-final.log",
+      "bytes": 4195,
+      "sha256": "e0dfcbf141a1b74fc841fc2aab7980700142c14dcb71b05be2b256db550ee8f8"
+    },
+    {
+      "artifact": "/tmp/agentextension-phase23-linux-integrity.log",
+      "bytes": 114,
+      "sha256": "3704eccdc64340f97c2eb68da3dc7a95c07bf8234aae2414dc55d1a4391f379d"
+    }
+  ],
+  "finalImplementationDigest": "b19cd9e19fb5ccf7a4394f4a3959f09189cfddc6b1da3493cbb2e85f6599102f",
+  "finalEvaluationDigest": "1615c74942ef5d7e37c39911e43144c7e311d31413988e9e91da00ada5e57b97",
+  "cleanup": {
+    "dedicatedRuntimeStopped": true,
+    "remainingTestContainers": 0
+  },
+  "localLinks": {
+    "checked": 396,
+    "broken": 0
+  }
+}

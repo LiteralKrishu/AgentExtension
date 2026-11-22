@@ -132,3 +132,13 @@ test('run reports include a usage table with token sources and compactions', asy
   assert.match(text, /\| Estimated cost \| USD 0\.015 \|/);
   assert.match(text, /Retained context sources are unavailable after compaction/);
 });
+
+test('a damaged audit tail is preserved and cannot reset the next sequence number',async t=>{
+ const storage=await fs.mkdtemp(path.join(os.tmpdir(),'agentextension-audit-tail-'));t.after(()=>fs.rm(storage,{recursive:true,force:true}));
+ const log=new AuditLog(storage,'/fixture');await log.append({tool:'read_file',effect:'workspace.read',target:'a'.repeat(64),decision:'allow',reason:'Workspace run scope',runId:'fixture'});
+ const valid=await fs.readFile(log.file,'utf8');
+ for(const tail of ['{"seq":','null\n','false\n']){
+  const before=valid+tail;await fs.writeFile(log.file,before);
+  await assert.rejects(log.append({tool:'read_file'}),/tail failed verification/);assert.equal(await fs.readFile(log.file,'utf8'),before);assert.equal((await log.export()).verification.ok,false);
+ }
+});

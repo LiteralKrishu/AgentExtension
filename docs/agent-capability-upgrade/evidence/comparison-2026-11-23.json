@@ -1,0 +1,403 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-23",
+  "status": "not-run",
+  "corpus": "agent-capability-upgrade/1",
+  "corpusSha256": "7396ca26dfca98775dd6a9f050e652ff3e77e23a422b60cfbd3fbeffe85dfc75",
+  "policy": {
+    "models": "local-only",
+    "apiSpendingUSD": 0,
+    "repetitions": 3
+  },
+  "implementationDigest": "e8f8a513f1a962c1f57986ae699b7cc84e912c11248543ee98f9ff0f68aa3fbc",
+  "evaluationDigest": "1615c74942ef5d7e37c39911e43144c7e311d31413988e9e91da00ada5e57b97",
+  "products": [
+    {
+      "product": "AgentExtension",
+      "version": "0.7.1-development",
+      "status": "not-run-on-current-source",
+      "model": "unqualified"
+    },
+    {
+      "product": "Cursor",
+      "version": null,
+      "status": "no-controlled-run",
+      "model": null
+    },
+    {
+      "product": "Codex",
+      "version": null,
+      "status": "no-controlled-run",
+      "model": null
+    }
+  ],
+  "rows": [
+    {
+      "task": "edit-and-check",
+      "split": "development",
+      "fixtureDigest": "1e917a061207442dd7e207fb0fc2447a4f23d680158b209acc820d6e6f50e8da",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "question",
+      "split": "development",
+      "fixtureDigest": "eaad7c998c66280ffd33e02bb25d2bd144a4a46aa35e45ede539237d47efc877",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "instructions",
+      "split": "development",
+      "fixtureDigest": "3a3e36e858e89301238840bdd20819a10c0d1e3e3b07f27315db2a8b695cf536",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "fix-team-workers",
+      "split": "development",
+      "fixtureDigest": "1e917a061207442dd7e207fb0fc2447a4f23d680158b209acc820d6e6f50e8da",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 12,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "js-stable-unique",
+      "split": "development",
+      "fixtureDigest": "b1276a628430df91ad6f4245f07f9e806775ae44507b00c0660538ac4047a96f",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "js-pagination",
+      "split": "development",
+      "fixtureDigest": "78887d53407c37884c2516a0e583e4f3decc007ef4b86a94abb95c6ac08a140e",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "js-config-mask",
+      "split": "development",
+      "fixtureDigest": "06fbbda7fec4b39d65a8cfaedbd07d91502aedcf23ba28e2ea2d973b9888b72e",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "js-ndjson",
+      "split": "development",
+      "fixtureDigest": "5719d1e5279fd696e3fc3748c15eb1bf2400bfb8e1bfbd22583a6562ecfe4900",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "js-cache-expiry",
+      "split": "development",
+      "fixtureDigest": "30fcee287c7582bab7d72fcc38e35658df2765cbd289089f9389a9165056beb3",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "js-retry",
+      "split": "development",
+      "fixtureDigest": "0764d2f4983020602697919f852cbc506b90bd83447b68cda6d1528101a0540f",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "py-merge-config",
+      "split": "development",
+      "fixtureDigest": "ccb1bab39a8177f5e53341192d1ce74c88f3da199320fe249e4608f64422af60",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "py-pagination",
+      "split": "held-out",
+      "fixtureDigest": "3de0970a41e113070ea787ad53c8431348ddd2aed85c077a86138578ba717c2f",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "py-batches",
+      "split": "held-out",
+      "fixtureDigest": "bb0505c481b9ca57461086c1878009ca3b0945bced8282be3d4bbb661cc669bb",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "py-relative-path",
+      "split": "held-out",
+      "fixtureDigest": "ed71e6c4ba0fb19d37b0a321b4aa70c5309f2b58a45c69da165c8e4785eb4b3e",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "py-csv-records",
+      "split": "held-out",
+      "fixtureDigest": "14e26773f335b6915392b7d5b219b37eaad5aa218c00bffb304870ff97360a6e",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "ts-result-value",
+      "split": "held-out",
+      "fixtureDigest": "a6c64bafb91893f8bf93e9a49522581dcfdda58f49fd33459bda66dd6527c4a6",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "ts-boolean-setting",
+      "split": "held-out",
+      "fixtureDigest": "a2e90acef5aad621eedecaa8a6b23f6ee64b8bf39a2132415c22ac5926b0af0a",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "ts-grouping",
+      "split": "held-out",
+      "fixtureDigest": "85cf732d7b2d8a4e3cb45e8a9aad78d8aa235033e8fed45a9c2ace817e9818ad",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "ts-money-format",
+      "split": "held-out",
+      "fixtureDigest": "b555ba6601f73558ef1a4100569cb1b5cea33428ce76b71c5a527d0b9b2f6d5d",
+      "sourceRevision": null,
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    },
+    {
+      "task": "flask-task-b",
+      "split": "development",
+      "fixtureDigest": null,
+      "sourceRevision": "22d924701a6ae2e4cd01e9a15bbaf3946094af65",
+      "budget": {
+        "minutes": 12,
+        "maxTokens": 400000,
+        "maxToolCalls": 48
+      },
+      "repetitionsRequired": 3,
+      "attempts": [],
+      "outcomes": {
+        "AgentExtension": null,
+        "Cursor": null,
+        "Codex": null
+      }
+    }
+  ],
+  "limitations": [
+    "No independent product run was performed. Null is missing data, not a failure score.",
+    "Historical partial AgentExtension attempts do not qualify this changed source.",
+    "No paid API usage is authorized."
+  ],
+  "taskSetDigest": "682850a237e507ca2a2c805d82a7c392c25cae79e78ed376bca86b27035418b4",
+  "taskCount": 20
+}

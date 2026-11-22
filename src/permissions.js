@@ -3,10 +3,13 @@ const { createHash, randomUUID } = require('node:crypto');
 
 /** @typedef {{ tool: string, effect: string, target: string }} ActionTarget */
 /** @typedef {Readonly<ActionTarget & { workspace: string, runId: string, policy: 1, epoch: number, arguments: string, scope: string }>} Action */
-/** @typedef {{ effect: string, expires: number }} Grant */
+/** @typedef {{ effect: string, expires: number, reusable?: boolean }} Grant */
+/** @typedef {{ prompts: number, waitMs: number, reused: number, policyAllowed: number }} ApprovalMetric */
+/** @typedef {{ action: Action, expires: number, label: string }} RunGrant */
+/** @typedef {{ action: Action, expires: number, reusable: boolean }} DispatchPermit */
 /** @typedef {'allow' | 'approve' | 'deny' | 'revoke' | 'skip' | 'answer'} AuditDecision */
 /** @typedef {ActionTarget & { time: string, decision: AuditDecision, reason: string, runId: string }} PermissionEvent */
-/** @typedef {{ runId: string, workspace: string, closed: boolean, scopes: string[], pending: number, events: PermissionEvent[] }} PermissionSnapshot */
+/** @typedef {{ runId: string, workspace: string, closed: boolean, scopes: string[], pending: number, events: PermissionEvent[], runGrants: { id: string, tool: string, label: string, expires: number, scope: string }[], approvalMetrics: Record<string, ApprovalMetric> }} PermissionSnapshot */
 
 /** @param {unknown} value @returns {unknown} */
 function stable(value) {
@@ -40,6 +43,10 @@ class PermissionBroker {
     this.revocation = new AbortController();
     /** @type {Map<string, Grant & { count?: number }>} */
     this.grants = new Map();
+    /** @type {Map<string, RunGrant>} */
+    this.runGrants = new Map();
+    /** @type {Record<string, ApprovalMetric>} */
+    this.approvalMetrics = {};
     /** @type {Set<string>} */
     this.denied = new Set();
     /** @type {PermissionEvent[]} */
@@ -121,9 +128,52 @@ class PermissionBroker {
     }
     const key = digest(action);
     const prior = this.grants.get(key);
-    this.grants.set(key, { effect: action.effect, count: (prior?.count ?? 0) + 1, expires: this.now() + ttl });
+    const lease = this.runGrants.get(key);
+    const reusable = !!lease && lease.expires > this.now();
+    this.grants.set(key, { effect: action.effect, count: (prior && prior.expires > this.now() ? prior.count ?? 0 : 0) + 1, expires: Math.min(this.now() + ttl, reusable ? lease.expires : Infinity), reusable });
     this.record(action, 'approve', reason);
     return true;
+  }
+
+  /** @param {Action} action @param {number} ttl @param {string} label */
+  grantRun(action, ttl, label) {
+    if (!this.valid(action) || action.tool !== 'run_command' || action.effect !== 'command.execute'
+      || !Number.isFinite(ttl) || ttl <= 0) return false;
+    for (const [key, grant] of this.runGrants) if (grant.expires <= this.now()) this.runGrants.delete(key);
+    while (this.runGrants.size >= 32) this.runGrants.delete(this.runGrants.keys().next().value ?? '');
+    this.runGrants.set(digest(action), { action, expires: this.now() + Math.min(ttl, 300_000), label: label.slice(0, 120) });
+    this.onChange(this.snapshot());
+    return true;
+  }
+  /** @param {Action} action */
+  reuse(action) {
+    const lease = this.runGrants.get(digest(action));
+    if (!lease || !this.valid(action) || lease.expires <= this.now()) return false;
+    const key = digest(action); const prior = this.grants.get(key);
+    this.grants.set(key, { effect: action.effect, count: (prior && prior.expires > this.now() ? prior.count ?? 0 : 0) + 1, expires: lease.expires, reusable: true });
+    this.authorizationUse(action, 'reuse');
+    this.record(action, 'approve', 'Reused an unchanged managed check grant');
+    return true;
+  }
+  /** @param {Action} action @param {'reuse'|'policy'} kind */
+  authorizationUse(action, kind) {
+    const metric = this.metric(action.tool);
+    if (kind === 'reuse') metric.reused++; else metric.policyAllowed++;
+  }
+  /** @param {string} tool */
+  metric(tool) { return this.approvalMetrics[tool] ??= { prompts: 0, waitMs: 0, reused: 0, policyAllowed: 0 }; }
+  /** @template T @param {Action} action @param {() => Promise<T>} ask @returns {Promise<T>} */
+  async prompt(action, ask) {
+    const metric = this.metric(action.tool); metric.prompts++;
+    const start = this.now();
+    try { return await ask(); }
+    finally { metric.waitMs += Math.max(0, this.now() - start); this.onChange(this.snapshot()); }
+  }
+  /** @param {DispatchPermit} permit */
+  validatePermit(permit) {
+    const lease = this.runGrants.get(digest(permit.action));
+    if (!this.valid(permit.action) || permit.expires <= this.now()
+      || permit.reusable && (!lease || lease.expires <= this.now())) throw new Error('Command approval expired or was revoked before dispatch.');
   }
 
   /** @param {Action} action */
@@ -138,10 +188,12 @@ class PermissionBroker {
     }
     if (grant === exact && exact.count !== undefined && --exact.count === 0) this.grants.delete(key);
     this.record(action, 'allow', grant === exact ? 'Consumed exact approval' : 'Workspace run scope');
+    return { action, expires: grant.expires, reusable: !!grant.reusable };
   }
 
   reset() {
     this.epoch++;
+    this.runGrants.clear();
     this.revocation.abort(new Error('Surface permission changed. Observe again.'));
     this.revocation = new AbortController();
     for (const key of this.grants.keys()) if (!key.startsWith('scope:')) this.grants.delete(key);
@@ -157,6 +209,7 @@ class PermissionBroker {
   revokeAll(reason = 'revoked') {
     this.closed = true;
     this.grants.clear();
+    this.runGrants.clear();
     this.epoch++;
     this.revocation.abort(new Error('Surface access was revoked.'));
     this.record({ tool: 'host', effect: 'all', target: this.workspace }, 'revoke', reason);
@@ -167,7 +220,9 @@ class PermissionBroker {
     return { runId: this.runId, workspace: this.workspace, closed: this.closed,
       scopes: [...this.grants.entries()].filter(([key, value]) => key.startsWith('scope:') && value.expires > this.now() && !this.policy?.blocks(value.effect))
         .map(([, value]) => value.effect), pending: [...this.grants.keys()].filter(key => !key.startsWith('scope:')).length,
-      events: this.events };
+      events: this.events, runGrants: [...this.runGrants.entries()].filter(([, grant]) => this.valid(grant.action) && grant.expires > this.now())
+        .map(([id, grant]) => ({ id, tool: grant.action.tool, label: grant.label, expires: grant.expires, scope: grant.action.scope })),
+      approvalMetrics: structuredClone(this.approvalMetrics) };
   }
 }
 

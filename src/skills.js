@@ -45,6 +45,9 @@ function parseSkill(text, folder) {
   if (!meta || typeof meta.name !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(meta.name)
       || meta.name.length > 64 || meta.name !== folder || typeof meta.description !== 'string'
       || !meta.description.trim() || meta.description.length > 1024) throw new Error('Invalid skill name or description.');
+  for (const key of ['enabled', 'disable-model-invocation', 'allow_implicit_invocation']) {
+    if (meta[key] !== undefined && typeof meta[key] !== 'boolean') throw new Error(`Skill ${key} must be a boolean.`);
+  }
   if (meta.enabled === false) throw new Error('Skill is disabled.');
   const scripts = meta.scripts === undefined ? [] : meta.scripts;
   if (!Array.isArray(scripts) || scripts.length > 4 || new Set(scripts).size !== scripts.length

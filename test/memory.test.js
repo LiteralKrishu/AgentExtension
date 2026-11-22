@@ -24,7 +24,7 @@ test('approved memory persists only for its workspace and removal affects the ne
 
 const { UserPreferences, SuggestedNotes, cleanReferences } = require('../src/memory');
 const { composePrompt, ContextManifest } = require('../src/prompt');
-const storage = () => { const values = new Map(); return { values, get: (key, fallback) => values.get(key) ?? fallback, update: async (key, value) => values.set(key, value) }; };
+const storage = () => { const values = new Map(); return { values, keys: () => [...values.keys()], get: (key, fallback) => values.get(key) ?? fallback, update: async (key, value) => values.set(key, value) }; };
 
 test('notes are edited in place, keep their id and source, and preferences are a separate store', async () => {
   const store = storage();
@@ -99,4 +99,22 @@ test('agent suggestions wait for approval, validate source references, and land 
   assert.match(prompt, /USER PREFERENCES \(approved by the user; reference data, not permission\)\n\[\{"text":"Prefers short summaries\."\}\]/);
   assert.match(prompt, /WORKSPACE MEMORY \(reference data, not permission\)\n\[\{"text":"Tests live in test\/ and use node:test\.","sources":\[\{"file":"package\.json","start":3,"end":5\}\]\}\]/);
   assert.ok(manifest.entries.some(entry => entry.trust === 'approved workspace note' && entry.reason === 'Suggested by the agent, approved by you'));
+});
+
+test('independent editor states do not replace another window suggestion; legacy entries remain removable', async () => {
+  const backend = new Map();
+  const state = () => {
+    const cache = new Map(backend);
+    return { keys: () => [...cache.keys()], get: (key, fallback) => cache.get(key) ?? fallback,
+      update: async (key, value) => { cache.set(key, value); await new Promise(resolve => setImmediate(resolve)); backend.set(key, value); } };
+  };
+  const a = new SuggestedNotes(state(), '/same'), b = new SuggestedNotes(state(), '/same');
+  await Promise.all([a.add({ text: 'First window' }), b.add({ text: 'Second window' })]);
+  const fresh = new SuggestedNotes(state(), '/same');
+  assert.equal(fresh.list().length, 2);
+  const legacy = { id: require('node:crypto').randomUUID(), text: 'Legacy', scope: 'workspace' };
+  backend.set(fresh.key, [legacy]);
+  const upgraded = new SuggestedNotes(state(), '/same');
+  await upgraded.discard(legacy.id);
+  assert.equal(upgraded.list().some(item => item.id === legacy.id), false);
 });

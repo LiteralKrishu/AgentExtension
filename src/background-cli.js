@@ -32,13 +32,19 @@ async function main([action, directory, id, connector]) {
     return;
   }
   if (action === 'status' || action === 'run-now') {
-    for (const store of await workspaceStores(storage)) {
-      for (const schedule of (await store.list()).filter(item => item.background)) {
+    for (const store of [...await workspaceStores(storage), ...await workspaceStores(storage, true)]) {
+      for (const schedule of (await store.list()).filter(item => item.background || item.type === 'coding-draft')) {
         if (action === 'status') {
           const state = schedule.backgroundRevoked ? 'revoked' : schedule.needsReview ? 'needs review' : schedule.enabled ? 'enabled' : 'paused';
           process.stdout.write(`${schedule.id}  ${state}  ${schedule.name}\n`);
         } else if (schedule.id === id) {
-          await backgroundScheduler({ storage, store, onChange: show }).runNow(id);
+          const controller = new AbortController(), stop = () => controller.abort();
+          process.on('SIGINT', stop); process.on('SIGTERM', stop);
+          try {
+            const options = { store, onChange: show, signal: controller.signal };
+            const scheduler = schedule.type === 'coding-draft' ? require('./coding-run').codingScheduler(options) : backgroundScheduler({ storage, ...options });
+            await scheduler.runNow(id);
+          } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
           return;
         }
       }

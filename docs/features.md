@@ -1,6 +1,8 @@
 # AgentExtension features
 
-AgentExtension 0.6.1 is a VS Code coding agent powered by a local TrueForge server. It proposes changes in a draft. You review the changes in VS Code and choose which ones to apply. It requires a trusted local workspace, VS Code 1.101 or later, and a model configured in TrueForge. [Extension manifest](../package.json) · [Setup](../README.md#set-up)
+AgentExtension 0.7.1 is a VS Code coding agent powered by a local TrueForge server. It proposes changes in a draft. You review the changes in VS Code and choose which ones to apply. It requires a trusted local workspace, VS Code 1.101 or later, and a model configured in TrueForge. [Extension manifest](../package.json) · [Setup](../README.md#set-up)
+
+The local, unreleased capability upgrade adds [scheduled coding drafts](scheduled-coding.md), [draft handoff](git-handoff.md), and [portable skill import](interoperability.md). See the [platform matrix](agent-capability-upgrade/PLATFORM-MATRIX.md) for current acceptance limits.
 
 ## Coding and review
 

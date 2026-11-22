@@ -18,16 +18,16 @@ class RunUsage {
   }
   get total() { return this.tokens.input + this.tokens.output; }
   elapsedMs() { return this.now() - this.started; }
-  model(usage, actor = 'parent') {
+  model(usage, actor = 'parent', continuation = false) {
     if (!usage) return;
     const input = Number(usage.inputTokens) || 0;
     const output = Number(usage.outputTokens) || 0;
     this.tokens.input += input;
     this.tokens.output += output;
     this.tokens.cacheRead += Number(usage.cacheReadTokens) || 0;
-    this.modelCalls++;
+    if (!continuation) this.modelCalls++;
     const row = this.actors[actor] ??= { input: 0, output: 0, calls: 0 };
-    row.input += input; row.output += output; row.calls++;
+    row.input += input; row.output += output; if (!continuation) row.calls++;
     // TrueForge attributes each parent input to harness, instructions, messages, skills and tool definitions.
     if (actor === 'parent' && usage.inputTokensBreakdown) this.breakdown = { ...usage.inputTokensBreakdown };
   }

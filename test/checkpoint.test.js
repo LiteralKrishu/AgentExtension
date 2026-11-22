@@ -129,3 +129,29 @@ test('inline recovery offers overlapping edits for review and refuses an unmappa
   assert.equal(restored.current(file, current), conflict.preview);
   await assert.rejects(rebaseCheckpoint(saved, { read: async () => 'prefix removed suffix\n' }), /selection boundaries/);
 });
+
+test('a legacy checkpoint gains a comparison token without granting a reader ownership',async t=>{
+ const storage=await fs.mkdtemp(path.join(os.tmpdir(),'agentextension-checkpoint-legacy-'));t.after(()=>fs.rm(storage,{recursive:true,force:true}));
+ const first=new CheckpointStore(storage,'/fixture');await fs.mkdir(first.directory,{recursive:true});
+ const legacy={version:1,workspace:'/fixture',savedAt:new Date().toISOString(),runId:'legacy',request:'Keep this draft',files:[]};await fs.writeFile(first.file,JSON.stringify(legacy));
+ const loaded=await first.load();assert.match(loaded.checkpointId,/^[a-f0-9]{64}$/);assert.equal(await first.clear(),false);
+ const second=new CheckpointStore(storage,'/fixture');const resumed=await second.save({...loaded,runId:'resumed',summary:'Rebased progress'},{expected:loaded});
+ assert.notEqual(resumed.checkpointId,loaded.checkpointId);await assert.rejects(first.save(legacy),{code:'ECHECKPOINTOWNERSHIP'});assert.equal((await second.load()).summary,'Rebased progress');
+});
+
+test('reading an unsupported or damaged checkpoint does not remove recovery data',async t=>{
+ const storage=await fs.mkdtemp(path.join(os.tmpdir(),'agentextension-checkpoint-preserve-'));t.after(()=>fs.rm(storage,{recursive:true,force:true}));
+ const store=new CheckpointStore(storage,'/fixture');await fs.mkdir(store.directory,{recursive:true});
+ for(const raw of [JSON.stringify({version:99,workspace:'/fixture',savedAt:new Date().toISOString(),request:'Future recovery',files:[]}),'{"request":']){
+  await fs.writeFile(store.file,raw);assert.equal(await store.load(),undefined);assert.equal(await fs.readFile(store.file,'utf8'),raw);
+  await assert.rejects(store.save({request:'Replacement',files:[]}));assert.equal(await fs.readFile(store.file,'utf8'),raw);
+ }
+});
+
+test('initial checkpoint creation cannot replace a file that appears during preparation',async t=>{
+ const storage=await fs.mkdtemp(path.join(os.tmpdir(),'agentextension-checkpoint-create-'));t.after(()=>fs.rm(storage,{recursive:true,force:true}));
+ const store=new CheckpointStore(storage,'/fixture');const write=fs.writeFile;const recovery=JSON.stringify({version:2,workspace:'/fixture',savedAt:new Date().toISOString(),request:'Keep existing recovery',files:[]});
+ fs.writeFile=async(file,...args)=>{await write(file,...args);if(String(file).startsWith(store.file+'.'))await write(store.file,recovery,{flag:'wx'});};
+ try{await assert.rejects(store.save({request:'New run',files:[]}),{code:'ECHECKPOINTOWNERSHIP'});}finally{fs.writeFile=write;}
+ assert.equal(await fs.readFile(store.file,'utf8'),recovery);
+});
