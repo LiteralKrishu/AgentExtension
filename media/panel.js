@@ -155,7 +155,7 @@ function renderReview(state) {
   byId('check-accepted').disabled = state.applying || !state.checks.length;
   const checkStatus = byId('accepted-check-status');
   checkStatus.hidden = reviewMode !== 'apply';
-  const matching = state.checks.filter(check => check.revision === state.revision && check.selection === state.acceptedSelection);
+  const matching = state.checks.filter(check => check.verification !== false && check.revision === state.revision && check.selection === state.acceptedSelection);
   const latest = [...new Map(matching.map(check => [JSON.stringify([check.command, check.args]), check])).values()];
   checkStatus.textContent = state.checkingAccepted ? 'Checking accepted changes…'
     : !latest.length ? 'No check has run on this selection.'
@@ -204,7 +204,7 @@ function renderChecks({ checks, revision, acceptedSelection }) {
   byId('verification').hidden = !checks.length;
   byId('check-list').replaceChildren(...checks.map(check => {
     const card = element('details');
-    const outcome = check.exitCode === 0 ? 'Passed' : check.exitCode == null ? 'Unavailable' : `Failed (exit ${check.exitCode})`;
+    const outcome = check.verification === false ? 'Diagnostic only' : check.exitCode === 0 ? 'Passed' : check.exitCode == null ? 'Unavailable' : `Failed (exit ${check.exitCode})`;
     let scope = `${check.scope} · draft ${check.revision}`;
     if (check.revision !== revision) scope += ' · earlier draft';
     else if (acceptedSelection && check.selection !== acceptedSelection) scope += ' · different hunk selection';
@@ -325,11 +325,13 @@ window.addEventListener('message', ({ data }) => {
     return row;
   }));
 
-  const nextContext = JSON.stringify([state.context, state.budget, state.unresolved]);
+  const nextContext = JSON.stringify([state.context, state.budget, state.unresolved, state.index]);
   if (nextContext !== contextKey) {
     contextKey = nextContext;
     byId('context').hidden = !state.context.length && !state.unresolved?.length;
     byId('context-summary').textContent = `Selected context · ${state.budget ?? ''}`;
+    byId('index-status').textContent = state.index
+      ? `Source index: ${state.index.indexed.toLocaleString()} of ${state.index.files.toLocaleString()} files${state.index.complete ? '' : ' · incomplete'}. ${state.index.unindexed.toLocaleString()} unindexed. Unsaved buffers are overlaid for this run.` : '';
     byId('context-list').replaceChildren(...state.context.map(hit => {
       const line = element('li', '');
       line.append(element('code', `${hit.file}:${hit.start}–${hit.end}`), element('div', hit.reason, 'hint'));

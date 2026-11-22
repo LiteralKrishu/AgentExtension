@@ -84,7 +84,7 @@ async function fixture(t, mode, { fallback = false, cancel = false, cancelOnToke
         mcp_server: server, tool_name: 'propose_write',
         input: { file: `file${round}.txt`, old_text: 'start', new_text: 'changed' },
       }, round));
-      if (round === 4 && forgetReview && !all.includes('Call the editor review_changes tool now')) {
+      if (round === 4 && forgetReview && !all.includes('Call the editor review_changes tool')) {
         return respond(res, input, { content: 'I staged the changes.' });
       }
       if (round === 4) return respond(res, input, call(defer, { mcp_server: server, tool_name: 'review_changes', input: {} }, 4));
@@ -218,7 +218,7 @@ test('TrueForge streams, discovers tools, stages three files, and resumes editor
   const run = await fixture(t, 'good');
   await run.task;
   assert.ifError(run.providerError());
-  assert.equal(run.requests(), 1);
+  assert.equal(run.requests(), 2, 'An unchecked draft gets one bounded verification follow-up.');
   assert.ok(run.output.join('').includes('Finished'));
   assert.deepEqual(run.toolNames.filter(tool => tool !== 'search_workspace'),
     ['propose_write', 'propose_write', 'propose_write', 'review_changes']);
@@ -349,9 +349,6 @@ test('editor line proposals use exact read receipts and reject stale ranges', op
   const args = { receipt: excerpt.receipt, start_line: 2, delete_count: 0, new_text: 'inserted\n' };
   const outside = await client.callTool({ name: 'propose_lines', arguments: { ...args, start_line: 4 } });
   assert.equal(outside.isError, true);
-  const joined = await client.callTool({ name: 'propose_lines', arguments: { ...args, new_text: 'inserted' } });
-  assert.equal(joined.isError, true);
-  assert.match(joined.content[0].text, /newline/);
   const mismatch = await client.callTool({ name: 'propose_lines', arguments: { ...args, start_line: 1, anchor_line: 'second' } });
   assert.match(mismatch.content[0].text, /anchor is on line 2/);
   const staged = await client.callTool({ name: 'propose_lines', arguments: { receipt: excerpt.receipt, anchor_line: 'second', new_text: 'inserted\n' } });

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "baseRevision": "5c5fe676a444d51a5163c89abdb39dec0860817e",
+  "overlays": [
+    {
+      "path": "test/workspace-command-cancellation.test.js",
+      "artifact": "cancellation.test.js.txt",
+      "sha256": "8eb0fcd02bee0e9b1fc0bcda97a33ed9d6422f4cf40fc6c1e1d25f021c453bc3"
+    }
+  ],
+  "sourceVersion": "git-overlay/1:4bb46d0c9ce2b5ea5fc54a30c3e58f33097eb8f8fd8a53667a6888ec1a27a7a4"
+}

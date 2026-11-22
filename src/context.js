@@ -1,4 +1,8 @@
 const CONTEXT_BUDGET = 12_000;
+const { LexicalIndex } = require('./lexical-index');
+const { Relationships } = require('./relationships');
+const { digest } = require('./permissions');
+const indexes = new WeakMap();
 const STOP_WORDS = new Set('about across add alongside also any appear application as be built by change code covered containing every find for from has have in into is it its list loaded must new of on only or print prints should that the their these this to use values was were when where which will with would'.split(' '));
 
 function lexemes(text) {
@@ -15,7 +19,7 @@ function mentions(prompt) {
     .map(([, type, ...values]) => ({ type, value: values.find(value => value !== undefined) }));
 }
 
-function rank(files, prompt) {
+function legacyRank(files, prompt) {
   const words = terms(prompt);
   const explicit = mentions(prompt);
   const candidates = [];
@@ -60,6 +64,58 @@ function rank(files, prompt) {
   return candidates.sort((left, right) => right.score - left.score || left.file.localeCompare(right.file) || left.start - right.start);
 }
 
+// Planning and history documents describe intent, not current behavior, so they rank below other documentation.
+const PROCESS_DOCUMENT = /(^|[/._-])(milestones?|roadmap|research|backlog|plans?|implementation|progress|changelog|releases?|remaining[-_]work|evidence|notes|todo|history)(?=[/._-]|$)/i;
+const SLOTS = { implementation: 3, test: 3, documentation: 3 };
+
+// Leads with the best window of a balanced top ten: explicit matches first, then up to three files of each category,
+// then the strongest remaining files. Scores are unchanged; later windows keep their order.
+function balance(ranked) {
+  const best = new Map();
+  for (const item of ranked) if (!best.has(item.file)) best.set(item.file, { item, position: best.size,
+    weight: item.category === 'documentation' && PROCESS_DOCUMENT.test(item.file.replace(/\.[^./]+$/, '')) ? item.score * .5 : item.score });
+  const files = [...best.values()].sort((a, b) => (b.item.priority ?? 0) - (a.item.priority ?? 0) || b.weight - a.weight || a.position - b.position);
+  const lead = new Set(files.filter(entry => (entry.item.priority ?? 0) > 0));
+  for (const [category, slots] of Object.entries(SLOTS)) for (const entry of files.filter(entry => entry.item.category === category).slice(0, slots)) lead.add(entry);
+  for (const entry of files) lead.add(entry);
+  const first = [...lead].slice(0, 10).map(entry => entry.item);
+  const chosen = new Set(first);
+  return [...first, ...ranked.filter(item => !chosen.has(item))];
+}
+
+function rank(files, prompt, options = {}) {
+  return balance(rankWindows(files, prompt, options));
+}
+
+function rankWindows(files, prompt, options = {}) {
+  let cached = indexes.get(files);
+  if (!cached || cached.sources.length !== files.length || cached.sources.some((source, i) => source.path !== files[i].path || source.text !== files[i].text)) {
+    cached = { sources: files.map(({ path, text }) => ({ path, text })), index: new LexicalIndex(files) };
+    indexes.set(files, cached);
+  }
+  const ranked = cached.index.rank(prompt, mentions(prompt), options);
+  if (options.relationships !== true || !ranked.length) return ranked;
+  cached.relationships ??= new Relationships(files);
+  const ordered = [...new Set(ranked.map(hit => hit.file))];
+  const seeds = [...new Set(ranked.filter(item => item.category === 'implementation').map(item => item.file))].slice(0, 3);
+  const related = cached.relationships.related(seeds);
+  const lexicalPosition = new Map(ordered.map((file, index) => [file, index]));
+  const relationshipPosition = new Map(related.map((edge, index) => [edge.file, index]));
+  for (const edge of related) if (!lexicalPosition.has(edge.file)) {
+    const source = cached.relationships.files.get(edge.file);
+    const lines = source.text.split(/\r?\n/);
+    const start = Math.max(1, edge.line - 3); const end = Math.min(lines.length, start + 17);
+    ranked.push({ file: edge.file, start, end, sample: lines.slice(start - 1, end).join('\n'), hits: [], category: /test/.test(edge.file) ? 'test' : /\.(md|rst)$/.test(edge.file) ? 'documentation' : 'implementation',
+      stem: edge.file.split('/').at(-1).split('.')[0], reason: edge.reason, provenance: edge.provenance, priority: 0,
+      contentHash: source.contentHash ?? digest(source.text) });
+  }
+  for (const item of ranked) {
+    const lexical = lexicalPosition.get(item.file); const relation = relationshipPosition.get(item.file);
+    item.score = (item.priority ?? 0) + (lexical === undefined ? 0 : 60 / (61 + lexical)) + (relation === undefined ? 0 : 60 / (61 + relation)) + (item.lexicalScore ?? 0) * .000001;
+  }
+  return ranked.sort((a,b) => b.score - a.score || a.file.localeCompare(b.file) || a.start - b.start);
+}
+
 function outline(file, category, words) {
   const lines = file.text.split(/\r?\n/);
   const anchors = [];
@@ -82,8 +138,8 @@ function outline(file, category, words) {
     .slice(0, 12).sort((left, right) => left.line - right.line).map(item => `${item.line}: ${item.text}`);
 }
 
-function assemble(files, prompt, budget = CONTEXT_BUDGET, anchors = []) {
-  const ranked = rank(files, prompt);
+function assemble(files, prompt, budget = CONTEXT_BUDGET, anchors = [], options) {
+  const ranked = rank(files, prompt, options);
   const categories = ['implementation', 'test', 'documentation'];
   const pinned = ranked.filter(item => item.exactFile || item.symbol);
   const implementation = ranked.find(item => item.category === 'implementation');
@@ -111,28 +167,39 @@ function assemble(files, prompt, budget = CONTEXT_BUDGET, anchors = []) {
   const selected = [];
   const perFile = new Map();
   const seen = new Set();
+  const ranges = new Map();
+  let omitted = 0;
   let text = '';
   for (const item of queue) {
     const key = `${item.file}:${item.start}`;
     if (seen.has(key) || (perFile.get(item.file) ?? 0) >= 2) continue;
+    if (ranges.get(item.file)?.some(range => Math.max(range.start, item.start) <= Math.min(range.end, item.end))) continue;
     seen.add(key);
     const anchors = !perFile.has(item.file) ? outlines.get(item.file) : undefined;
+    const sample = item.sample.slice(0, 2300);
+    const end = Math.min(item.end, item.start + sample.split('\n').length - 1);
     const excerpt = JSON.stringify({
-      file: item.file, start: item.start, end: item.end, text: item.sample.slice(0, 2_300),
+      file: item.file, start: item.start, end, text: sample,
+      ...(sample.length < item.sample.length ? { truncated: true } : {}),
       ...(anchors?.length ? { anchors } : {}),
     });
-    if (text.length + excerpt.length + 1 > budget) continue;
+    if (text.length + excerpt.length + 1 > budget) { omitted++; continue; }
     text += excerpt + '\n';
     perFile.set(item.file, (perFile.get(item.file) ?? 0) + 1);
-    selected.push({ file: item.file, start: item.start, end: item.end, reason: item.reason,
+    if (!ranges.has(item.file)) ranges.set(item.file, []);
+    ranges.get(item.file).push({ start: item.start, end });
+    selected.push({ file: item.file, start: item.start, end, reason: item.reason,
+      ...(item.contentHash ? { contentHash: item.contentHash } : {}),
+      ...(item.provenance ? { provenance: item.provenance } : {}),
       ...(typeof item.symbol === 'string' ? { symbol: item.symbol } : {}) });
   }
   const unresolved = mentions(prompt).filter(item => !selected.some(hit => item.type === 'file'
     ? hit.file === item.value : hit.reason === `Explicit symbol ${item.value}` || hit.symbol === item.value));
-  return { text, selected, unresolved, budget, used: text.length };
+  return { text, selected, unresolved, budget, used: text.length, omitted,
+    ranking: { algorithm: 'bm25-fields', coverage: indexes.get(files)?.index.coverage } };
 }
 
-function search(files, query, limit) {
+function search(files, query, limit, { includeScores = false } = {}) {
   const words = terms(query);
   const needle = query.toLowerCase();
   const results = [];
@@ -156,7 +223,8 @@ function search(files, query, limit) {
       });
     }
   }
-  return results.sort((a, b) => b.score - a.score).slice(0, limit).map(({ score, ...item }) => item);
+  return results.sort((a, b) => b.score - a.score).slice(0, limit).map(({ score, ...item }) =>
+    includeScores ? { ...item, score } : item);
 }
 
-module.exports = { assemble, search, mentions, CONTEXT_BUDGET };
+module.exports = { assemble, search, mentions, rank, legacyRank, CONTEXT_BUDGET };

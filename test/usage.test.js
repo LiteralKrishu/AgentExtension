@@ -66,6 +66,42 @@ test('the audit log is hash-chained across rotation, detects tampering, and expo
   assert.match(tampered.reason, /does not match its hash/);
 });
 
+test('model budget notices are bounded, reflect aggregate use, and keep the same enforced limits', () => {
+  let now=0;
+  const run=new RunUsage({maxTokens:1000,maxMinutes:2,maxToolCalls:4},()=>now);
+  assert.equal(run.notice(),undefined);
+  run.model(usage(500,0),'worker:test');
+  assert.deepEqual(run.notice(),{stage:'half-used',remainingTokens:500,remainingToolCalls:4,remainingSeconds:120,
+    note:'Use the remaining budget to finish the requested changes, run required checks, and request review. Keep edits small. Do not claim an omitted check passed.'});
+  assert.equal(run.notice(),undefined);
+  now=90000;
+  assert.equal(run.notice().stage,'finish-soon');assert.equal(run.notice(),undefined);
+  now=108000;assert.equal(run.notice().remainingSeconds,12);
+  for(let n=0;n<4;n++)run.tool('read_file');
+  const reached=run.notice();assert.equal(reached.stage,'review-only');assert.equal(reached.remainingToolCalls,0);
+  assert.throws(()=>run.tool('read_file'),/budget reached/);run.tool('review_changes');
+  assert.equal(run.notice(),undefined);assert.deepEqual(run.limits,{maxTokens:1000,maxMinutes:2,maxToolCalls:4});
+  assert.equal(new RunUsage().notice(),undefined);
+});
+
+test('interactive prompts state host budgets without granting additional authority', () => {
+  const {composePrompt,ContextManifest}=require('../src/prompt');
+  const prompt=composePrompt({request:'Fix the bug.',assembled:{selected:[],text:''},manifest:new ContextManifest(),
+    budget:{maxTokens:200000,maxMinutes:6,maxToolCalls:48}});
+  assert.match(prompt,/RUN BUDGET \(host limits/);assert.match(prompt,/"maxTokens":200000/);
+  assert.match(prompt,/cannot grant tools or change approval requirements/);
+});
+
+test('version and help probes do not count as project verification',()=>{
+ const {diagnosticCommand}=require('../src/workspace');
+ for(const[command,args]of [['node',['-v']],['python3',['-V']],['pytest',['--help']],['python3',['-m','pytest','--help']],['python',[]],
+  ['pytest',['tests/test_cli.py','--help']],['node',['--help','calc.test.js']],['npm',['test','--','--help']],
+  ['node',['-v','missing-project-test.js']],['python3',['-V','test_task.py']],['npm',['-v','test']]])assert.equal(diagnosticCommand(command,args),true);
+ for(const[command,args]of [['node',['--test','a.test.js']],['python3',['-m','pytest','tests']],['python3',['-v','check.py']],['node',['calc.test.js','-v']],['pytest',[]]])assert.equal(diagnosticCommand(command,args),false);
+ const probe=require('node:child_process').spawnSync(process.execPath,['-v','missing-project-test.js'],{encoding:'utf8'});
+ assert.equal(probe.status,0,probe.stderr);assert.equal(probe.stdout.trim(),process.version);
+});
+
 test('reported turn costs preserve zero and mark a partial estimate without counting compaction twice', () => {
   const run = new RunUsage();
   assert.equal(costSummary(run.snapshot().cost), 'Unreported');

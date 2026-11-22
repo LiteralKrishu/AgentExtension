@@ -1,0 +1,29 @@
+{
+  "version": "agent-capability-upgrade/retrieval/2",
+  "frozenAt": "2026-11-22T13:02:07.355Z",
+  "sourceVersion": "git-overlay/1:4bb46d0c9ce2b5ea5fc54a30c3e58f33097eb8f8fd8a53667a6888ec1a27a7a4",
+  "inputDigest": "f5295ef17c74321845461253a8f3c8c256d7c92266f0cf3bc7768e72ac93b849",
+  "labelsDigest": "acea52248302f24422c26274088beac520cdb1b328de046bcd02b9ef2ab22738",
+  "reviewDigest": "f7a9ec5a70e0ebed8f9d89e4ea21592ed927784e53727e21d6b9a6b62a1202c0",
+  "heldOutIds": [
+    "v2-held-01",
+    "v2-held-02",
+    "v2-held-03",
+    "v2-held-04",
+    "v2-held-05",
+    "v2-held-06",
+    "v2-held-07",
+    "v2-held-08",
+    "v2-held-09",
+    "v2-held-10",
+    "v2-held-11",
+    "v2-held-12",
+    "v2-held-13",
+    "v2-held-14",
+    "v2-held-15",
+    "v2-held-16"
+  ],
+  "heldOutStatus": "not evaluated when frozen",
+  "baselineImplementationDigest": "987dc8bf1169c29fa4c37cede6cad96ba0d2a48c6882f2e480ab6373e95c4be5",
+  "limitation": "Held-out queries are fresh and kept out of development selection. They were source-reviewed by the same implementer. External independent comparison remains a later release gate."
+}

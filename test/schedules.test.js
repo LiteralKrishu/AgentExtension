@@ -272,7 +272,7 @@ test('the editor bridge for a scheduled run registers only read tools and enforc
   await client.connect(new StreamableHTTPClientTransport(new URL(bridge.url), {
     requestInit: { headers: { Authorization: `Bearer ${bridge.token}` } } }));
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map(tool => tool.name).sort(), ['read_file', 'search_workspace']);
+  assert.deepEqual(tools.map(tool => tool.name).sort(), ['read_file', 'read_files', 'search_workspace']);
   const write = await client.callTool({ name: 'propose_write', arguments: { file: 'a.txt', old_text: 'one', new_text: 'ONE' } });
   assert.equal(write.isError, true);
   assert.equal((await client.callTool({ name: 'read_file', arguments: { file: 'a.txt' } })).isError, undefined);

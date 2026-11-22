@@ -51,7 +51,7 @@ flask --help
 
 Run the command against an app with test values. Check that a key such as `DEMO_TOKEN` appears with the value `***` and a key such as `DEMO_LABEL` retains its value. Use **Undo last apply** to show that the edit can be reverted.
 
-To collect a draft through the automated live-model harness, set `AGENTEXTENSION_TEST_FLASK_ROOT` to the clean Flask 3.1.3 checkout and run `npm run test:qwen -- --only flask-task-b` from AgentExtension. The harness drives hunk review and records the staged file contents in its JSON result. Inspect that draft and run the CLI checks above in a disposable checkout before recording Task B as passed. [Live-model harness](../test/model/run.cjs)
+To collect a draft through the automated live-model harness, set `AGENTEXTENSION_TEST_FLASK_ROOT` to the clean Flask 3.1.3 checkout and run `npm run test:qwen -- --only flask-task-b` from AgentExtension. The harness drives hunk review, applies the recorded draft in a disposable copy, and runs independent CLI behavior and regression checks. Only a complete outcome passes. The disposable verifier requires a Python toolchain with the test dependencies available; a missing dependency is not a successful result. Review the recorded patch and acceptance evidence before recording Task B as passed. [Live-model harness](../test/model/run.cjs)
 
 ## C. Model failure
 

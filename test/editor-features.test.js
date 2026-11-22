@@ -43,6 +43,36 @@ test('language providers add definitions and references under the existing works
   assert.ok(result.used <= 4_000);
 });
 
+test('document providers cache by source generation, document version and provider state', async t => {
+  const f = await fixture(t); await f.write('a.js', 'function target() {}\n');
+  const uri = { scheme: 'file', fsPath: path.join(f.root, 'a.js'), toString: () => 'file:a.js' };
+  const location = { uri, range: { start: { line: 0, character: 0 } } };
+  const document = { uri, version: 1 };
+  let calls = 0;
+  const vscode = { workspace: { textDocuments: [document] }, commands: { executeCommand: async name => {
+    calls++;
+    return name === 'vscode.executeDocumentSymbolProvider' ? [{ name: 'target', selectionRange: location.range }] : [location];
+  } } };
+  const anchor = { uri, position: location.range.start, reason: 'Active editor' };
+  const query = () => editorContext(vscode, f.workspace, 'Inspect target', anchor, new AbortController().signal, { generation: 1, providerState: 'v1' });
+  assert.ok((await query()).anchors.some(item => item.symbol === 'target' && item.provenance === 'language-provider'));
+  const first = calls; await query(); assert.equal(calls, first);
+  document.version++; await query(); assert.ok(calls > first);
+});
+
+test('an unavailable or slow provider leaves text retrieval usable', async t => {
+  const f = await fixture(t); await f.write('a.js', 'const target = 1;\n');
+  const controller = new AbortController();
+  const vscode = { commands: { executeCommand: () => new Promise(() => {}) } };
+  const alive = setTimeout(() => {}, 2000);
+  try {
+    const result = await editorContext(vscode, f.workspace, '@symbol:target', undefined, controller.signal);
+    assert.deepEqual(result.files, []);
+    assert.equal(result.coverage.providerTimedOut, true);
+    assert.equal(assemble([{ path: 'a.js', text: await f.workspace.read('a.js') }], '@symbol:target').selected[0].file, 'a.js');
+  } finally { clearTimeout(alive); }
+});
+
 test('checkpoint rebase retains independent changes and offers both versions of an overlap', async t => {
   const f = await fixture(t);
   const base = 'first\nsecond\nthird\nfourth\n';

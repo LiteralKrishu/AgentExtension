@@ -1,0 +1,2190 @@
+{
+  "version": "retrieval-judgment-audit/1",
+  "recordedDate": "2026-11-22",
+  "corpusVersion": "agent-capability-upgrade/1",
+  "sourceRevision": "5c5fe676a444d51a5163c89abdb39dec0860817e",
+  "labelsDigest": "ef8e775650abb77626abe990468d6efe40e63de03e8ffe2fd931c3f4f777113a",
+  "inputDigest": "e0fb47d71bffbb8c3bfbf699f46daf69667304ed5277845855751b5057d05b36",
+  "method": "Review pinned implementation, assertions, and user documentation. Retrieval rank is not evidence of relevance. Proposed corrections do not change the frozen benchmark.",
+  "sources": {
+    "src/bridge.js": "419ded9938cbdf4a260b47c7abec86820f220518cc67eca12c523a10fbaa7dd9",
+    "test/core.test.js": "08d3f39cb069f9d4252c7a2218ff6ad035f63426d5c287a6a735fa02d46338bd",
+    "test/live.test.js": "9bfb10c4cc5be72a924b2ddb017b6078672ced6f65909b117c0070ff157bef83",
+    "README.md": "9456c4c218252ac922af19eaa4819130fd5e3e3f459d8405b7eeb8acb93dad25",
+    "src/apply.js": "a292d178688b53f9be48f088082ff24efc406c187b5fea567cc1cc28307855a6",
+    "test/vscode.cjs": "03c26a535910dada6ff2e948acc4a9365599595ed336125dfbf137c981d672bb",
+    "docs/features.md": "6461252625319528bb16c51c43506777b6057162c0998e3996004c059f21f19b",
+    "src/permissions.js": "43336057e69c6cc15e8b72e5be6075e9c8a8927842006893e9781152903aecdc",
+    "test/permissions.test.js": "13b64cf9ba57a8b4092d750b5d063ce2a45c845aaec41b3611660ee84002ea0c",
+    "src/prompt.js": "190a2478e7d1b34e100de7d6697cfd1d560ab0d67f314085416abe5cde4e9832",
+    "test/instructions.test.js": "1cfa458a4be80df1ce50e5679328f44adb6cc800fbc465259cb46ef1550f6274",
+    "src/forge.js": "360112233ede3219430557d0ac546af710b447fee2cc16727d681b8c89e8b3b2",
+    "src/worker-session.js": "b96337454ede88eebc3bca16e1c7938d33c0cce23b8b65e44d983cba7f3e92f7",
+    "test/worker-live.test.js": "e981384f9a9a41658ba9323b906dc02e9a535d0ebb9182103fdd64adf069858a",
+    "src/workspace.js": "493acdf58da2e649a162d9334b0b27184d5a334998ace2ad5d1c170f5b606b4c",
+    "test/connectors.test.js": "eb3b1b1e1dba6fe65ae8f0092cbb425d4c130dcd0206cf068d2cb8fafca00e13",
+    "test/surface-live.test.js": "25e897f04fc376ac08e5b9f7d13b03bfcc070b33423d867b2ab7f6ec183b058a",
+    "test/script-runner.test.js": "13fdda79d804c940d88b54e9b923cc466aa27aa9e531a2835a07181e28a4dd4a",
+    "test/workers.test.js": "02a96ccd2ee223fe89fb5210fb2ac5ff2081798ecac42e975af6da55d8f64710",
+    "test/memory.test.js": "15813f9e653e8e697c4afb121ed9f9832d740386d53720db2f62f90f0d7ee628",
+    "src/draft.js": "ae489f09dd609f000011444f69815b08dd876e6394f0d5c6f5700efa57f82957",
+    "test/hardening.test.js": "e6c34ac7266fb96ee8c4c27e9129cff6d11844a44656d6461b3f3d6264a17f53",
+    "src/context.js": "c2811e61ce2e831a86b8524aaf87dc9bccb6f6ae689a8db3d06c4e57db097076",
+    "src/usage.js": "6c9e8ab55a2be05c0f9af29423fac2ce4d2b3b6225aa6713b10208c0ef8ec1e9",
+    "test/usage.test.js": "42dcdaf7c6febbe0d544565f899b044d36c32aea5ebc5eed514a4c0a841dfe6c",
+    "test/extension-questions.test.js": "5a37212e76b810c09e284e3f10673a0b05031a251d41c4f9887b3dd3817e1158",
+    "src/skills.js": "9e77d229c1835cd40881f2674d9c8a470c611cc7744c20f49e1e7546ae075f30",
+    "test/skills.test.js": "2b399a7e3ec6ed01c42a414641d2f699dea6350b9019fe5eaab70767c6bc46b6",
+    "src/connector-oauth.js": "23b61900a757a8e93927c53a3f28b370c631544eaf296da31d8ce9bdf5ccf744",
+    "test/connector-oauth.test.js": "c38835407a73aa1d9641bb8c6c53710551a6dcc95f0621f854fbac3816d56ec8",
+    "src/plugins.js": "578312d720920304d11f4518726500e810cb367e80c8ab1119862198f6abc7a9",
+    "test/plugins.test.js": "78e6fd164e3cc9618a2601a4104d48c8e0c6b960ec8946f894e81c3a681d49cd",
+    "src/checkpoint.js": "7b1d5bbf77574648e57729ad87b6c93d7c2132a8e738db8c85fcd972dedd5e9f",
+    "test/checkpoint.test.js": "2decb32277251d7b308b54c2d5e1ea58d984bc22d7edf5fb92960c595ac07968",
+    "src/collaboration.js": "417f8979b264dca83e421a5f097e078b2eec468c031b9598213d409226d6bd2b",
+    "test/session-continuation.test.js": "ec3e6f714786090eaf274de23c1e0eb1785378055be67d722ad1ab5d06cce1fc",
+    "docs/hosted-collaboration-https.md": "8911c2741251972a9616147837e6536970254cb6d7ffbc09f668878ae0dab487",
+    "src/workspace-sync.js": "1f1190d389e7575e596b51203775c1a500d97fd8e34a879004365b124d2ee182",
+    "test/workspace-sync.test.js": "a4aa502408b4d133f4132af85ed3d9bb8f5297f9fbf424740afde78f3e1bb68d",
+    "src/memory-sync.js": "e35b5c15fcb72853cd8027a982509d496cf750bb9f6ee7e431893a7850a5a77d",
+    "test/memory-sync.test.js": "17864954a6deef784b34ea1bb64af198c9f54e1023b4e832455ad2816f1a3a5e",
+    "src/background-runner.js": "401994fa52f88529dde1d2149bdf4c46e75681f7d2baa5130c6d2961c9ef0564",
+    "test/background-live.test.js": "a4a14657d3f586c56c0a0e7447960538efc08ca5122710771643c10230973d89",
+    "src/schedules.js": "8e738637c7c5f43fff233a29fed95a5e583934cd752faad44a64df327a48ad47",
+    "test/schedules.test.js": "ac2083f2f8855b101770f251ce3d297942241679a588dc7e9d5857c67a5c3ab4",
+    "src/schedule-controller.js": "8ba6781205c37472cb5e131f6b2ad9e641847018fd9b01c6232e6e0e31cdadaf",
+    "test/extension-schedules.test.js": "e50080a68c02cd5dcd47acfac1b8f0a77c8fbe9fa02501d031e230eab945615d",
+    "src/audit.js": "9e436d638da7e4b2c5059c7298865962bb204cadc642afa82cdf2f1cbd8099db",
+    "src/organization.js": "1c948a440b35b40ef07da7f071e66a749bc4e15bbeefe8d5ac2763609020c19a",
+    "src/policy.js": "160392d34e783aa47458f00030043788db9f3b28a2e54e762f865767984d5674",
+    "test/organization.test.js": "b29c81ab73cc02d6fa481c1603e2cd139b1adbbc947791707ab9b64a6036d85d",
+    "src/browser.js": "037fb8649238fd35ded4a428f149b459e51d2bba37a094bda0fab8690f34bed2",
+    "src/computer.js": "74375f1a7752938cbeefc443bba64b08d70a3d21995e7ef4a15b8c0a4ff7591d",
+    "src/workers.js": "cb3d2943fa36285c9b67e895f40ece345f7e84497354998fcf86b42fa4e39cfa",
+    "src/plugin-hooks.js": "b846f3ef467e4b81870f6971f648d30bbe7a891e635340b2c91f92f0e5e36031",
+    "test/plugin-hooks.test.js": "bb590b1edf55cfd9bc5ab889e681ebc2bd361db3d3a5da5a9cb42912fdec9eaa"
+  },
+  "judgments": [
+    {
+      "query": "query-01",
+      "category": "implementation",
+      "originalFiles": [
+        "src/bridge.js"
+      ],
+      "decision": "retain",
+      "reason": "Registers propose_lines and validates the current receipt, anchor, and replacement range.",
+      "citations": [
+        {
+          "file": "src/bridge.js",
+          "start": 160,
+          "end": 192,
+          "sha256": "7ef5cd1d85e79159888abb5c608d78b7fb0fc601c7c576edab6d6c49c762794a"
+        }
+      ]
+    },
+    {
+      "query": "query-01",
+      "category": "test",
+      "originalFiles": [
+        "test/core.test.js"
+      ],
+      "decision": "replace-proposed",
+      "reason": "The core test file checks draft operations but never calls propose_lines. This runtime fixture calls the tool and asserts range, newline, anchor, and stale-receipt rejection.",
+      "citations": [
+        {
+          "file": "test/live.test.js",
+          "start": 343,
+          "end": 362,
+          "sha256": "594b1d9c22edbf38498055d8c79a6abac47f48169396607ac1d184775462db7f"
+        }
+      ],
+      "proposedFiles": [
+        "test/live.test.js"
+      ]
+    },
+    {
+      "query": "query-01",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Describes receipt-bound line proposals and source changes that invalidate a read.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 548,
+          "end": 548,
+          "sha256": "86e275ce41d05a5c13c019a3d0da5612345cc5a4d61281f66b8a0330b89c94aa"
+        }
+      ]
+    },
+    {
+      "query": "query-02",
+      "category": "implementation",
+      "originalFiles": [
+        "src/apply.js"
+      ],
+      "decision": "retain",
+      "reason": "Defines applyWorkspaceChanges, checks source text, and prepares reviewed file operations.",
+      "citations": [
+        {
+          "file": "src/apply.js",
+          "start": 11,
+          "end": 37,
+          "sha256": "678742b4e4c465887945a514fd729b0d17754a43ac557da2e7c301173235e858"
+        }
+      ]
+    },
+    {
+      "query": "query-02",
+      "category": "test",
+      "originalFiles": [
+        "test/vscode.cjs"
+      ],
+      "decision": "retain",
+      "reason": "Applies accepted draft changes, checks native editor text and file creation, then rejects a mismatching source.",
+      "citations": [
+        {
+          "file": "test/vscode.cjs",
+          "start": 18,
+          "end": 34,
+          "sha256": "d1831b1f7ee94da4ec5c7ef58dd1b3fd07f726243a52ed2cdc3d8710f2611d4f"
+        }
+      ]
+    },
+    {
+      "query": "query-02",
+      "category": "documentation",
+      "originalFiles": [
+        "docs/features.md"
+      ],
+      "decision": "retain",
+      "reason": "Describes hunk decisions, apply, undo, and verification of the accepted changes.",
+      "citations": [
+        {
+          "file": "docs/features.md",
+          "start": 13,
+          "end": 15,
+          "sha256": "762df6b5d5eaee168904239b8b5ece97de5644b0cf328482df27530bcf45c294"
+        }
+      ]
+    },
+    {
+      "query": "query-03",
+      "category": "implementation",
+      "originalFiles": [
+        "src/permissions.js"
+      ],
+      "decision": "retain",
+      "reason": "Defines PermissionBroker and binds actions to workspace, run, policy, arguments, and scope.",
+      "citations": [
+        {
+          "file": "src/permissions.js",
+          "start": 23,
+          "end": 55,
+          "sha256": "ebdbd989fc5bc08402a8458d1853485c939f5fce10bfd03f13317c6d322e215a"
+        }
+      ]
+    },
+    {
+      "query": "query-03",
+      "category": "test",
+      "originalFiles": [
+        "test/permissions.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts that exact grants bind action fields and can be consumed only once.",
+      "citations": [
+        {
+          "file": "test/permissions.test.js",
+          "start": 8,
+          "end": 17,
+          "sha256": "3491792451b95695d2c218a6315018288d8f1393fbdd574663ce0b5fd1b93074"
+        }
+      ]
+    },
+    {
+      "query": "query-03",
+      "category": "documentation",
+      "originalFiles": [
+        "docs/features.md"
+      ],
+      "decision": "retain",
+      "reason": "Describes scoped permissions and exact one-time grants.",
+      "citations": [
+        {
+          "file": "docs/features.md",
+          "start": 49,
+          "end": 51,
+          "sha256": "0c3c3a0bec39fc461792ca0060dbecdcb042b7281b5a1083354c5617f9152276"
+        }
+      ]
+    },
+    {
+      "query": "query-04",
+      "category": "implementation",
+      "originalFiles": [
+        "src/prompt.js"
+      ],
+      "decision": "retain",
+      "reason": "Defines ContextManifest entries, compaction timing, source counts, and token estimates.",
+      "citations": [
+        {
+          "file": "src/prompt.js",
+          "start": 4,
+          "end": 36,
+          "sha256": "2b58ccff607fce498271f6d387f26d67750c144472f2b72da98a17b8bf01ffee"
+        }
+      ]
+    },
+    {
+      "query": "query-04",
+      "category": "test",
+      "originalFiles": [
+        "test/core.test.js"
+      ],
+      "decision": "replace-proposed",
+      "reason": "The core test file never constructs ContextManifest. This fixture constructs it and asserts trust labels, character totals, and token estimates.",
+      "citations": [
+        {
+          "file": "test/instructions.test.js",
+          "start": 80,
+          "end": 90,
+          "sha256": "5d5f198e2f74ce1f1636abb1aa2e7ab7d425005b138dbb6bb3f721a70a429343"
+        }
+      ],
+      "proposedFiles": [
+        "test/instructions.test.js"
+      ]
+    },
+    {
+      "query": "query-04",
+      "category": "documentation",
+      "originalFiles": [
+        "docs/features.md"
+      ],
+      "decision": "retain",
+      "reason": "Describes the context-source history and compaction timing that the manifest records.",
+      "citations": [
+        {
+          "file": "docs/features.md",
+          "start": 22,
+          "end": 22,
+          "sha256": "dab8922428e2d2fb4233da7440981a81c76da8f6d1a99472a7d1eab12a1599c4"
+        }
+      ]
+    },
+    {
+      "query": "query-05",
+      "category": "implementation",
+      "originalFiles": [
+        "src/forge.js"
+      ],
+      "decision": "retain",
+      "reason": "Defines runForge and configures its runtime, model, and connector scope.",
+      "citations": [
+        {
+          "file": "src/forge.js",
+          "start": 107,
+          "end": 132,
+          "sha256": "8898eb935901366ea070fe3cc2f56cc07e8a4faf8b281ca69289f8834eb51959"
+        }
+      ]
+    },
+    {
+      "query": "query-05",
+      "category": "test",
+      "originalFiles": [
+        "test/live.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Drives runForge through a streamed three-file edit and review flow, then checks its reviewed hunks.",
+      "citations": [
+        {
+          "file": "test/live.test.js",
+          "start": 217,
+          "end": 227,
+          "sha256": "9c2c914e55d97925d9eab12460ae0a766b894d1dea55d8e7d685a8224902e5e0"
+        }
+      ]
+    },
+    {
+      "query": "query-05",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Describes the TrueForge session loop, event stream, tool discovery, and editor approvals.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 542,
+          "end": 544,
+          "sha256": "f841ac541fb98a26fa7940e75813cf74272092246c688999c4edc63f05bc9283"
+        }
+      ]
+    },
+    {
+      "query": "query-06",
+      "category": "implementation",
+      "originalFiles": [
+        "src/worker-session.js"
+      ],
+      "decision": "retain",
+      "reason": "Defines runWorkerSession and creates a separate agent session with restricted tools and no inherited skills or memory.",
+      "citations": [
+        {
+          "file": "src/worker-session.js",
+          "start": 22,
+          "end": 65,
+          "sha256": "88741d0db420d1fbbc500e0821c1527c0bff811bada0ab1f2e46e74d1311ce81"
+        }
+      ]
+    },
+    {
+      "query": "query-06",
+      "category": "test",
+      "originalFiles": [
+        "test/worker-live.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Runs a real worker session and checks its limited tool exposure and absent parent context.",
+      "citations": [
+        {
+          "file": "test/worker-live.test.js",
+          "start": 50,
+          "end": 64,
+          "sha256": "92fca5d405d2935de10bc3c30744de754d56a3368e625728cf4995c2bc7e8d68"
+        }
+      ]
+    },
+    {
+      "query": "query-06",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "States that each worker uses a separate TrueForge session.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 542,
+          "end": 542,
+          "sha256": "4670280ad9c4db6f5930a83629e9be3e310c7be1ed11e55fc7dd64ed0e488421"
+        }
+      ]
+    },
+    {
+      "query": "query-07",
+      "category": "implementation",
+      "originalFiles": [
+        "src/workspace.js"
+      ],
+      "decision": "retain",
+      "reason": "Defines private-path exclusions and safePath validation against traversal and protected names.",
+      "citations": [
+        {
+          "file": "src/workspace.js",
+          "start": 14,
+          "end": 23,
+          "sha256": "574a8147bda3097dfb5edf89d7a5d0d594e511bb32c05f03a35a2344796c647e"
+        }
+      ]
+    },
+    {
+      "query": "query-07",
+      "category": "test",
+      "originalFiles": [
+        "test/core.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts private-path, traversal, and symlink read rejection.",
+      "citations": [
+        {
+          "file": "test/core.test.js",
+          "start": 72,
+          "end": 87,
+          "sha256": "455737700b4eabebc6b2e0472e9917126bcb26f9719d0f85b869c42e48fa1e1a"
+        }
+      ]
+    },
+    {
+      "query": "query-07",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents hidden-path, protected-path, and symlink exclusions in workspace file sharing. This is related scope documentation, not an API reference for safePath.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 300,
+          "end": 300,
+          "sha256": "35cf8bb36d75878069cdbe0dbe75866b91126f6cf1a30eb1abe01a2bc2e4cf4a"
+        }
+      ]
+    },
+    {
+      "query": "query-08",
+      "category": "implementation",
+      "originalFiles": [
+        "src/forge.js"
+      ],
+      "decision": "retain",
+      "reason": "Validates a loopback HTTP TrueForge URL and rejects credentials and non-root URL components.",
+      "citations": [
+        {
+          "file": "src/forge.js",
+          "start": 34,
+          "end": 43,
+          "sha256": "87d87c53bf1d745ce95174273e55fa84e8d8e418a2f790ba91896296b5f5d9f3"
+        }
+      ]
+    },
+    {
+      "query": "query-08",
+      "category": "test",
+      "originalFiles": [
+        "test/core.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Checks accepted local URLs and rejects a deceptive hostname and a session URL.",
+      "citations": [
+        {
+          "file": "test/core.test.js",
+          "start": 89,
+          "end": 98,
+          "sha256": "e00119dca43824722f0801f31a42f1191462cce173a36e3ef55bd9c148fda134"
+        }
+      ]
+    },
+    {
+      "query": "query-08",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents connecting a model through a local TrueForge service.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 7,
+          "end": 20,
+          "sha256": "c13d7d4fda6440ba4e4152a354cf5f21a38e2421a27bd54218aceddb65ea115f"
+        }
+      ]
+    },
+    {
+      "query": "query-09",
+      "category": "implementation",
+      "originalFiles": [
+        "src/bridge.js"
+      ],
+      "decision": "retain",
+      "reason": "Registers create_file and stages a new file through the draft object.",
+      "citations": [
+        {
+          "file": "src/bridge.js",
+          "start": 201,
+          "end": 206,
+          "sha256": "e441d740ab2bc85f0776db02e11f42fa4d13a8c1c3603fe5c2ee93f83ca7c80c"
+        }
+      ]
+    },
+    {
+      "query": "query-09",
+      "category": "test",
+      "originalFiles": [
+        "test/core.test.js"
+      ],
+      "decision": "replace-proposed",
+      "reason": "The core test file never creates a draft file. The native fixture creates one, asserts it is absent before apply, and checks its contents after apply. This tests the underlying creation flow rather than the bridge call itself.",
+      "citations": [
+        {
+          "file": "test/vscode.cjs",
+          "start": 18,
+          "end": 27,
+          "sha256": "06cc4c5670b5c61595476a7ef319ef419ab6d20ac2bb0a4d587deee8a021a8a5"
+        }
+      ],
+      "proposedFiles": [
+        "test/vscode.cjs"
+      ]
+    },
+    {
+      "query": "query-09",
+      "category": "documentation",
+      "originalFiles": [
+        "docs/features.md"
+      ],
+      "decision": "retain",
+      "reason": "Describes creating a text file and applying approved new files.",
+      "citations": [
+        {
+          "file": "docs/features.md",
+          "start": 9,
+          "end": 14,
+          "sha256": "3ff62f03945b333d2c09c51da08ade1badfb680ebcd25b7e74d3c6a89daf42fc"
+        }
+      ]
+    },
+    {
+      "query": "query-10",
+      "category": "implementation",
+      "originalFiles": [
+        "src/bridge.js"
+      ],
+      "decision": "retain",
+      "reason": "Registers review_changes and binds accepted hunks to the current draft revision.",
+      "citations": [
+        {
+          "file": "src/bridge.js",
+          "start": 208,
+          "end": 227,
+          "sha256": "0e437b2459954a6e172b1223cc4dd2f510393699760a7180b10c14fe0cf3a5b5"
+        }
+      ]
+    },
+    {
+      "query": "query-10",
+      "category": "test",
+      "originalFiles": [
+        "test/live.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Checks that a staged draft reaches reviewed hunks after a forgotten-review follow-up.",
+      "citations": [
+        {
+          "file": "test/live.test.js",
+          "start": 314,
+          "end": 318,
+          "sha256": "57936d1497b3d08a4389c1081625eeb49c6d1d4edf58aba32a231e38e33c09b6"
+        }
+      ]
+    },
+    {
+      "query": "query-10",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Describes hunk acceptance, rejection, review continuation, and checks of accepted changes.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 47,
+          "end": 48,
+          "sha256": "ddd77a9fe04f1965ffaaddd6ee6e4b896caa7132aff0cfe77fa0a9a47b0a636b"
+        }
+      ]
+    },
+    {
+      "query": "query-11",
+      "category": "implementation",
+      "originalFiles": [
+        "src/bridge.js"
+      ],
+      "decision": "retain",
+      "reason": "Registers connector_read and routes its validated input to the configured connector reader.",
+      "citations": [
+        {
+          "file": "src/bridge.js",
+          "start": 249,
+          "end": 251,
+          "sha256": "4eef62141ce3d18695ee358b47d61672edfdfdbc57889ab52db47a21152f23a4"
+        }
+      ]
+    },
+    {
+      "query": "query-11",
+      "category": "test",
+      "originalFiles": [
+        "test/connectors.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Checks that credential, scope, and revocation changes invalidate connector read approval.",
+      "citations": [
+        {
+          "file": "test/connectors.test.js",
+          "start": 38,
+          "end": 46,
+          "sha256": "cc4e798b7bf32f6b76e831b99e676492e7bccaf6a14d3137b175cb538a0a46c5"
+        }
+      ]
+    },
+    {
+      "query": "query-11",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents read-connector configuration, exact tool targets, and credential handling.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 479,
+          "end": 502,
+          "sha256": "67d5d567206d5817b84a1f386629ae00125cbcdbdb7f6be4b111f7517ad453ef"
+        }
+      ]
+    },
+    {
+      "query": "query-12",
+      "category": "implementation",
+      "originalFiles": [
+        "src/bridge.js"
+      ],
+      "decision": "retain",
+      "reason": "Registers browser_visit as an explicit read-only visit outside the selected browser origins.",
+      "citations": [
+        {
+          "file": "src/bridge.js",
+          "start": 281,
+          "end": 284,
+          "sha256": "c923fc01cdcb22065932c3275cbb5e9920bb291544e4cbdc10f00fcd46c82b01"
+        }
+      ]
+    },
+    {
+      "query": "query-12",
+      "category": "test",
+      "originalFiles": [
+        "test/surface-live.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Checks one approved outside-origin visit, read-only restrictions, expiry, and permission rules.",
+      "citations": [
+        {
+          "file": "test/surface-live.test.js",
+          "start": 213,
+          "end": 246,
+          "sha256": "9d74a10f280f284ec34f8380ab388c894fffffd4f888f8a4351509fc57d6a2fd"
+        }
+      ]
+    },
+    {
+      "query": "query-12",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents browser_visit, its exact URL approval, read-only operations, and expiry.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 121,
+          "end": 121,
+          "sha256": "79c486c036762bf90742700693f3e376dbc6f35cb6d4401ba509f1f44d6fb159"
+        }
+      ]
+    },
+    {
+      "query": "query-13",
+      "category": "implementation",
+      "originalFiles": [
+        "src/bridge.js"
+      ],
+      "decision": "retain",
+      "reason": "Registers run_skill_script only when script execution is enabled and routes it through isolated execution.",
+      "citations": [
+        {
+          "file": "src/bridge.js",
+          "start": 239,
+          "end": 242,
+          "sha256": "05a7b6259dba62cb8b70be9db01ccdf9eaf4f02100abc00adee65a2dd2d23edd"
+        }
+      ]
+    },
+    {
+      "query": "query-13",
+      "category": "test",
+      "originalFiles": [
+        "test/script-runner.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts active-skill eligibility, exact script approval, changed-input rejection, and one-use execution.",
+      "citations": [
+        {
+          "file": "test/script-runner.test.js",
+          "start": 150,
+          "end": 170,
+          "sha256": "8986755163db45866abf89df33e552a4d4d6dd86c26815d56a5bb06db1e444ef"
+        }
+      ]
+    },
+    {
+      "query": "query-13",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents declared skill scripts, their isolation, exact approval, and output restrictions.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 435,
+          "end": 449,
+          "sha256": "87306e8f432d50bdb23e3fa25dc39cf0e4bb9284b91bfae1956a99f44fb30a64"
+        }
+      ]
+    },
+    {
+      "query": "query-14",
+      "category": "implementation",
+      "originalFiles": [
+        "src/bridge.js"
+      ],
+      "decision": "retain",
+      "reason": "Registers worker edit proposals and merge_worker_edits, which stages a proposal through the worker pool.",
+      "citations": [
+        {
+          "file": "src/bridge.js",
+          "start": 269,
+          "end": 273,
+          "sha256": "5d45816e3ecc6912177920f8ace033f6d3a3194c6af07a35464c858fce44739f"
+        }
+      ]
+    },
+    {
+      "query": "query-14",
+      "category": "test",
+      "originalFiles": [
+        "test/workers.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts that worker edits stay separate until merge, then stage once without changing disk text.",
+      "citations": [
+        {
+          "file": "test/workers.test.js",
+          "start": 162,
+          "end": 178,
+          "sha256": "e8276fddda820de23522cc0e1c497f78d8ac39ee04ed96cdb96f3627e54f6594"
+        }
+      ]
+    },
+    {
+      "query": "query-14",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Describes separate worker drafts, merge_worker_edits, stale bases, overlapping edits, and user review.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 62,
+          "end": 62,
+          "sha256": "dbb7a49d0fb239f40ac3e1bab3079e73db1186118cb1af53fc6463440eb42396"
+        }
+      ]
+    },
+    {
+      "query": "query-15",
+      "category": "implementation",
+      "originalFiles": [
+        "src/bridge.js"
+      ],
+      "decision": "retain",
+      "reason": "Registers suggest_note with workspace or user scope, a reason, and bounded source references.",
+      "citations": [
+        {
+          "file": "src/bridge.js",
+          "start": 121,
+          "end": 126,
+          "sha256": "e6e15bbfad538665e2ade1f0031cf3cbeec14018d9ec72fa0fcbd6822ddbad0d"
+        }
+      ]
+    },
+    {
+      "query": "query-15",
+      "category": "test",
+      "originalFiles": [
+        "test/memory.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts that suggested notes remain pending until approval, preserve references, reject private references, and can be discarded.",
+      "citations": [
+        {
+          "file": "test/memory.test.js",
+          "start": 75,
+          "end": 94,
+          "sha256": "3122891a168b05fd56e6918f69f01dd64d66e02fd05782900592fa9a327481fe"
+        }
+      ]
+    },
+    {
+      "query": "query-15",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents suggest_note, review before saving, source references, and suggestion limits.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 58,
+          "end": 58,
+          "sha256": "9da9251d87afd7b89e7ebace92e0ec2d03a720b3082e787604a5e0f2cf5cceb0"
+        }
+      ]
+    },
+    {
+      "query": "query-16",
+      "category": "implementation",
+      "originalFiles": [
+        "src/bridge.js"
+      ],
+      "decision": "retain",
+      "reason": "Registers diagnose_failure for the test-diagnosis worker role.",
+      "citations": [
+        {
+          "file": "src/bridge.js",
+          "start": 265,
+          "end": 267,
+          "sha256": "6266c66b3bda3c38a0140728ca179724b7fcb86524285c1e2bbc51403e064adb"
+        }
+      ]
+    },
+    {
+      "query": "query-16",
+      "category": "test",
+      "originalFiles": [
+        "test/workers.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts the failed command, bounded output, cited files, diagnosis role, and absence of draft changes.",
+      "citations": [
+        {
+          "file": "test/workers.test.js",
+          "start": 143,
+          "end": 158,
+          "sha256": "f767357c18f083fb5c21bc9fd647f3778c5acead4aca43a1cc1a2f33c34f35ae"
+        }
+      ]
+    },
+    {
+      "query": "query-16",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents diagnosis of the latest failed check from its output and cited files.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 62,
+          "end": 62,
+          "sha256": "dbb7a49d0fb239f40ac3e1bab3079e73db1186118cb1af53fc6463440eb42396"
+        }
+      ]
+    },
+    {
+      "query": "query-17",
+      "category": "implementation",
+      "originalFiles": [
+        "src/draft.js"
+      ],
+      "decision": "retain",
+      "reason": "Restricts exact replacements to the selected file and selection and refuses range edits in inline mode.",
+      "citations": [
+        {
+          "file": "src/draft.js",
+          "start": 74,
+          "end": 99,
+          "sha256": "42d4ea04a06973a8bafbad52791191f9bc333eac8dd6ad658138efcfcbb6c426"
+        }
+      ]
+    },
+    {
+      "query": "query-17",
+      "category": "test",
+      "originalFiles": [
+        "test/core.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts that edits cannot escape the selected region and preserves outside text and CRLF endings.",
+      "citations": [
+        {
+          "file": "test/core.test.js",
+          "start": 19,
+          "end": 28,
+          "sha256": "8d97eb6bc48b88a2e7cc14cb0e4a031cf30583336680614f07884c1881434ecd"
+        }
+      ]
+    },
+    {
+      "query": "query-17",
+      "category": "documentation",
+      "originalFiles": [
+        "docs/features.md"
+      ],
+      "decision": "retain",
+      "reason": "States that an inline draft can change only the original selection.",
+      "citations": [
+        {
+          "file": "docs/features.md",
+          "start": 8,
+          "end": 8,
+          "sha256": "c313cbcd4563136a9e020fb752cace76242b5b5c38e6db9476faa6fcfa11f8d9"
+        }
+      ]
+    },
+    {
+      "query": "query-18",
+      "category": "implementation",
+      "originalFiles": [
+        "src/apply.js"
+      ],
+      "decision": "retain",
+      "reason": "Checks the current document text against the reviewed source before applying a change.",
+      "citations": [
+        {
+          "file": "src/apply.js",
+          "start": 17,
+          "end": 26,
+          "sha256": "e9e8770db10b6731cdba074b68a24eefd865e0db341ef408f4d715cd153d6e90"
+        }
+      ]
+    },
+    {
+      "query": "query-18",
+      "category": "test",
+      "originalFiles": [
+        "test/hardening.test.js"
+      ],
+      "decision": "replace-proposed",
+      "reason": "The hardening file tests isolation rather than applyWorkspaceChanges. The native fixture calls that function with a mismatching source and expects changed-since-review rejection.",
+      "citations": [
+        {
+          "file": "test/vscode.cjs",
+          "start": 33,
+          "end": 34,
+          "sha256": "2c8d689e3f08e674d9282a1f6e4854b437cd59f02ea260a34df2c3cc3776d642"
+        }
+      ],
+      "proposedFiles": [
+        "test/vscode.cjs"
+      ]
+    },
+    {
+      "query": "query-18",
+      "category": "documentation",
+      "originalFiles": [
+        "docs/features.md"
+      ],
+      "decision": "retain",
+      "reason": "States that apply checks whether the underlying text still matches.",
+      "citations": [
+        {
+          "file": "docs/features.md",
+          "start": 14,
+          "end": 14,
+          "sha256": "9a529f5ecf733b573ac3f96db6593d94867cb5fe4241b835bb5635c88b4dc26d"
+        }
+      ]
+    },
+    {
+      "query": "query-19",
+      "category": "implementation",
+      "originalFiles": [
+        "src/context.js"
+      ],
+      "decision": "retain",
+      "reason": "Selects implementation, test, and documentation representatives when assembling repository context.",
+      "citations": [
+        {
+          "file": "src/context.js",
+          "start": 85,
+          "end": 104,
+          "sha256": "93d137affbb60c36844783061699c81025eba4a26f26a5eac1a2965deb12e5e8"
+        }
+      ]
+    },
+    {
+      "query": "query-19",
+      "category": "test",
+      "originalFiles": [
+        "test/core.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts selected implementation, matching test, documentation, budget limits, and source anchors.",
+      "citations": [
+        {
+          "file": "test/core.test.js",
+          "start": 56,
+          "end": 69,
+          "sha256": "f6dfe886aad99fe301cafbdd07f4316fb678184a864dadfdd6009601fd151196"
+        }
+      ]
+    },
+    {
+      "query": "query-19",
+      "category": "documentation",
+      "originalFiles": [
+        "docs/features.md"
+      ],
+      "decision": "retain",
+      "reason": "Describes automatic context from source, tests, and documentation.",
+      "citations": [
+        {
+          "file": "docs/features.md",
+          "start": 20,
+          "end": 20,
+          "sha256": "45272e99ec7437ef43d6ff8361594e5e4babf456ab9f7c05b6a2c7ffb24e95c3"
+        }
+      ]
+    },
+    {
+      "query": "query-20",
+      "category": "implementation",
+      "originalFiles": [
+        "src/workspace.js"
+      ],
+      "decision": "retain",
+      "reason": "Passes cancellation into isolated command execution and removes the disposable directory in finally.",
+      "citations": [
+        {
+          "file": "src/workspace.js",
+          "start": 115,
+          "end": 144,
+          "sha256": "38690320022c560522ad34e152f15a9f5d0b6a85943b38d5790bfaa8b986d01a"
+        },
+        {
+          "file": "src/workspace.js",
+          "start": 217,
+          "end": 243,
+          "sha256": "86296429ceaf59a3bd5a5ac0e639d6e3af490fa0e5a35d72f2d69d9abb260438"
+        }
+      ]
+    },
+    {
+      "query": "query-20",
+      "category": "test",
+      "originalFiles": [
+        "test/hardening.test.js"
+      ],
+      "decision": "coverage-gap",
+      "reason": "This fixture creates an active AbortSignal and tests isolation. It never aborts a running workspace command or asserts removal of that command copy. No direct cancellation-and-cleanup assertion was found in the pinned test tree. A new corpus must record this coverage gap instead of inventing a positive test path.",
+      "citations": [
+        {
+          "file": "test/hardening.test.js",
+          "start": 50,
+          "end": 60,
+          "sha256": "c77c6d29aea10b384ea864f693710ae34adfa242332988d7d17b8b079c045448"
+        }
+      ]
+    },
+    {
+      "query": "query-20",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents run cancellation and isolated temporary command copies. It does not explicitly document the cleanup assertion missing from the tests.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 53,
+          "end": 54,
+          "sha256": "c3a7f30c2ee8f9984bb766fc85fad89cd200653ec3560793b3b6461f373b38f2"
+        },
+        {
+          "file": "README.md",
+          "start": 550,
+          "end": 550,
+          "sha256": "9a3fb631dc05a2dd13c3ff7f16c42a5f297eb679d96ca66c56b4ec1c0cc100c7"
+        }
+      ]
+    },
+    {
+      "query": "query-21",
+      "category": "implementation",
+      "originalFiles": [
+        "src/workspace.js"
+      ],
+      "decision": "retain",
+      "reason": "Builds macOS and Linux isolation arguments that deny network access.",
+      "citations": [
+        {
+          "file": "src/workspace.js",
+          "start": 178,
+          "end": 203,
+          "sha256": "3baba3b829326c65141162a68b391c4544cb1417e21e34a86a20aaed1e870ab5"
+        }
+      ]
+    },
+    {
+      "query": "query-21",
+      "category": "test",
+      "originalFiles": [
+        "test/permissions.test.js"
+      ],
+      "decision": "replace-proposed",
+      "reason": "The permissions test file checks grants rather than network isolation. This fixture runs isolated curl and asserts a nonzero exit.",
+      "citations": [
+        {
+          "file": "test/hardening.test.js",
+          "start": 50,
+          "end": 60,
+          "sha256": "c77c6d29aea10b384ea864f693710ae34adfa242332988d7d17b8b079c045448"
+        }
+      ],
+      "proposedFiles": [
+        "test/hardening.test.js"
+      ]
+    },
+    {
+      "query": "query-21",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "States that verification commands run in a temporary copy without network access.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 550,
+          "end": 550,
+          "sha256": "9a3fb631dc05a2dd13c3ff7f16c42a5f297eb679d96ca66c56b4ec1c0cc100c7"
+        }
+      ]
+    },
+    {
+      "query": "query-22",
+      "category": "implementation",
+      "originalFiles": [
+        "src/usage.js"
+      ],
+      "decision": "retain",
+      "reason": "Tracks model tokens and reported costs and formats the visible usage summary.",
+      "citations": [
+        {
+          "file": "src/usage.js",
+          "start": 21,
+          "end": 44,
+          "sha256": "b4e48a9d1117bf8765094e5174db17c8b85c15d1787e65fb7f9fc1ecaa97738f"
+        },
+        {
+          "file": "src/usage.js",
+          "start": 65,
+          "end": 86,
+          "sha256": "2bf34320ca1c8b0cfa481791cf71d76581d0412f76a1d83856651f352cd5c8cc"
+        }
+      ]
+    },
+    {
+      "query": "query-22",
+      "category": "test",
+      "originalFiles": [
+        "test/usage.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts unreported cost, zero cost, partial totals, and compaction accounting.",
+      "citations": [
+        {
+          "file": "test/usage.test.js",
+          "start": 69,
+          "end": 79,
+          "sha256": "06144d7ce4ace87a7c9ea4610e1bc2db816a6d62e180c4f82b8ae8179540955b"
+        }
+      ]
+    },
+    {
+      "query": "query-22",
+      "category": "documentation",
+      "originalFiles": [
+        "docs/features.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents displayed token usage, compaction activity, and reported cost.",
+      "citations": [
+        {
+          "file": "docs/features.md",
+          "start": 54,
+          "end": 54,
+          "sha256": "fc69665f0dec90ce22c7ed1a0c81f6f589db550dc06c8fc9ea29809763af406f"
+        }
+      ]
+    },
+    {
+      "query": "query-23",
+      "category": "implementation",
+      "originalFiles": [
+        "src/forge.js"
+      ],
+      "decision": "retain",
+      "reason": "Handles required question responses as bounded user input and resumes the paused turn.",
+      "citations": [
+        {
+          "file": "src/forge.js",
+          "start": 351,
+          "end": 376,
+          "sha256": "4e0aa8b233de5e10218509f7a1ba1e7f3e0d1eb77977155aa4ffbe778fcae2d9"
+        }
+      ]
+    },
+    {
+      "query": "query-23",
+      "category": "test",
+      "originalFiles": [
+        "test/extension-questions.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts a structured question in the panel, its answer, resumed model output, and separation from tool approval.",
+      "citations": [
+        {
+          "file": "test/extension-questions.test.js",
+          "start": 35,
+          "end": 65,
+          "sha256": "05109bf3eee60fc114684a8962335e4b50b2cbbaa751229522af71d875ed8494"
+        }
+      ]
+    },
+    {
+      "query": "query-23",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents question choices, user answers, skips, and the separate approval limit.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 45,
+          "end": 45,
+          "sha256": "c927e5e1f24723d12a49ff233a1a22091e93489b0287bb82299b044c6132db31"
+        }
+      ]
+    },
+    {
+      "query": "query-24",
+      "category": "implementation",
+      "originalFiles": [
+        "src/skills.js"
+      ],
+      "decision": "retain",
+      "reason": "Reads explicit-only frontmatter and filters it during automatic workflow matching.",
+      "citations": [
+        {
+          "file": "src/skills.js",
+          "start": 40,
+          "end": 56,
+          "sha256": "0cd7a6ff578c5d33cb4dd68404239b65dc051e43a8925085f66eeb3a2a576cc3"
+        },
+        {
+          "file": "src/skills.js",
+          "start": 169,
+          "end": 190,
+          "sha256": "4c457c48ae53ac9a1324168c367b1bef236b9250dbf3b4a1ad4e464dfa8da881"
+        }
+      ]
+    },
+    {
+      "query": "query-24",
+      "category": "test",
+      "originalFiles": [
+        "test/skills.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Tests automatic matching, explicit-only exclusion, and workflow budgets.",
+      "citations": [
+        {
+          "file": "test/skills.test.js",
+          "start": 102,
+          "end": 124,
+          "sha256": "2146621f2d88cccbe8f318c4a013d59e313b631b2894ee16f76d342ca73b150e"
+        }
+      ]
+    },
+    {
+      "query": "query-24",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents that disable-model-invocation and disabled implicit invocation require manual selection.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 55,
+          "end": 55,
+          "sha256": "a6368c5b6b974c52545f959e3af2d1e9a884c43f465cc0487a8a9e8dc4aabb45"
+        }
+      ]
+    },
+    {
+      "query": "query-25",
+      "category": "implementation",
+      "originalFiles": [
+        "src/connector-oauth.js"
+      ],
+      "decision": "retain",
+      "reason": "Refreshes expired or rejected access tokens while preserving the verified account, scope, and current credential binding.",
+      "citations": [
+        {
+          "file": "src/connector-oauth.js",
+          "start": 243,
+          "end": 286,
+          "sha256": "9d36bf5bcec32c1349016fe3a8a363d0d55cde9519b8a227a328202497173f5e"
+        }
+      ]
+    },
+    {
+      "query": "query-25",
+      "category": "test",
+      "originalFiles": [
+        "test/connector-oauth.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts refresh, account switching, and rejection of changed refresh identities or scopes.",
+      "citations": [
+        {
+          "file": "test/connector-oauth.test.js",
+          "start": 13,
+          "end": 46,
+          "sha256": "e45c93f2a472a555fabef85efa26a234821f8a5d86bdcffb9b011bdf8ea43bfe"
+        }
+      ]
+    },
+    {
+      "query": "query-25",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents verified OAuth accounts, refresh identity, and new approval after account switches.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 528,
+          "end": 532,
+          "sha256": "5e7fd61a0b6d6e2715654795529cd4f6cce27e0559d62b7578f530937af24edc"
+        }
+      ]
+    },
+    {
+      "query": "query-26",
+      "category": "implementation",
+      "originalFiles": [
+        "src/plugins.js"
+      ],
+      "decision": "retain",
+      "reason": "Reloads enabled plugin content and rejects a changed approval pin before use.",
+      "citations": [
+        {
+          "file": "src/plugins.js",
+          "start": 168,
+          "end": 181,
+          "sha256": "e07c92d23d947665a5ece04fe4234cb50267aa270c3b96c2476b603f7b2da06e"
+        }
+      ]
+    },
+    {
+      "query": "query-26",
+      "category": "test",
+      "originalFiles": [
+        "test/plugins.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Changes plugin version, workflow text, and capabilities and asserts invalidation or rejection.",
+      "citations": [
+        {
+          "file": "test/plugins.test.js",
+          "start": 31,
+          "end": 48,
+          "sha256": "21f31799b99e0c3875853a03ae2bd9424edab0e0a38371268d61902ea1ca1307"
+        }
+      ]
+    },
+    {
+      "query": "query-26",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "States that changed plugin content, version, or referenced configuration needs approval again.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 60,
+          "end": 60,
+          "sha256": "202e1cf574ab2bb3e8566448534b35db2fbf57d7b6f576232368feb23544a8f5"
+        }
+      ]
+    },
+    {
+      "query": "query-27",
+      "category": "implementation",
+      "originalFiles": [
+        "src/checkpoint.js"
+      ],
+      "decision": "retain",
+      "reason": "Loads a workspace-bound checkpoint and restores saved draft files without restoring grants.",
+      "citations": [
+        {
+          "file": "src/checkpoint.js",
+          "start": 49,
+          "end": 68,
+          "sha256": "419f364a9aa9346e72f528ee6a7852b664e7003c5a8711dddecea685b636afd7"
+        },
+        {
+          "file": "src/checkpoint.js",
+          "start": 219,
+          "end": 237,
+          "sha256": "2039eb2732b4bc1d483dc4fdf4ae7eb35b44da2e519484a0da2127f998e109db"
+        }
+      ]
+    },
+    {
+      "query": "query-27",
+      "category": "test",
+      "originalFiles": [
+        "test/checkpoint.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Loads a checkpoint, asserts stored draft data and absent grants, restores the draft, and checks workspace and age restrictions.",
+      "citations": [
+        {
+          "file": "test/checkpoint.test.js",
+          "start": 42,
+          "end": 65,
+          "sha256": "ffe87b9f8c3caa74436db9af43ea5a098eaa4ef3faa36f0c5ad719ab8579fc28"
+        }
+      ]
+    },
+    {
+      "query": "query-27",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents restart recovery, source conflicts, fresh approvals, and checkpoint clearing.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 44,
+          "end": 44,
+          "sha256": "6130af65c0e238cd809f35e2ce8fd50703becf2886ea7c874c8b2ff99fa783bf"
+        }
+      ]
+    },
+    {
+      "query": "query-28",
+      "category": "implementation",
+      "originalFiles": [
+        "src/collaboration.js"
+      ],
+      "decision": "retain",
+      "reason": "Builds a portable continuation and materializes it against the receiving workspace Git revision and source bases.",
+      "citations": [
+        {
+          "file": "src/collaboration.js",
+          "start": 169,
+          "end": 204,
+          "sha256": "3b8cdc8371da4ffa8c29cd9dc38c61a507782fcf222cd62aec3664af18ab88d6"
+        }
+      ]
+    },
+    {
+      "query": "query-28",
+      "category": "test",
+      "originalFiles": [
+        "test/session-continuation.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Checks reviewed staged text, device enrollment restrictions, private payload handling, and stale-preview rejection on receiving a continuation. These are same-machine fixture devices.",
+      "citations": [
+        {
+          "file": "test/session-continuation.test.js",
+          "start": 14,
+          "end": 56,
+          "sha256": "2b1f3fdb6512efbc5dc3f51eea254436e97f40fa4c45b2aad7bffc7c94f82a32"
+        }
+      ]
+    },
+    {
+      "query": "query-28",
+      "category": "documentation",
+      "originalFiles": [
+        "docs/hosted-collaboration-https.md"
+      ],
+      "decision": "retain",
+      "reason": "Defines a physical two-computer session-continuation check with import, resume, and protected-action review. This is a test procedure, not a passing result.",
+      "citations": [
+        {
+          "file": "docs/hosted-collaboration-https.md",
+          "start": 195,
+          "end": 200,
+          "sha256": "b3c74874b690139e678c746ee063a974d355b8ec57d570466810929959282941"
+        }
+      ]
+    },
+    {
+      "query": "query-29",
+      "category": "implementation",
+      "originalFiles": [
+        "src/workspace-sync.js"
+      ],
+      "decision": "retain",
+      "reason": "Captures visible workspace files against a stable Git revision and verifies saved file bases.",
+      "citations": [
+        {
+          "file": "src/workspace-sync.js",
+          "start": 86,
+          "end": 143,
+          "sha256": "1aa1e7e26f066d1d1aa9e7ff369d513f477832432cd217ad29c6efe534f51ab5"
+        }
+      ]
+    },
+    {
+      "query": "query-29",
+      "category": "test",
+      "originalFiles": [
+        "test/workspace-sync.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts rejection of a mismatching Git file base and refusal to overwrite ignored or symbolic-link paths.",
+      "citations": [
+        {
+          "file": "test/workspace-sync.test.js",
+          "start": 121,
+          "end": 133,
+          "sha256": "3d35a7a5a5fe1bc0b213ff1e0c337c2caebc9045d1d55d492ad1c20377e3cd0f"
+        }
+      ]
+    },
+    {
+      "query": "query-29",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents shared workspace file synchronization, Git bases, scope exclusions, and source review.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 292,
+          "end": 300,
+          "sha256": "60f27cae33457d422ef52cff4f051d499d4b8656d737dafe5df8c365baa83586"
+        }
+      ]
+    },
+    {
+      "query": "query-30",
+      "category": "implementation",
+      "originalFiles": [
+        "src/memory-sync.js"
+      ],
+      "decision": "retain",
+      "reason": "Merges independent note changes and asks for a choice when local and remote edits conflict.",
+      "citations": [
+        {
+          "file": "src/memory-sync.js",
+          "start": 109,
+          "end": 128,
+          "sha256": "ebf19f46f8afa633047f502bb54794d7d4b0a8683df91f50715c05932fba1f04"
+        }
+      ]
+    },
+    {
+      "query": "query-30",
+      "category": "test",
+      "originalFiles": [
+        "test/memory-sync.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts merged independent edits, deletion propagation, explicit conflict resolution, and cancelled review.",
+      "citations": [
+        {
+          "file": "test/memory-sync.test.js",
+          "start": 100,
+          "end": 130,
+          "sha256": "49444e54ba9c441c80ec630ad3fb62b65a3a37df9d24b4cb2674ef82f3b39aae"
+        }
+      ]
+    },
+    {
+      "query": "query-30",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents offline edits, synchronization, merge conflicts, and revocation across enrolled devices.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 315,
+          "end": 323,
+          "sha256": "dcfbc0f69b235a79a54a9a58bbdef10a21ecc301d9f29d2407b27e2a7a725948"
+        }
+      ]
+    },
+    {
+      "query": "query-31",
+      "category": "implementation",
+      "originalFiles": [
+        "src/background-runner.js"
+      ],
+      "decision": "retain",
+      "reason": "Executes a scheduled read-only report through the background scheduler and runs timer ticks outside the editor process.",
+      "citations": [
+        {
+          "file": "src/background-runner.js",
+          "start": 266,
+          "end": 292,
+          "sha256": "a2c81ef63b37f3018c8df631af102f190ef889c610caa4e2b4e628eed64e9b1e"
+        },
+        {
+          "file": "src/background-runner.js",
+          "start": 304,
+          "end": 316,
+          "sha256": "83c082eae5bf7268860bf0892630c18dd1bc4c6663a8e3b56ebef48652ffa654"
+        }
+      ]
+    },
+    {
+      "query": "query-31",
+      "category": "test",
+      "originalFiles": [
+        "test/background-live.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Disposes the editor timer, starts the separate runner, and asserts one completed occurrence and its report notification.",
+      "citations": [
+        {
+          "file": "test/background-live.test.js",
+          "start": 261,
+          "end": 277,
+          "sha256": "fc1d18b42e4838786f61b55e6abb8a67bf3d528433b5ca77338512005fb1c9d2"
+        }
+      ]
+    },
+    {
+      "query": "query-31",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents approving and running scheduled reports while VS Code is closed.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 359,
+          "end": 373,
+          "sha256": "ff4d7b146df351608632d9368ffec11cb103c10c69988b873199328258ab9c12"
+        }
+      ]
+    },
+    {
+      "query": "query-32",
+      "category": "implementation",
+      "originalFiles": [
+        "src/schedules.js"
+      ],
+      "decision": "retain",
+      "reason": "Uses an exclusive claim file so only one timer owner can claim a schedule occurrence.",
+      "citations": [
+        {
+          "file": "src/schedules.js",
+          "start": 335,
+          "end": 344,
+          "sha256": "4ac83b5beef8ef824c9c903d7c0a9d7a671db86561bd76cf1ca43ab6a66e9fd4"
+        }
+      ]
+    },
+    {
+      "query": "query-32",
+      "category": "test",
+      "originalFiles": [
+        "test/schedules.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Ticks two scheduler owners concurrently and asserts that only one occurrence runs.",
+      "citations": [
+        {
+          "file": "test/schedules.test.js",
+          "start": 172,
+          "end": 181,
+          "sha256": "6bfb95d201fd901e249d6dea955875c7f2b0ecbd3772f324d86a87337bc3b556"
+        }
+      ]
+    },
+    {
+      "query": "query-32",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "States that a shared claim file prevents duplicate runs by two windows or runner processes.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 355,
+          "end": 355,
+          "sha256": "430ae8239a337cabf17ddf3d777fa9aedfd78c002e0d07e07b2f327cc434adc5"
+        }
+      ]
+    },
+    {
+      "query": "query-33",
+      "category": "implementation",
+      "originalFiles": [
+        "src/schedule-controller.js"
+      ],
+      "decision": "retain",
+      "reason": "Lists saved scheduled questions, resolves one answer or dismissal, and starts an interactive follow-up from an answer.",
+      "citations": [
+        {
+          "file": "src/schedule-controller.js",
+          "start": 300,
+          "end": 333,
+          "sha256": "5fc665442653a82ee35d2e71d199509bb689b9ee647b20eb2bcd7d67eafd0ecd"
+        }
+      ]
+    },
+    {
+      "query": "query-33",
+      "category": "test",
+      "originalFiles": [
+        "test/extension-schedules.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts a saved question, one interactive answer, removal from the waiting list, and dismissal without another follow-up.",
+      "citations": [
+        {
+          "file": "test/extension-schedules.test.js",
+          "start": 88,
+          "end": 110,
+          "sha256": "713a5ba6f0f6a8820d059640afbc9bff19c5a21b8333216fc2e8e075d5be32a4"
+        }
+      ]
+    },
+    {
+      "query": "query-33",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents reviewing a saved unattended question and starting a fresh interactive run.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 333,
+          "end": 333,
+          "sha256": "e35bbf60d025aa6e28eb6de53d0fa0bda2ee8eeb4f0e2592ccd5ee20c1ad8e3c"
+        }
+      ]
+    },
+    {
+      "query": "query-34",
+      "category": "implementation",
+      "originalFiles": [
+        "src/audit.js"
+      ],
+      "decision": "retain",
+      "reason": "Validates redacted export fields and hashes and checks local hash-chain content and order.",
+      "citations": [
+        {
+          "file": "src/audit.js",
+          "start": 53,
+          "end": 62,
+          "sha256": "060bd9ebb97abe502112d16ee4d17362c19b5d0ed6c231c534761ab906d8eaec"
+        },
+        {
+          "file": "src/audit.js",
+          "start": 109,
+          "end": 117,
+          "sha256": "479f9a21bed325dd635871e738a70988ac05dc3b2c9e998610a5fc66a8663137"
+        }
+      ]
+    },
+    {
+      "query": "query-34",
+      "category": "test",
+      "originalFiles": [
+        "test/usage.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts redacted export content, verifies the stored chain, tampers with a record, and expects verification failure.",
+      "citations": [
+        {
+          "file": "test/usage.test.js",
+          "start": 41,
+          "end": 66,
+          "sha256": "d28a829989d52239e64a74dc04b1d10873b374043140fbe69c2f0be1cf82022c"
+        }
+      ]
+    },
+    {
+      "query": "query-34",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents local chain verification, redacted-event hashes, deduplication, and collector checks.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 256,
+          "end": 256,
+          "sha256": "1596806792b9b5c66733a54551b6862631aaec5897c0a4c92b56a95da001108a"
+        }
+      ]
+    },
+    {
+      "query": "query-35",
+      "category": "implementation",
+      "originalFiles": [
+        "src/organization.js"
+      ],
+      "decision": "retain",
+      "reason": "The organization module loads and merges managed administrator rules. PolicyEngine supplies their decision precedence. The original target is relevant to the managed-policy path; it is not the sole enforcement module.",
+      "citations": [
+        {
+          "file": "src/organization.js",
+          "start": 71,
+          "end": 79,
+          "sha256": "d50a5c0470d7c37c19c7379003cadd65fa3a3b8c553cb07e1e77c34771b56bdb"
+        },
+        {
+          "file": "src/policy.js",
+          "start": 147,
+          "end": 155,
+          "sha256": "1ae449168a1f91d99cda9564db8a3d5a4d73993afe478e69af4a7a923d5341aa"
+        }
+      ]
+    },
+    {
+      "query": "query-35",
+      "category": "test",
+      "originalFiles": [
+        "test/organization.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Updates administrator policy before a command and asserts that it overrides a user allow rule and dispatches no check.",
+      "citations": [
+        {
+          "file": "test/organization.test.js",
+          "start": 123,
+          "end": 144,
+          "sha256": "2b7828a74d1cdca1a445ccbd751adf404292df5b435c97a07382d22ddb036dc2"
+        }
+      ]
+    },
+    {
+      "query": "query-35",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents administrator precedence and blocking the next protected action when managed policy cannot be verified.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 254,
+          "end": 254,
+          "sha256": "68e27e200f4b34789ad3c4d7c3f0fabfb01e9daf6ad26ac16344520846923866"
+        }
+      ]
+    },
+    {
+      "query": "query-36",
+      "category": "implementation",
+      "originalFiles": [
+        "src/browser.js"
+      ],
+      "decision": "retain",
+      "reason": "Validates selected origins and starts a separate browser and isolated browser context with controlled request routing.",
+      "citations": [
+        {
+          "file": "src/browser.js",
+          "start": 42,
+          "end": 85,
+          "sha256": "1f33e1a86adfddec0ae7a0cf3a3e0c5c53735c5bf758e0e813b90f22ba25f37e"
+        }
+      ]
+    },
+    {
+      "query": "query-36",
+      "category": "test",
+      "originalFiles": [
+        "test/surface-live.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Exercises dedicated browser observation and asserts blocked injected writes, outside-origin content, sockets, and redirects.",
+      "citations": [
+        {
+          "file": "test/surface-live.test.js",
+          "start": 30,
+          "end": 39,
+          "sha256": "19396bc3e88729e9276df6ee3891d88f8f271bf4ef3b1a0f9653bf8740ef9e3d"
+        }
+      ]
+    },
+    {
+      "query": "query-36",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents the dedicated browser profile and selected-origin restrictions.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 117,
+          "end": 119,
+          "sha256": "1b1d5acd9cecc857048d402e7acdbfd2c777dc5e6add09c5ebb8d5ffd3eba475"
+        }
+      ]
+    },
+    {
+      "query": "query-37",
+      "category": "implementation",
+      "originalFiles": [
+        "src/computer.js"
+      ],
+      "decision": "retain",
+      "reason": "Requires an observed control and rechecks the app and snapshot before and after approval, before native dispatch.",
+      "citations": [
+        {
+          "file": "src/computer.js",
+          "start": 99,
+          "end": 125,
+          "sha256": "b6f77593dae49d054dba31ec31e29e936ef5d37b3bb712636f6e2743d6d8f64e"
+        }
+      ]
+    },
+    {
+      "query": "query-37",
+      "category": "test",
+      "originalFiles": [
+        "test/surface-live.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Replaces the addressed native window and asserts rejection of the stale action before observing the replacement.",
+      "citations": [
+        {
+          "file": "test/surface-live.test.js",
+          "start": 190,
+          "end": 206,
+          "sha256": "b20b13f4c0f58e0c5948b8cc7e6cacb4b87055308b6c2626cb1e01606def3e46"
+        }
+      ]
+    },
+    {
+      "query": "query-37",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents current observations, changed-target rejection, and native app, window, and control checks.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 123,
+          "end": 123,
+          "sha256": "3b21f6d8b2680b00d82292ff9160e1edac78b72f04ccb91d5d5ac12b5bb3dba4"
+        },
+        {
+          "file": "README.md",
+          "start": 127,
+          "end": 127,
+          "sha256": "e9e1ca780ab70b689a16315961903c9ddc18f2c062af711c2fbf317e9493023f"
+        }
+      ]
+    },
+    {
+      "query": "query-38",
+      "category": "implementation",
+      "originalFiles": [
+        "src/worker-session.js"
+      ],
+      "decision": "retain",
+      "reason": "The worker session exposes the bounded read bridge. WorkerPool enforces the explicitly named snapshot files, current parent scope, and read quota behind that bridge. Both modules support the query.",
+      "citations": [
+        {
+          "file": "src/worker-session.js",
+          "start": 39,
+          "end": 49,
+          "sha256": "d9b994101ded86e64efbe17a8d9f6fde973a96beab7b4ff364f18d5ef6b2e7d5"
+        },
+        {
+          "file": "src/workers.js",
+          "start": 221,
+          "end": 248,
+          "sha256": "93a86ddce655317b2ca92e1120c7ff2f0908ae8b47083c53a82fa8e763182bc8"
+        }
+      ]
+    },
+    {
+      "query": "query-38",
+      "category": "test",
+      "originalFiles": [
+        "test/workers.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts fixed snapshot reads, rejection of unnamed files, the read quota, parent-scope enforcement, and expired access.",
+      "citations": [
+        {
+          "file": "test/workers.test.js",
+          "start": 229,
+          "end": 250,
+          "sha256": "3d777f565ff0daf43c50f16ff8007187b0798aeb7a3fb0ff47a8b8c5a43e1e88"
+        }
+      ]
+    },
+    {
+      "query": "query-38",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents explicitly named worker snapshot files, limited extra reads, parent scope, and cancellation.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 425,
+          "end": 433,
+          "sha256": "fe8087c9178ac556e0ff64932486425bc34de325280d9c092219999c4040e30d"
+        }
+      ]
+    },
+    {
+      "query": "query-39",
+      "category": "implementation",
+      "originalFiles": [
+        "src/workers.js"
+      ],
+      "decision": "retain",
+      "reason": "Rejects stale worker revision and source hashes and overlapping parent edits before merging a proposal.",
+      "citations": [
+        {
+          "file": "src/workers.js",
+          "start": 315,
+          "end": 338,
+          "sha256": "ed4030573a3ac6ab2f3d8fd988630ffcfd52777785e0e328094202eda97da1e5"
+        }
+      ]
+    },
+    {
+      "query": "query-39",
+      "category": "test",
+      "originalFiles": [
+        "test/workers.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Asserts stale-proposal and overlap rejection, then permits a separate non-overlapping edit.",
+      "citations": [
+        {
+          "file": "test/workers.test.js",
+          "start": 180,
+          "end": 198,
+          "sha256": "3ef4b421e9305e8d9b3409c849db6c32fde4c66b876cadbaf55daf9e205f18bf"
+        }
+      ]
+    },
+    {
+      "query": "query-39",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents refused merges when the draft changed or the proposal overlaps prior parent edits.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 62,
+          "end": 62,
+          "sha256": "dbb7a49d0fb239f40ac3e1bab3079e73db1186118cb1af53fc6463440eb42396"
+        }
+      ]
+    },
+    {
+      "query": "query-40",
+      "category": "implementation",
+      "originalFiles": [
+        "src/plugin-hooks.js"
+      ],
+      "decision": "retain",
+      "reason": "Runs approved hooks for the requested event and propagates before-apply hook failures to block apply.",
+      "citations": [
+        {
+          "file": "src/plugin-hooks.js",
+          "start": 46,
+          "end": 78,
+          "sha256": "6ed00a85c4343cbeee99a8f1d31bdd4083cac5ab68757c889f47953a54786bbf"
+        }
+      ]
+    },
+    {
+      "query": "query-40",
+      "category": "test",
+      "originalFiles": [
+        "test/plugin-hooks.test.js"
+      ],
+      "decision": "retain",
+      "reason": "Attempts apply after review and asserts unchanged source plus a recorded failing before-apply conflict-marker hook.",
+      "citations": [
+        {
+          "file": "test/plugin-hooks.test.js",
+          "start": 67,
+          "end": 79,
+          "sha256": "4081beb9f57f36a44969e7e5cc3317d84ff25f08a6b2f5770368f3694ecbaba7"
+        }
+      ]
+    },
+    {
+      "query": "query-40",
+      "category": "documentation",
+      "originalFiles": [
+        "README.md"
+      ],
+      "decision": "retain",
+      "reason": "Documents built-in and custom before-apply hooks that receive accepted hunk text and can block apply.",
+      "citations": [
+        {
+          "file": "README.md",
+          "start": 451,
+          "end": 455,
+          "sha256": "0381bf8364792b9a819ad166aee74af5534403c61b8233c171f582ab95e05cd5"
+        },
+        {
+          "file": "README.md",
+          "start": 472,
+          "end": 472,
+          "sha256": "89affcc03ffdcb2c9a1b837c8b33b720aeb752bcec2037870df9f923bfb04191"
+        }
+      ]
+    }
+  ]
+}

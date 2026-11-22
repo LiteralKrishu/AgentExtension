@@ -223,7 +223,7 @@ test('the Notes panel previews incoming changes and syncs only after approval', 
   };
   const sendMemoryAndWait = async expectedStatus => {
     const published = host.states.length;
-    await host.send({ type: 'memory' });
+    await host.sendAndWait({ type: 'memory' });
     // A previous sync can have the same status. Require a fresh panel update.
     await host.waitFor(state => host.states.length > published && expectedStatus.test(state.status ?? ''),
       5_000, 'Notes action to finish');
@@ -231,7 +231,7 @@ test('the Notes panel previews incoming changes and syncs only after approval', 
   const local = new WorkspaceMemory(host.context.globalState, second.root);
   const option = { kind: 'pick', value: items => items.find(item => item.label === 'Sync workspace notes') };
   host.answers.push(option, { kind: 'modal', value: () => undefined });
-  await host.send({ type: 'memory' });
+  await host.sendAndWait({ type: 'memory' });
   assert.deepEqual(local.list(), []);
   host.answers.push(option, { kind: 'modal', value: (_buttons, title) => {
     assert.equal(title, 'Sync workspace notes?');

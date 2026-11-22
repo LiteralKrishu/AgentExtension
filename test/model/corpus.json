@@ -1,0 +1,653 @@
+{
+  "version": "agent-capability-upgrade/1",
+  "policy": {
+    "models": "local-only",
+    "apiSpendingUSD": 0,
+    "repetitions": 3
+  },
+  "tasks": [
+    {
+      "id": "js-stable-unique",
+      "language": "javascript",
+      "version": 1,
+      "files": {
+        "src/unique.js": "exports.unique=values=>[...new Set(values.map(String))];\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/unique.js');a.equal(typeof m, 'object');\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "src/unique.js",
+      "prompt": "Fix src/unique.js to satisfy this contract: unique(values) removes duplicates while preserving first occurrence and the original value types. Use JavaScript Set equality. Do not mutate the input. Add regression tests to task.test.cjs and document the behavior in README.md. Run the tests and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "node",
+          "args": [
+            "-e",
+            "const a=require('node:assert/strict'),m=require('./src/unique.js');const v=[1,'1',1,2,NaN,NaN];a.deepEqual(m.unique(v),[1,'1',2,NaN]);a.equal(v.length,6);a.deepEqual(m.unique([]),[]);"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "node",
+          "args": [
+            "--test",
+            "task.test.cjs"
+          ]
+        }
+      ],
+      "reference": {
+        "src/unique.js": "exports.unique=values=>[...new Set(values)];\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/unique.js');const v=[1,'1',1,2,NaN,NaN];a.deepEqual(m.unique(v),[1,'1',2,NaN]);a.equal(v.length,6);a.deepEqual(m.unique([]),[]);\n",
+        "README.md": "# Library\n\nunique(values) removes duplicates while preserving first occurrence and the original value types. Use JavaScript Set equality. Do not mutate the input.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "development",
+      "fixtureDigest": "b1276a628430df91ad6f4245f07f9e806775ae44507b00c0660538ac4047a96f"
+    },
+    {
+      "id": "js-pagination",
+      "language": "javascript",
+      "version": 1,
+      "files": {
+        "src/pagination.js": "exports.page=(items,offset,limit)=>items.slice(offset,limit);\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/pagination.js');a.equal(typeof m, 'object');\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "src/pagination.js",
+      "prompt": "Fix src/pagination.js to satisfy this contract: page(items, offset, limit) returns at most limit items starting at offset. Offset and limit must be nonnegative integers. A zero limit returns an empty array. Invalid arguments raise RangeError. Do not mutate items. Add regression tests to task.test.cjs and document the behavior in README.md. Run the tests and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "node",
+          "args": [
+            "-e",
+            "const a=require('node:assert/strict'),m=require('./src/pagination.js');a.deepEqual(m.page([1,2,3,4],1,2),[2,3]);a.deepEqual(m.page([1],0,0),[]);for(const x of [-1,1.5,NaN])a.throws(()=>m.page([1],x,2),RangeError);"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "node",
+          "args": [
+            "--test",
+            "task.test.cjs"
+          ]
+        }
+      ],
+      "reference": {
+        "src/pagination.js": "exports.page=(items,offset,limit)=>{if(!Number.isInteger(offset)||!Number.isInteger(limit)||offset<0||limit<0)throw new RangeError('invalid page');return items.slice(offset,offset+limit);};\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/pagination.js');a.deepEqual(m.page([1,2,3,4],1,2),[2,3]);a.deepEqual(m.page([1],0,0),[]);for(const x of [-1,1.5,NaN])a.throws(()=>m.page([1],x,2),RangeError);\n",
+        "README.md": "# Library\n\npage(items, offset, limit) returns at most limit items starting at offset. Offset and limit must be nonnegative integers. A zero limit returns an empty array. Invalid arguments raise RangeError. Do not mutate items.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "development",
+      "fixtureDigest": "78887d53407c37884c2516a0e583e4f3decc007ef4b86a94abb95c6ac08a140e"
+    },
+    {
+      "id": "js-config-mask",
+      "language": "javascript",
+      "version": 1,
+      "files": {
+        "src/config.js": "exports.mask=c=>Object.fromEntries(Object.entries(c).map(([k,v])=>[k,/SECRET|PASSWORD|TOKEN|KEY/.test(k)?'***':v]));\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/config.js');a.equal(typeof m, 'object');\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "src/config.js",
+      "prompt": "Fix src/config.js to satisfy this contract: mask(config) replaces values for keys containing SECRET, PASSWORD, TOKEN, or KEY, case-insensitively, with ***. Preserve all other values and all key names. Do not mutate config. Add regression tests to task.test.cjs and document the behavior in README.md. Run the tests and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "node",
+          "args": [
+            "-e",
+            "const a=require('node:assert/strict'),m=require('./src/config.js');const c={api_token:'x',PASSWORD:'y',secret_key:'z',label:'visible',count:0,enabled:false};a.deepEqual(m.mask(c),{api_token:'***',PASSWORD:'***',secret_key:'***',label:'visible',count:0,enabled:false});a.equal(c.api_token,'x');"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "node",
+          "args": [
+            "--test",
+            "task.test.cjs"
+          ]
+        }
+      ],
+      "reference": {
+        "src/config.js": "exports.mask=c=>Object.fromEntries(Object.entries(c).map(([k,v])=>[k,/SECRET|PASSWORD|TOKEN|KEY/i.test(k)?'***':v]));\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/config.js');const c={api_token:'x',PASSWORD:'y',secret_key:'z',label:'visible',count:0,enabled:false};a.deepEqual(m.mask(c),{api_token:'***',PASSWORD:'***',secret_key:'***',label:'visible',count:0,enabled:false});a.equal(c.api_token,'x');\n",
+        "README.md": "# Library\n\nmask(config) replaces values for keys containing SECRET, PASSWORD, TOKEN, or KEY, case-insensitively, with ***. Preserve all other values and all key names. Do not mutate config.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "development",
+      "fixtureDigest": "06fbbda7fec4b39d65a8cfaedbd07d91502aedcf23ba28e2ea2d973b9888b72e"
+    },
+    {
+      "id": "js-ndjson",
+      "language": "javascript",
+      "version": 1,
+      "files": {
+        "src/ndjson.js": "exports.parseLines=text=>text.split('\\n').map(JSON.parse);\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/ndjson.js');a.equal(typeof m, 'object');\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "src/ndjson.js",
+      "prompt": "Fix src/ndjson.js to satisfy this contract: parseLines(text) parses one JSON value per nonblank line, supports CRLF and a trailing newline, and raises an error naming the original one-based line number for malformed JSON. Add regression tests to task.test.cjs and document the behavior in README.md. Run the tests and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "node",
+          "args": [
+            "-e",
+            "const a=require('node:assert/strict'),m=require('./src/ndjson.js');a.deepEqual(m.parseLines('1\\r\\n\\r\\n{\"x\":2}\\n'),[1,{x:2}]);a.deepEqual(m.parseLines(''),[]);a.throws(()=>m.parseLines('1\\n\\nBAD'),/line 3/);"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "node",
+          "args": [
+            "--test",
+            "task.test.cjs"
+          ]
+        }
+      ],
+      "reference": {
+        "src/ndjson.js": "exports.parseLines=text=>text.split(/\\r?\\n/).flatMap((s,i)=>{if(!s.trim())return [];try{return [JSON.parse(s)];}catch{throw new Error('Invalid JSON at line '+(i+1));}});\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/ndjson.js');a.deepEqual(m.parseLines('1\\r\\n\\r\\n{\"x\":2}\\n'),[1,{x:2}]);a.deepEqual(m.parseLines(''),[]);a.throws(()=>m.parseLines('1\\n\\nBAD'),/line 3/);\n",
+        "README.md": "# Library\n\nparseLines(text) parses one JSON value per nonblank line, supports CRLF and a trailing newline, and raises an error naming the original one-based line number for malformed JSON.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "development",
+      "fixtureDigest": "5719d1e5279fd696e3fc3748c15eb1bf2400bfb8e1bfbd22583a6562ecfe4900"
+    },
+    {
+      "id": "js-cache-expiry",
+      "language": "javascript",
+      "version": 1,
+      "files": {
+        "src/cache.js": "exports.Cache=class {constructor(now){this.now=now;this.values=new Map()}set(k,v,ttl){this.values.set(k,{v,until:this.now()+ttl})}get(k){const x=this.values.get(k);return x&&this.now()<=x.until?x.v:undefined}};\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/cache.js');a.equal(typeof m, 'object');\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "src/cache.js",
+      "prompt": "Fix src/cache.js to satisfy this contract: Cache accepts an injected now function. set(key, value, ttl) stores a value until now reaches insertion time plus ttl. get returns undefined at or after expiry, including a zero ttl. Preserve false and zero values. Add regression tests to task.test.cjs and document the behavior in README.md. Run the tests and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "node",
+          "args": [
+            "-e",
+            "const a=require('node:assert/strict'),m=require('./src/cache.js');let now=100;const c=new m.Cache(()=>now);c.set('a',false,5);a.equal(c.get('a'),false);now=105;a.equal(c.get('a'),undefined);c.set('b',0,0);a.equal(c.get('b'),undefined);a.equal(c.get('missing'),undefined);"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "node",
+          "args": [
+            "--test",
+            "task.test.cjs"
+          ]
+        }
+      ],
+      "reference": {
+        "src/cache.js": "exports.Cache=class {constructor(now){this.now=now;this.values=new Map()}set(k,v,ttl){this.values.set(k,{v,until:this.now()+ttl})}get(k){const x=this.values.get(k);return x&&this.now()<x.until?x.v:undefined}};\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/cache.js');let now=100;const c=new m.Cache(()=>now);c.set('a',false,5);a.equal(c.get('a'),false);now=105;a.equal(c.get('a'),undefined);c.set('b',0,0);a.equal(c.get('b'),undefined);a.equal(c.get('missing'),undefined);\n",
+        "README.md": "# Library\n\nCache accepts an injected now function. set(key, value, ttl) stores a value until now reaches insertion time plus ttl. get returns undefined at or after expiry, including a zero ttl. Preserve false and zero values.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "development",
+      "fixtureDigest": "30fcee287c7582bab7d72fcc38e35658df2765cbd289089f9389a9165056beb3"
+    },
+    {
+      "id": "js-retry",
+      "language": "javascript",
+      "version": 1,
+      "files": {
+        "src/retry.js": "exports.retry=async(fn,attempts)=>{for(let i=0;i<=attempts;i++){try{return await fn()}catch(e){if(i===attempts)throw e}}};\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/retry.js');a.equal(typeof m, 'object');\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "src/retry.js",
+      "prompt": "Fix src/retry.js to satisfy this contract: retry(fn, attempts) awaits fn until it succeeds or the positive integer attempt count is exhausted. Return the successful value and rethrow the last error on exhaustion. Reject invalid attempt counts with RangeError. Never call fn after success. Add regression tests to task.test.cjs and document the behavior in README.md. Run the tests and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "node",
+          "args": [
+            "-e",
+            "const a=require('node:assert/strict'),m=require('./src/retry.js');(async()=>{let n=0;const err=new Error('last');await a.rejects(m.retry(async()=>{n++;throw err},2),e=>e===err);a.equal(n,2);n=0;a.equal(await m.retry(async()=>{n++;return 0},3),0);a.equal(n,1);await a.rejects(m.retry(async()=>1,0),RangeError)})().catch(e=>{console.error(e);process.exitCode=1});"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "node",
+          "args": [
+            "--test",
+            "task.test.cjs"
+          ]
+        }
+      ],
+      "reference": {
+        "src/retry.js": "exports.retry=async(fn,attempts)=>{if(!Number.isInteger(attempts)||attempts<1)throw new RangeError('attempts');for(let i=0;i<attempts;i++){try{return await fn()}catch(e){if(i===attempts-1)throw e}}};\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/retry.js');(async()=>{let n=0;const err=new Error('last');await a.rejects(m.retry(async()=>{n++;throw err},2),e=>e===err);a.equal(n,2);n=0;a.equal(await m.retry(async()=>{n++;return 0},3),0);a.equal(n,1);await a.rejects(m.retry(async()=>1,0),RangeError)})().catch(e=>{console.error(e);process.exitCode=1});\n",
+        "README.md": "# Library\n\nretry(fn, attempts) awaits fn until it succeeds or the positive integer attempt count is exhausted. Return the successful value and rethrow the last error on exhaustion. Reject invalid attempt counts with RangeError. Never call fn after success.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "development",
+      "fixtureDigest": "0764d2f4983020602697919f852cbc506b90bd83447b68cda6d1528101a0540f"
+    },
+    {
+      "id": "py-merge-config",
+      "language": "python",
+      "version": 1,
+      "files": {
+        "config.py": "def merge(defaults, overrides):\n    defaults.update({k:v for k,v in overrides.items() if v})\n    return defaults\n",
+        "test_task.py": "import unittest\nimport config\n\nclass Regression(unittest.TestCase):\n    def test_module(self):\n        self.assertTrue(config is not None)\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "config.py",
+      "prompt": "Fix config.py to satisfy this contract: merge(defaults, overrides) returns a new shallow dictionary. Overrides take precedence, including False, zero, empty string, and None. Do not mutate either input. Add regression tests to test_task.py and document the behavior in README.md. Run python3 -m unittest test_task.py and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "python3",
+          "args": [
+            "-c",
+            "import config as m\nd={'a':1,'b':2};o={'a':0,'b':False,'c':None,'d':''}\nassert m.merge(d,o)==o\nassert d=={'a':1,'b':2}\nassert o=={'a':0,'b':False,'c':None,'d':''}\n"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "python3",
+          "args": [
+            "-m",
+            "unittest",
+            "test_task.py"
+          ]
+        }
+      ],
+      "reference": {
+        "config.py": "def merge(defaults, overrides):\n    return {**defaults, **overrides}\n",
+        "test_task.py": "import unittest\n\nclass Regression(unittest.TestCase):\n    def test_behavior(self):\n        import config as m\n        d={'a':1,'b':2};o={'a':0,'b':False,'c':None,'d':''}\n        assert m.merge(d,o)==o\n        assert d=={'a':1,'b':2}\n        assert o=={'a':0,'b':False,'c':None,'d':''}\n",
+        "README.md": "# Library\n\nmerge(defaults, overrides) returns a new shallow dictionary. Overrides take precedence, including False, zero, empty string, and None. Do not mutate either input.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "development",
+      "fixtureDigest": "ccb1bab39a8177f5e53341192d1ce74c88f3da199320fe249e4608f64422af60"
+    },
+    {
+      "id": "py-pagination",
+      "language": "python",
+      "version": 1,
+      "files": {
+        "pagination.py": "def page(items, offset, limit):\n    return items[offset:limit]\n",
+        "test_task.py": "import unittest\nimport pagination\n\nclass Regression(unittest.TestCase):\n    def test_module(self):\n        self.assertTrue(pagination is not None)\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "pagination.py",
+      "prompt": "Fix pagination.py to satisfy this contract: page(items, offset, limit) returns up to limit items starting at offset. Reject negative or non-integer arguments, including bool, with ValueError. A zero limit returns an empty list. Do not mutate the input. Add regression tests to test_task.py and document the behavior in README.md. Run python3 -m unittest test_task.py and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "python3",
+          "args": [
+            "-c",
+            "import pagination as m\nassert m.page([1,2,3,4],1,2)==[2,3]\nassert m.page([1],0,0)==[]\nfor x in [-1,True,1.5]:\n    try: m.page([1],x,1)\n    except ValueError: pass\n    else: raise AssertionError('accepted invalid offset')\n"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "python3",
+          "args": [
+            "-m",
+            "unittest",
+            "test_task.py"
+          ]
+        }
+      ],
+      "reference": {
+        "pagination.py": "def page(items, offset, limit):\n    if type(offset) is not int or type(limit) is not int or offset<0 or limit<0:\n        raise ValueError('invalid page')\n    return items[offset:offset+limit]\n",
+        "test_task.py": "import unittest\n\nclass Regression(unittest.TestCase):\n    def test_behavior(self):\n        import pagination as m\n        assert m.page([1,2,3,4],1,2)==[2,3]\n        assert m.page([1],0,0)==[]\n        for x in [-1,True,1.5]:\n            try: m.page([1],x,1)\n            except ValueError: pass\n            else: raise AssertionError('accepted invalid offset')\n",
+        "README.md": "# Library\n\npage(items, offset, limit) returns up to limit items starting at offset. Reject negative or non-integer arguments, including bool, with ValueError. A zero limit returns an empty list. Do not mutate the input.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "held-out",
+      "fixtureDigest": "3de0970a41e113070ea787ad53c8431348ddd2aed85c077a86138578ba717c2f"
+    },
+    {
+      "id": "py-batches",
+      "language": "python",
+      "version": 1,
+      "files": {
+        "batching.py": "def batches(values, size):\n    return [values[i:i+size] for i in range(0,len(values),size)]\n",
+        "test_task.py": "import unittest\nimport batching\n\nclass Regression(unittest.TestCase):\n    def test_module(self):\n        self.assertTrue(batching is not None)\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "batching.py",
+      "prompt": "Fix batching.py to satisfy this contract: batches(values, size) returns successive lists of up to size values, consuming an iterable once. Empty input yields no batches. Reject a nonpositive or non-integer size, including bool, with ValueError. Add regression tests to test_task.py and document the behavior in README.md. Run python3 -m unittest test_task.py and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "python3",
+          "args": [
+            "-c",
+            "import batching as m\nassert list(m.batches(iter([1,2,3,4,5]),2))==[[1,2],[3,4],[5]]\nassert list(m.batches([],2))==[]\nfor x in [0,-1,True,1.5]:\n    try: list(m.batches([],x))\n    except ValueError: pass\n    else: raise AssertionError('accepted invalid batch size')\n"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "python3",
+          "args": [
+            "-m",
+            "unittest",
+            "test_task.py"
+          ]
+        }
+      ],
+      "reference": {
+        "batching.py": "def batches(values, size):\n    if type(size) is not int or size<1: raise ValueError('size')\n    output=[]\n    batch=[]\n    for value in values:\n        batch.append(value)\n        if len(batch)==size:\n            output.append(batch)\n            batch=[]\n    if batch: output.append(batch)\n    return output\n",
+        "test_task.py": "import unittest\n\nclass Regression(unittest.TestCase):\n    def test_behavior(self):\n        import batching as m\n        assert list(m.batches(iter([1,2,3,4,5]),2))==[[1,2],[3,4],[5]]\n        assert list(m.batches([],2))==[]\n        for x in [0,-1,True,1.5]:\n            try: list(m.batches([],x))\n            except ValueError: pass\n            else: raise AssertionError('accepted invalid batch size')\n",
+        "README.md": "# Library\n\nbatches(values, size) returns successive lists of up to size values, consuming an iterable once. Empty input yields no batches. Reject a nonpositive or non-integer size, including bool, with ValueError.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "held-out",
+      "fixtureDigest": "bb0505c481b9ca57461086c1878009ca3b0945bced8282be3d4bbb661cc669bb"
+    },
+    {
+      "id": "py-relative-path",
+      "language": "python",
+      "version": 1,
+      "files": {
+        "paths.py": "import posixpath\ndef normalize(value):\n    return posixpath.normpath(value)\n",
+        "test_task.py": "import unittest\nimport paths\n\nclass Regression(unittest.TestCase):\n    def test_module(self):\n        self.assertTrue(paths is not None)\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "paths.py",
+      "prompt": "Fix paths.py to satisfy this contract: normalize(value) returns a normalized POSIX relative path. Reject absolute paths, traversal outside the root, backslashes, NUL, and an empty or dot path with ValueError. Do not use the filesystem. Add regression tests to test_task.py and document the behavior in README.md. Run python3 -m unittest test_task.py and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "python3",
+          "args": [
+            "-c",
+            "import paths as m\nassert m.normalize('a/./b/../c')=='a/c'\nfor x in ['', '.', '/etc/passwd', '../a', 'a/../../b', 'a\\\\b', 'a\\x00b']:\n    try: m.normalize(x)\n    except ValueError: pass\n    else: raise AssertionError('accepted '+repr(x))\n"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "python3",
+          "args": [
+            "-m",
+            "unittest",
+            "test_task.py"
+          ]
+        }
+      ],
+      "reference": {
+        "paths.py": "import posixpath\ndef normalize(value):\n    if not value or value.startswith('/') or '\\\\' in value or '\\x00' in value: raise ValueError('path')\n    value=posixpath.normpath(value)\n    if value in ('.','..') or value.startswith('../'): raise ValueError('path')\n    return value\n",
+        "test_task.py": "import unittest\n\nclass Regression(unittest.TestCase):\n    def test_behavior(self):\n        import paths as m\n        assert m.normalize('a/./b/../c')=='a/c'\n        for x in ['', '.', '/etc/passwd', '../a', 'a/../../b', 'a\\\\b', 'a\\x00b']:\n            try: m.normalize(x)\n            except ValueError: pass\n            else: raise AssertionError('accepted '+repr(x))\n",
+        "README.md": "# Library\n\nnormalize(value) returns a normalized POSIX relative path. Reject absolute paths, traversal outside the root, backslashes, NUL, and an empty or dot path with ValueError. Do not use the filesystem.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "held-out",
+      "fixtureDigest": "ed71e6c4ba0fb19d37b0a321b4aa70c5309f2b58a45c69da165c8e4785eb4b3e"
+    },
+    {
+      "id": "py-csv-records",
+      "language": "python",
+      "version": 1,
+      "files": {
+        "csv_records.py": "def records(text):\n    lines=text.splitlines()\n    keys=lines[0].split(',')\n    return [dict(zip(keys,line.split(','))) for line in lines[1:]]\n",
+        "test_task.py": "import unittest\nimport csv_records\n\nclass Regression(unittest.TestCase):\n    def test_module(self):\n        self.assertTrue(csv_records is not None)\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "csv_records.py",
+      "prompt": "Fix csv_records.py to satisfy this contract: records(text) returns CSV rows as dictionaries, supports a leading UTF-8 BOM, quoted commas, and CRLF, and skips completely blank rows. Use the first row as headers. Add regression tests to test_task.py and document the behavior in README.md. Run python3 -m unittest test_task.py and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "python3",
+          "args": [
+            "-c",
+            "import csv_records as m\nassert m.records('\\ufeffname,value\\r\\n\"a,b\",0\\r\\n\\r\\nc,false\\r\\n')==[{'name':'a,b','value':'0'},{'name':'c','value':'false'}]\nassert m.records('name,value\\n')==[]\n"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "python3",
+          "args": [
+            "-m",
+            "unittest",
+            "test_task.py"
+          ]
+        }
+      ],
+      "reference": {
+        "csv_records.py": "import csv\nimport io\ndef records(text):\n    return list(csv.DictReader(io.StringIO(text.lstrip('\\ufeff'),newline='')))\n",
+        "test_task.py": "import unittest\n\nclass Regression(unittest.TestCase):\n    def test_behavior(self):\n        import csv_records as m\n        assert m.records('\\ufeffname,value\\r\\n\"a,b\",0\\r\\n\\r\\nc,false\\r\\n')==[{'name':'a,b','value':'0'},{'name':'c','value':'false'}]\n        assert m.records('name,value\\n')==[]\n",
+        "README.md": "# Library\n\nrecords(text) returns CSV rows as dictionaries, supports a leading UTF-8 BOM, quoted commas, and CRLF, and skips completely blank rows. Use the first row as headers.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "held-out",
+      "fixtureDigest": "14e26773f335b6915392b7d5b219b37eaad5aa218c00bffb304870ff97360a6e"
+    },
+    {
+      "id": "ts-result-value",
+      "language": "typescript",
+      "version": 1,
+      "files": {
+        "src/result.ts": "export function unwrap<T>(r:{ok:true,value:T}|{ok:false,error:string}):T{return (r as {value:T}).value;}\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/result.ts');a.equal(typeof m, 'object');\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "src/result.ts",
+      "prompt": "Fix src/result.ts to satisfy this contract: unwrap<T>(result) returns value for the ok:true variant, including false and zero. For ok:false, throw Error with the supplied error text. Preserve the discriminated union type. Add regression tests to task.test.cjs and document the behavior in README.md. Run the tests and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "node",
+          "args": [
+            "--experimental-strip-types",
+            "-e",
+            "const a=require('node:assert/strict'),m=require('./src/result.ts');a.equal(m.unwrap({ok:true,value:false}),false);a.equal(m.unwrap({ok:true,value:0}),0);a.throws(()=>m.unwrap({ok:false,error:'bad'}),/bad/);"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "node",
+          "args": [
+            "--experimental-strip-types",
+            "--test",
+            "task.test.cjs"
+          ]
+        }
+      ],
+      "reference": {
+        "src/result.ts": "export function unwrap<T>(r:{ok:true,value:T}|{ok:false,error:string}):T{if(!r.ok)throw new Error(r.error);return r.value;}\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/result.ts');a.equal(m.unwrap({ok:true,value:false}),false);a.equal(m.unwrap({ok:true,value:0}),0);a.throws(()=>m.unwrap({ok:false,error:'bad'}),/bad/);\n",
+        "README.md": "# Library\n\nunwrap<T>(result) returns value for the ok:true variant, including false and zero. For ok:false, throw Error with the supplied error text. Preserve the discriminated union type.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "held-out",
+      "fixtureDigest": "a6c64bafb91893f8bf93e9a49522581dcfdda58f49fd33459bda66dd6527c4a6"
+    },
+    {
+      "id": "ts-boolean-setting",
+      "language": "typescript",
+      "version": 1,
+      "files": {
+        "src/settings.ts": "export function parseBoolean(value:unknown,fallback:boolean):boolean{return Boolean(value);}\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/settings.ts');a.equal(typeof m, 'object');\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "src/settings.ts",
+      "prompt": "Fix src/settings.ts to satisfy this contract: parseBoolean(value, fallback) accepts true and false booleans and case-insensitive true/false strings. Other inputs return the boolean fallback. Whitespace around strings is ignored. Add regression tests to task.test.cjs and document the behavior in README.md. Run the tests and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "node",
+          "args": [
+            "--experimental-strip-types",
+            "-e",
+            "const a=require('node:assert/strict'),m=require('./src/settings.ts');a.equal(m.parseBoolean(' FALSE ',true),false);a.equal(m.parseBoolean(false,true),false);a.equal(m.parseBoolean('yes',false),false);a.equal(m.parseBoolean(null,true),true);"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "node",
+          "args": [
+            "--experimental-strip-types",
+            "--test",
+            "task.test.cjs"
+          ]
+        }
+      ],
+      "reference": {
+        "src/settings.ts": "export function parseBoolean(value:unknown,fallback:boolean):boolean{if(typeof value==='boolean')return value;if(typeof value==='string'){const v=value.trim().toLowerCase();if(v==='true')return true;if(v==='false')return false;}return fallback;}\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/settings.ts');a.equal(m.parseBoolean(' FALSE ',true),false);a.equal(m.parseBoolean(false,true),false);a.equal(m.parseBoolean('yes',false),false);a.equal(m.parseBoolean(null,true),true);\n",
+        "README.md": "# Library\n\nparseBoolean(value, fallback) accepts true and false booleans and case-insensitive true/false strings. Other inputs return the boolean fallback. Whitespace around strings is ignored.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "held-out",
+      "fixtureDigest": "a2e90acef5aad621eedecaa8a6b23f6ee64b8bf39a2132415c22ac5926b0af0a"
+    },
+    {
+      "id": "ts-grouping",
+      "language": "typescript",
+      "version": 1,
+      "files": {
+        "src/grouping.ts": "export function groupBy<T>(items:readonly T[],key:(item:T)=>string):Map<string,T[]>{const out=new Map<string,T[]>();for(const item of items)out.set(key(item),[item]);return out;}\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/grouping.ts');a.equal(typeof m, 'object');\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "src/grouping.ts",
+      "prompt": "Fix src/grouping.ts to satisfy this contract: groupBy<T>(items, key) returns Map<string,T[]> in first-key order, preserving every item and order within each group. Support empty string and __proto__ keys. Do not mutate the input. Add regression tests to task.test.cjs and document the behavior in README.md. Run the tests and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "node",
+          "args": [
+            "--experimental-strip-types",
+            "-e",
+            "const a=require('node:assert/strict'),m=require('./src/grouping.ts');const v=[{k:'',n:1},{k:'__proto__',n:2},{k:'',n:3}];const r=m.groupBy(v,x=>x.k);a.ok(r instanceof Map);a.deepEqual([...r.keys()],['','__proto__']);a.deepEqual(r.get('').map(x=>x.n),[1,3]);a.equal(v.length,3);"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "node",
+          "args": [
+            "--experimental-strip-types",
+            "--test",
+            "task.test.cjs"
+          ]
+        }
+      ],
+      "reference": {
+        "src/grouping.ts": "export function groupBy<T>(items:readonly T[],key:(item:T)=>string):Map<string,T[]>{const out=new Map<string,T[]>();for(const item of items){const k=key(item);const group=out.get(k);if(group)group.push(item);else out.set(k,[item]);}return out;}\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/grouping.ts');const v=[{k:'',n:1},{k:'__proto__',n:2},{k:'',n:3}];const r=m.groupBy(v,x=>x.k);a.ok(r instanceof Map);a.deepEqual([...r.keys()],['','__proto__']);a.deepEqual(r.get('').map(x=>x.n),[1,3]);a.equal(v.length,3);\n",
+        "README.md": "# Library\n\ngroupBy<T>(items, key) returns Map<string,T[]> in first-key order, preserving every item and order within each group. Support empty string and __proto__ keys. Do not mutate the input.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "held-out",
+      "fixtureDigest": "85cf732d7b2d8a4e3cb45e8a9aad78d8aa235033e8fed45a9c2ace817e9818ad"
+    },
+    {
+      "id": "ts-money-format",
+      "language": "typescript",
+      "version": 1,
+      "files": {
+        "src/money.ts": "export function formatCents(cents:number):string{return String(cents/100);}\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/money.ts');a.equal(typeof m, 'object');\n",
+        "README.md": "# Library\n\nDescribe the public behavior here.\n"
+      },
+      "source": "src/money.ts",
+      "prompt": "Fix src/money.ts to satisfy this contract: formatCents(cents) accepts only safe integer minor-unit amounts and returns a decimal string with exactly two fractional digits, including negatives and zero. Invalid amounts raise RangeError. Add regression tests to task.test.cjs and document the behavior in README.md. Run the tests and submit the changes for review.",
+      "acceptance": [
+        {
+          "name": "Independent behavior",
+          "command": "node",
+          "args": [
+            "--experimental-strip-types",
+            "-e",
+            "const a=require('node:assert/strict'),m=require('./src/money.ts');for(const [x,y] of [[0,'0.00'],[1,'0.01'],[-1,'-0.01'],[12345,'123.45'],[-100,'-1.00']])a.equal(m.formatCents(x),y);for(const x of [NaN,Infinity,1.2,Number.MAX_SAFE_INTEGER+1])a.throws(()=>m.formatCents(x),RangeError);"
+          ]
+        },
+        {
+          "name": "Project regression tests",
+          "command": "node",
+          "args": [
+            "--experimental-strip-types",
+            "--test",
+            "task.test.cjs"
+          ]
+        }
+      ],
+      "reference": {
+        "src/money.ts": "export function formatCents(cents:number):string{if(!Number.isSafeInteger(cents))throw new RangeError('cents');const n=Math.abs(cents);return (cents<0?'-':'')+Math.floor(n/100)+'.'+String(n%100).padStart(2,'0');}\n",
+        "task.test.cjs": "const a=require('node:assert/strict'),m=require('./src/money.ts');for(const [x,y] of [[0,'0.00'],[1,'0.01'],[-1,'-0.01'],[12345,'123.45'],[-100,'-1.00']])a.equal(m.formatCents(x),y);for(const x of [NaN,Infinity,1.2,Number.MAX_SAFE_INTEGER+1])a.throws(()=>m.formatCents(x),RangeError);\n",
+        "README.md": "# Library\n\nformatCents(cents) accepts only safe integer minor-unit amounts and returns a decimal string with exactly two fractional digits, including negatives and zero. Invalid amounts raise RangeError.\n"
+      },
+      "budget": {
+        "minutes": 6,
+        "maxTokens": 200000,
+        "maxToolCalls": 48
+      },
+      "split": "held-out",
+      "fixtureDigest": "b555ba6601f73558ef1a4100569cb1b5cea33428ce76b71c5a527d0b9b2f6d5d"
+    }
+  ]
+}

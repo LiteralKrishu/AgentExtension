@@ -51,7 +51,7 @@ async function backgroundOAuthFixture(t) {
   const signIn = async () => {
     host.answers.push({ kind: 'pick', value: items => items[0] }, { kind: 'pick', value: items => items.find(item => item.signIn) },
       { kind: 'modal', value: 'Use account' });
-    await host.send({ type: 'connector-token' });
+    await host.sendAndWait({ type: 'connector-token' });
   };
   await signIn();
   const originalIdentity = await host.context.secrets.get(secretKey(f.config));
@@ -162,7 +162,7 @@ test('background OAuth fails closed on issuer, scope, or account changes and dur
   assert.doesNotMatch(await fs.readFile(f.store.file, 'utf8'), /account-two/);
   f.host.answers.push({ kind: 'pick', value: items => items[0] }, { kind: 'pick', value: items => items.find(item => !item.signIn) },
     { kind: 'modal', value: 'Sign out' });
-  await f.host.send({ type: 'connector-token' });
+  await f.host.sendAndWait({ type: 'connector-token' });
   assert.equal((await f.store.list())[0].backgroundRevoked, true);
   await assert.rejects(fs.stat(new BackgroundCredentials(f.store, replacement).oauthDirectory), { code: 'ENOENT' });
   await assert.rejects(runner(storage, 'run-now', [replacement.id]), /Resume this schedule/);
@@ -322,7 +322,7 @@ test('a TrueForge-managed connector still depends on a live scoped workspace bri
   t.after(() => Promise.allSettled([forge.settings.mcpServers.delete(name), forge.settings.mcpServers.delete(denied)]));
   await register(name, bridge.token);
   const tools = (await forge.mcpServers.listTools(name)).data;
-  assert.deepEqual(tools.map(tool => tool.name).sort(), ['read_file', 'search_workspace']);
+  assert.deepEqual(tools.map(tool => tool.name).sort(), ['read_file', 'read_files', 'search_workspace']);
   await assert.rejects(async () => { await register(denied, 'wrong-credential'); await forge.mcpServers.listTools(denied); });
 
   const model = await scriptedModel(t, baseUrl, ({ all, tools, round, call, say }) => {

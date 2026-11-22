@@ -12,144 +12,67 @@
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { execFile } = require('node:child_process');
-const { promisify } = require('node:util');
+const { createHash } = require('node:crypto');
 const { setTimeout: sleep } = require('node:timers/promises');
 const { startHost } = require('../helpers/host.cjs');
+const { evaluateScenario, successful } = require('./evaluate.cjs');
+const { verifyDraft } = require('./verify.cjs');
+const { readCheckEvidence, dispatchAuthorization } = require('./evidence.cjs');
+const { requireLocalEndpoint } = require('./local-only.cjs');
+const { compactionOption, executionSettings } = require('./profile.cjs');
 
 const ROOT = path.join(__dirname, '..', '..');
 const FORGE = process.env.AGENTEXTENSION_TEST_FORGE_URL || 'http://127.0.0.1:8790';
 const MODEL = process.env.AGENTEXTENSION_TEST_MODEL || 'local-lm-studio/qwen';
 const SCENARIO_MINUTES = Number(process.env.AGENTEXTENSION_TEST_SCENARIO_MINUTES || 12);
-const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : undefined;
+const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1]?.split(',') : undefined;
+const useCorpus = process.argv.includes('--corpus');
+const listedOnly = process.argv.includes('--list');
+// --hosted-main is an explicit, user-authorized opt-in for a paid hosted main profile. Every other corpus run stays local.
+const hostedMain = process.argv.includes('--hosted-main');
+const localOnly = !hostedMain && (useCorpus || process.argv.includes('--local-only'));
+const repetitions = process.argv.includes('--repetitions') ? Number(process.argv[process.argv.indexOf('--repetitions') + 1]) : useCorpus ? 3 : 1;
+const compaction = compactionOption(process.argv);
 
-const calc = 'exports.add = (a, b) => a - b;\nexports.sub = (a, b) => a - b;\n';
-const calcTest = "const test = require('node:test');\nconst assert = require('node:assert');\nconst { add, sub } = require('./calc.js');\n\ntest('add', () => assert.equal(add(1, 2), 3));\ntest('sub', () => assert.equal(sub(5, 2), 3));\n";
-const staged = (result, file) => result.hunks.filter(hunk => hunk.file === file);
-const git = promisify(execFile);
+const { scenarios, flaskScenario } = require('./scenarios.cjs');
 
-const scenarios = [
-  {
-    name: 'edit-and-check',
-    purpose: 'Stage a focused fix, run the test through the command approval, and submit for review.',
-    files: { 'calc.js': calc, 'calc.test.js': calcTest },
-    prompt: 'The add function in calc.js returns the wrong result. Fix it, run `node --test calc.test.js` to check the fix, then submit the change for review.',
-    evaluate: r => [
-      { name: 'Staged a change to calc.js', required: true, ok: staged(r, 'calc.js').length > 0 },
-      { name: 'The staged add uses +', required: true, ok: /a \+ b/.test(r.draft['calc.js'] ?? '') },
-      { name: 'Requested hunk review', required: true, ok: r.reviewed },
-      { name: 'Ran a check through the approval', ok: r.checks.length > 0 },
-      { name: 'The last check passed', ok: r.checks.at(-1)?.exitCode === 0 },
-      { name: 'Left sub unchanged', ok: /sub = \(a, b\) => a - b/.test(r.draft['calc.js'] ?? calc) },
-    ],
-  },
-  {
-    name: 'question',
-    purpose: 'Ask a structured question before an ambiguous edit, then act on the answer.',
-    files: { 'config/dev.json': '{\n  "logLevel": "info"\n}\n', 'config/prod.json': '{\n  "logLevel": "warn"\n}\n' },
-    prompt: 'Set the log level to "debug" in the config file. There are two config files. Ask me which one to change before you edit anything, then submit the change for review.',
-    answer: question => {
-      const index = question.options.findIndex(option => /dev/i.test(option));
-      return index >= 0 ? { option: index, text: '' } : { text: 'config/dev.json' };
-    },
-    evaluate: r => [
-      { name: 'Asked a question', required: true, ok: r.questions.length > 0 },
-      { name: 'Changed config/dev.json', required: true, ok: /"debug"/.test(r.draft['config/dev.json'] ?? '') },
-      { name: 'Left config/prod.json alone', required: true, ok: !r.draft['config/prod.json'] },
-    ],
-  },
-  {
-    name: 'suggest-note',
-    purpose: 'Suggest a workspace note with a source reference instead of editing files.',
-    files: { 'package.json': '{\n  "name": "demo",\n  "scripts": {\n    "test": "node --test"\n  }\n}\n' },
-    prompt: 'Read package.json and suggest a workspace note that records how to run this project\'s tests. Cite package.json as the source. Do not change any files.',
-    evaluate: r => [
-      { name: 'Suggested a note', required: true, ok: r.suggestions.length > 0 },
-      { name: 'The note mentions the test command', ok: r.suggestions.some(item => /node --test|npm test/.test(item.text)) },
-      { name: 'Cited package.json', ok: r.suggestions.some(item => item.references.some(ref => ref.file === 'package.json')) },
-      { name: 'Staged no edits', required: true, ok: r.hunks.length === 0 },
-    ],
-  },
-  {
-    name: 'instructions',
-    purpose: 'Follow an approved workspace profile and a path rule delivered with a matching file.',
-    files: { 'calc.js': calc.replace('a - b;\nexports.sub', 'a + b;\nexports.sub'),
-      'AGENTS.md': 'Keep changes small. End every summary with the line "Checked by AgentExtension."\n',
-      '.agentextension/rules/js.md': '---\npaths: ["**/*.js"]\n---\nEvery exported function you add needs a JSDoc comment that starts with /** and describes its parameters.\n' },
-    approveInstructions: true,
-    prompt: 'Add an exported function mul(a, b) to calc.js that multiplies two numbers, then submit the change for review.',
-    evaluate: r => [
-      { name: 'Added mul', required: true, ok: /mul/.test(r.draft['calc.js'] ?? '') },
-      { name: 'Path rule delivered', required: true, ok: r.manifest.some(entry => entry.kind === 'path rule') },
-      { name: 'Followed the path rule (JSDoc)', ok: /\/\*\*[\s\S]*mul/.test(r.draft['calc.js'] ?? '') },
-      { name: 'Followed the workspace profile', ok: /Checked by AgentExtension/.test(r.text) },
-    ],
-  },
-  {
-    name: 'fix-team-workers',
-    purpose: 'Use the diagnosis and edit-proposal workers, merge the proposal, and recheck.',
-    files: { 'calc.js': calc, 'calc.test.js': calcTest },
-    plugins: ['fix-team'],
-    prompt: 'calc.test.js fails. Run `node --test calc.test.js`. Then call diagnose_failure to find the cause, call propose_worker_edits for calc.js, check the proposed hunks, and merge them with merge_worker_edits. Rerun the test and submit the change for review.',
-    evaluate: r => [
-      { name: 'Called diagnose_failure', ok: r.workers.some(worker => worker.role === 'test-diagnosis') },
-      { name: 'Diagnosis completed', ok: r.workers.some(worker => worker.role === 'test-diagnosis' && worker.state === 'completed') },
-      { name: 'Worker proposal merged', required: true, ok: r.workers.some(worker => worker.role === 'edit-proposal' && worker.state === 'merged') },
-      { name: 'Merged file reached hunk review', required: true, ok: r.phase === 'ready' && staged(r, 'calc.js').length > 0 },
-      { name: 'Staged add uses +', required: true, ok: /a \+ b/.test(r.draft['calc.js'] ?? '') },
-      { name: 'The last check passed', ok: r.checks.at(-1)?.exitCode === 0 },
-    ],
-  },
-  {
-    name: 'budget-and-audit',
-    purpose: 'Stop tool calls at the run budget, finish cleanly, and export a verified audit log.',
-    files: Object.fromEntries(Array.from({ length: 6 }, (_, index) => [`notes/n${index + 1}.md`, `Note ${index + 1}: item ${index * 7}.\n`])),
-    settings: { runBudget: { maxTokens: 400_000, maxMinutes: 15, maxToolCalls: 3 } },
-    prompt: 'Read each file in the notes folder one at a time with read_file and summarize each one. Do not change any files.',
-    audit: true,
-    evaluate: r => [
-      { name: 'Run ended without an error', required: true, ok: ['done', 'ready'].includes(r.phase) },
-      { name: 'Tool-call limit reached', required: true, ok: /tool-call limit/.test(r.usage?.reached ?? '') },
-      { name: 'Tokens reported by the model server', ok: (r.usage?.tokens.total ?? 0) > 0 },
-      { name: 'Audit export verified', required: true, ok: r.audit?.verification.ok === true },
-    ],
-  },
-  {
-    name: 'scheduled-report',
-    purpose: 'Run an unattended read-only report and produce cited findings.',
-    files: { 'src/a.js': '// TODO: handle empty input\nexports.a = x => x;\n', 'src/b.js': 'exports.b = 1;\n// TODO remove legacy flag\n', 'README.md': 'Demo.\n' },
-    scheduled: 'List every TODO comment in the workspace with its file and line number.',
-    evaluate: r => [
-      { name: 'Report completed', required: true, ok: r.status === 'completed' },
-      { name: 'Report names src/a.js', ok: /a\.js/.test(r.text) },
-      { name: 'Report names src/b.js', ok: /b\.js/.test(r.text) },
-      { name: 'No write-tool requests', required: true, ok: r.usage.writesRequested === 0 },
-    ],
-  },
-];
+async function implementationDigest() {
+  const source = path.join(ROOT, 'src');
+  const files = (await fs.readdir(source)).filter(name => name.endsWith('.js')).sort();
+  const hash = createHash('sha256');
+  for (const name of files) { hash.update(name + '\0'); hash.update(await fs.readFile(path.join(source,name))); hash.update('\0'); }
+  for (const name of ['trueforge/agent.json','package.json']) { hash.update(name + '\0'); hash.update(await fs.readFile(path.join(ROOT,name))); }
+  return hash.digest('hex');
+}
 
-async function flaskScenario() {
-  if (!process.env.AGENTEXTENSION_TEST_FLASK_ROOT) throw new Error('Set AGENTEXTENSION_TEST_FLASK_ROOT to a clean Flask 3.1.3 checkout.');
-  const workspace = await fs.realpath(process.env.AGENTEXTENSION_TEST_FLASK_ROOT);
-  const command = async (...args) => (await git('git', args, { cwd: workspace, timeout: 5_000 })).stdout.trimEnd();
-  if (await command('rev-parse', '--show-toplevel') !== workspace
-      || await command('rev-parse', 'HEAD') !== '22d924701a6ae2e4cd01e9a15bbaf3946094af65'
-      || await command('status', '--porcelain')) {
-    throw new Error('Use the root of a clean Flask 3.1.3 checkout at 22d92470.');
+async function evaluationDigest() {
+  const directory=__dirname;
+  const names=(await fs.readdir(directory)).filter(name=>name.endsWith('.cjs')||['corpus.json','flask-inputs.json'].includes(name)).sort();
+  const hash=createHash('sha256');
+  for(const name of names){hash.update(name+'\0');hash.update(await fs.readFile(path.join(directory,name)));hash.update('\0');}
+  for(const name of ['queries.json','judgments.json','judgments.cjs','run.cjs','source.cjs','corpus.cjs',
+    ...['queries.json','judgments.json','source.json','freeze.json','cancellation.test.js.txt'].map(name=>'corpora/v2/'+name)]){
+    hash.update('../retrieval/'+name+'\0');hash.update(await fs.readFile(path.join(directory,'../retrieval',name)));hash.update('\0');
   }
-  return {
-    name: 'flask-task-b', workspace, files: {},
-    purpose: 'Collect and review the draft for the original Flask Task B. Run the CLI acceptance checks separately.',
-    prompt: 'Add a new built-in CLI command flask config that prints the loaded application\'s configuration as JSON, masking the values of any key containing SECRET, PASSWORD, TOKEN or KEY as "***". It must appear in flask --help, be covered by a test, and be documented alongside the other built-in commands.',
-    evaluate: r => [
-      { name: 'Reached hunk review', required: true, ok: r.reviewed && r.phase === 'ready' },
-      { name: 'Staged CLI, test and documentation changes', required: true, ok: staged(r, 'src/flask/cli.py').length > 0
-        && r.hunks.some(hunk => /^tests\/test_.*\.py$/.test(hunk.file)) && staged(r, 'docs/cli.rst').length > 0 },
-    ],
-  };
+  hash.update(await fs.readFile(path.join(directory,'../helpers/host.cjs')));
+  return hash.digest('hex');
+}
+
+// Registers the hosted main provider in the local TrueForge. The key comes from the environment and is never recorded.
+async function registerHostedMain(forge, provider, example) {
+  const { AGENTEXTENSION_TEST_HOSTED_URL: baseUrl, AGENTEXTENSION_TEST_HOSTED_KEY: apiKey, AGENTEXTENSION_TEST_MODEL_ID: modelId } = process.env;
+  const url = URL.canParse(baseUrl ?? '') ? new URL(baseUrl) : undefined;
+  if (!url || url.protocol !== 'https:' || url.username || url.password || !apiKey || /[\r\n]/.test(apiKey) || !modelId)
+    throw new Error('--hosted-main requires an HTTPS AGENTEXTENSION_TEST_HOSTED_URL, AGENTEXTENSION_TEST_HOSTED_KEY, and AGENTEXTENSION_TEST_MODEL_ID.');
+  if (provider === example.name) throw new Error(`--hosted-main cannot reuse the local provider name ${example.name}.`);
+  const models = [{ name: MODEL.split('/')[1], modelId, properties: example.models[0].properties }];
+  await forge.settings.modelProviders.createOrUpdate({ manifest: { type: 'custom', name: provider,
+    baseUrl: url.href.replace(/\/$/, ''), auth: { apiKey }, models } });
+  return url.host;
 }
 
 async function preflight() {
+  require('../../src/forge').localUrl(FORGE);
   const { TrueForge } = await import('@truefoundry/trueforge-sdk');
   const forge = new TrueForge({ baseUrl: FORGE, maxRetries: 0, timeoutInSeconds: 10 });
   try { await fetch(FORGE, { signal: AbortSignal.timeout(5_000) }); } catch {
@@ -157,8 +80,16 @@ async function preflight() {
   }
   const [provider] = MODEL.split('/');
   const example = JSON.parse(await fs.readFile(path.join(ROOT, 'trueforge', 'model.example.json'), 'utf8')).manifest;
+  const hostedHost = hostedMain ? await registerHostedMain(forge, provider, example) : null;
+  if (localOnly && provider !== example.name) {
+    const listed = await forge.settings.modelProviders.list();
+    const items = Array.isArray(listed) ? listed : listed?.data ?? listed?.items ?? [];
+    const configured = items.find(item => (item.manifest?.name ?? item.name) === provider);
+    requireLocalEndpoint((configured?.manifest ?? configured)?.baseUrl);
+  }
   if (provider === example.name) {
     const baseUrl = process.env.AGENTEXTENSION_TEST_MODEL_URL || example.baseUrl;
+    if (localOnly) requireLocalEndpoint(baseUrl);
     let served;
     try { served = (await (await fetch(`${baseUrl}/models`, { signal: AbortSignal.timeout(5_000) })).json())?.data?.map(item => item.id) ?? []; } catch {
       throw new Error(`The model server is not reachable at ${baseUrl}. Start LM Studio's server and load the model.`);
@@ -179,6 +110,11 @@ async function preflight() {
       console.log(`Registered TrueForge provider ${provider} at ${baseUrl} with model ${modelId}.`);
     }
   }
+  const { data: models } = await forge.models.list();
+  const configured = models.find(model => model.name === MODEL);
+  return { model: MODEL, modelId: configured?.modelId, properties: configured?.properties ?? {},
+    compaction, turnTimeoutSeconds: 600, workerTimeoutSeconds: 180,
+    fallbackModel: '', temperature: null, determinism: 'Provider defaults; temperature was not exposed by this setup.', localOnly, hostedHost };
 }
 
 async function runScenario(scenario) {
@@ -187,18 +123,29 @@ async function runScenario(scenario) {
   const cleanups = [];
   const t = { after: fn => cleanups.push(fn) };
   const result = { name: scenario.name, purpose: scenario.purpose, model: MODEL, hunks: [], draft: {}, checks: [], questions: [], suggestions: [],
-    workers: [], manifest: [], log: [], text: '', errors: [] };
+    workers: [], manifest: [], log: [], text: '', errors: [], changes: [], unapprovedActions: scenario.scheduled ? 0 : null, approvals: 0, interactionMs: 0,
+    taskVersion: scenario.version ?? 1, fixtureDigest: scenario.fixtureDigest, sourceRevision: scenario.sourceRevision,
+    split: scenario.split, language: scenario.language, budget: scenario.budget };
+  result.implementationDigest = await implementationDigest();
+  result.evaluationDigest = await evaluationDigest();
+  result.environment = { editorAppRoot: process.env.AGENTEXTENSION_TEST_EDITOR_APP_ROOT ?? null,
+    searchExecutable: await require('../../src/search').searchExecutable(process.env.AGENTEXTENSION_TEST_EDITOR_APP_ROOT) ?? null };
   try {
     for (const [file, text] of Object.entries(scenario.files)) {
       await fs.mkdir(path.dirname(path.join(root, file)), { recursive: true });
       await fs.writeFile(path.join(root, file), text);
     }
     if (scenario.scheduled) return await scheduledScenario(scenario, root, result, started);
-    const settings = { serverUrl: FORGE, model: MODEL, fallbackModel: '', compaction: false, turnTimeoutSeconds: 600, workerTimeoutSeconds: 180, readConnectors: [],
-      skillRoots: [], pluginRoots: [], browserOrigins: [], automaticSkills: false, ...scenario.settings };
+    const settings = { serverUrl: FORGE, model: MODEL, fallbackModel: '', compaction, turnTimeoutSeconds: 600, workerTimeoutSeconds: 180, readConnectors: [],
+      skillRoots: [], pluginRoots: [], browserOrigins: [], automaticSkills: false, ...scenario.settings,
+      ...(scenario.budget ? {runBudget: {maxTokens: scenario.budget.maxTokens,maxMinutes: scenario.budget.minutes,maxToolCalls: scenario.budget.maxToolCalls}} : {}) };
+    result.executionSettings = executionSettings(settings);
     const host = await startHost(t, { root, settings });
     host.autoAnswer = async (kind, title, items) => {
-      if (kind === 'modal') return items.find(item => ['Run command', 'Allow read', 'Allow action', 'Enable plugin', 'Approve instructions', 'Save note'].includes(item)) ?? items[0];
+      if (kind === 'modal') {
+        result.approvals++;
+        return items.find(item => ['Run command', 'Allow read', 'Allow action', 'Enable plugin', 'Approve instructions', 'Save note'].includes(item));
+      }
       return undefined;
     };
     if (scenario.plugins) {
@@ -212,17 +159,28 @@ async function runScenario(scenario) {
       await host.waitFor(state => /In use: .*AGENTS\.md/.test(state.instructionSummary ?? ''), 15_000, 'instructions approved');
     }
     const first = host.states.length;
+    result.submittedAt = Date.now();
     await host.send({ type: 'run', prompt: scenario.prompt });
-    const deadline = Date.now() + SCENARIO_MINUTES * 60_000;
+    const minutes = scenario.budget?.minutes ?? SCENARIO_MINUTES;
+    const deadline = result.submittedAt + minutes * 60_000;
     let handled = '';
     let sawActive = false;
+    let lastPollAt = result.submittedAt;
+    result.maxPollGapMs = 0;
     while (Date.now() < deadline) {
       await sleep(500);
+      const polledAt = Date.now();
+      result.maxPollGapMs = Math.max(result.maxPollGapMs, polledAt - lastPollAt);
+      lastPollAt = polledAt;
+      if (polledAt >= deadline) break;
       const state = host.state();
       // A fast run can start and finish between polls, so check every state published since the request.
       sawActive ||= host.states.slice(first).some(item => item.runActive);
-      if (state.phase === 'review' && handled !== `review:${state.revision}`) {
-        handled = `review:${state.revision}`;
+      if (state.hunks?.length && result.firstReviewPatchMs === undefined) result.firstReviewPatchMs = Date.now() - result.submittedAt;
+      if (Number.isFinite(state.progress?.firstDraftMs)) result.firstPatchMs = Math.max(0,state.progress.startedAt + state.progress.firstDraftMs - result.submittedAt);
+      const interactionAt = Date.now();
+      if (state.phase === 'review' && handled !== `review:${state.revision}:${state.reviewSequence ?? 0}`) {
+        handled = `review:${state.revision}:${state.reviewSequence ?? 0}`;
         result.reviewed = true;
         result.hunks = state.hunks;
         for (const hunk of state.hunks) await host.send({ type: 'decision', id: hunk.id, value: 'accept' });
@@ -235,25 +193,52 @@ async function runScenario(scenario) {
         handled = 'plan';
         await host.send({ type: 'approve-plan' });
       } else if (sawActive && state.runActive === false) break;
+      if (['review', 'question', 'plan'].includes(state.phase)) result.interactionMs += Date.now() - interactionAt;
     }
-    const state = host.state();
-    if (state.runActive) { result.errors.push(`Timed out after ${SCENARIO_MINUTES} minutes.`); await host.send({ type: 'cancel' }); }
-    Object.assign(result, { phase: state.phase, status: state.status, text: state.text ?? '', checks: state.checks ?? [], workers: state.workers ?? [],
+    let state = host.state();
+    result.modelRunMs = Date.now() - result.submittedAt;
+    result.deadlineOverrunMs = Math.max(0,result.modelRunMs-minutes*60000);
+    if (state.runActive) {
+      result.timedOut = true; result.errors.push(`Timed out after ${minutes} minutes.`);
+      // Save partial diagnostic work before the harness's user-style cancel discards it.
+      result.interruptedCheckpoint = await new (require('../../src/checkpoint').CheckpointStore)(host.storage,root).load();
+      await host.send({ type: 'cancel' });
+    }
+    if (state.runActive) state = await host.waitFor(value => !value.runActive, 15000, 'terminal run cleanup');
+    Object.assign(result, { revision: state.revision, phase: state.phase, status: state.status, text: state.text ?? '', checks: state.checks ?? [], workers: state.workers ?? [],
       manifest: (state.manifest ?? []).map(({ kind, source, trust, reason }) => ({ kind, source, trust, reason })), log: state.log ?? [],
       usage: state.usageDetail, permissions: (state.permissions?.events ?? []).map(({ tool, effect, decision, reason }) => ({ tool, effect, decision, reason })) });
+    result.authorizationEvidence = dispatchAuthorization(host.states,result.usage?.toolCalls);
+    result.unapprovedActions = result.authorizationEvidence.unapprovedActions;
     if (!result.hunks.length && state.hunks?.length) result.hunks = state.hunks;
     // The draft as staged, from the run report written by the extension.
-    await host.send({ type: 'run-report' });
+    await host.sendAndWait({ type: 'run-report' });
     const reportFile = host.shown.documents.at(-1);
     if (reportFile) {
       try {
         const changes = JSON.parse(await fs.readFile(path.join(path.dirname(reportFile), 'draft.json'), 'utf8'));
+        result.changes = changes;
         for (const change of changes) result.draft[change.file] = change.after;
-      } catch { /* No draft. */ }
+        result.checks = await readCheckEvidence(path.dirname(reportFile), result.checks);
+        try {
+          result.progress = JSON.parse(await fs.readFile(path.join(path.dirname(reportFile), 'progress.json'), 'utf8'));
+          if (Number.isFinite(result.progress.firstDraftMs)) result.firstPatchMs = Math.max(0,result.progress.startedAt + result.progress.firstDraftMs - result.submittedAt);
+        }
+        catch (error) { if (error.code !== 'ENOENT') throw error; }
+      } catch (error) { result.errors.push('Could not read final draft evidence: ' + error.message); }
     }
     const { SuggestedNotes } = require('../../src/memory');
     result.suggestions = new SuggestedNotes(host.context.globalState, root).list();
     if (scenario.audit) result.audit = await new (require('../../src/audit').AuditLog)(host.storage, root).export();
+    if (state.checkpoint) {
+      result.checkpoint = await new (require('../../src/checkpoint').CheckpointStore)(host.storage, root).load();
+    }
+    if (state.phase === 'ready' && !scenario.kind) {
+      const verificationAt = Date.now();
+      result.verification = await verifyDraft({ source: root, changes: result.changes, allowedFiles: scenario.allowedFiles,
+        acceptance: scenario.acceptance, acceptanceInputs: scenario.acceptanceInputs });
+      result.verificationMs = Date.now() - verificationAt;
+    }
     if (state.phase === 'ready') await host.send({ type: 'cancel' });
     result.errors.push(...host.shown.errors);
   } catch (error) {
@@ -274,8 +259,10 @@ async function scheduledScenario(scenario, root, result, started) {
     workspace.identity = root;
     const schedule = { id: 'model-check', name: 'Model check', prompt: scenario.scheduled, days: [0, 1, 2, 3, 4, 5, 6], times: ['09:00'],
       timeZone: 'UTC', connectors: [], budget: { minutes: 10, toolCalls: 20, connectorReads: 0 }, catchUpMinutes: 60, approval: { digest: 'x', at: 0 } };
+    const settings = { serverUrl: FORGE, model: MODEL, fallbackModel: '', compaction, turnTimeoutSeconds: 600, workerTimeoutSeconds: 180 };
+    result.executionSettings = executionSettings(settings);
     const run = await runScheduledReport({ schedule, occurrence: { at: Date.now(), slot: 'manual' }, trigger: 'manual', workspace,
-      settings: { serverUrl: FORGE, model: MODEL, fallbackModel: '', compaction: false, turnTimeoutSeconds: 600 }, storage });
+      settings, storage });
     const report = await fs.readFile(run.report, 'utf8');
     Object.assign(result, { phase: run.status, status: run.status, reason: run.reason, usage: run.usage,
       text: report.split('## Report')[1]?.split('## Permission decisions')[0] ?? '' });
@@ -285,40 +272,72 @@ async function scheduledScenario(scenario, root, result, started) {
 }
 
 function finish(scenario, result, started) {
+  if (Number.isFinite(result.submittedAt)) {
+    result.wallMs = Date.now() - result.submittedAt;
+    result.activeMs = Math.max(0,result.wallMs-(result.progress?.waitingMs??result.interactionMs??0));
+  }
   result.seconds = Math.round((Date.now() - started) / 1000);
-  try { result.results = scenario.evaluate(result); } catch (error) { result.results = []; result.errors.push(error.message); }
-  const required = result.results.filter(item => item.required);
-  result.outcome = result.errors.length && !result.results.length ? 'error'
-    : required.every(item => item.ok) ? (result.results.every(item => item.ok) ? 'pass' : 'pass with gaps') : 'fail';
+  result.reason ??= result.usage?.reached;
+  Object.assign(result, evaluateScenario(scenario, result));
   console.log(`${result.outcome.padEnd(14)} ${scenario.name} (${result.seconds} s)`);
+  if (result.reason) console.log('  reason: ' + result.reason);
   for (const item of result.results) console.log(`  ${item.ok ? 'ok  ' : 'MISS'} ${item.required ? '*' : ' '} ${item.name}`);
   for (const error of result.errors) console.log(`  error: ${String(error).split('\n')[0]}`);
   return result;
 }
 
 async function main() {
-  if (only?.includes('flask-task-b')) scenarios.push(await flaskScenario());
-  const selected = scenarios.filter(item => !only || only.includes(item.name));
+  if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 3) throw new Error('Use one to three repetitions.');
+  const loaded = useCorpus ? await require('./corpus.cjs').loadCorpus() : undefined;
+  const candidates = loaded?.tasks ?? [...scenarios];
+  if (!useCorpus && only?.includes('flask-task-b')) candidates.push(await flaskScenario());
+  const selected = candidates.filter(item => !only || only.includes(item.name));
   if (!selected.length || only?.some(name => !selected.some(item => item.name === name))) throw new Error('Unknown real-model scenario.');
-  await preflight();
+  if (listedOnly) {
+    console.log(JSON.stringify({ version: loaded?.version ?? 'legacy-strict/1', policy: loaded?.policy,
+      repetitions, executionSettings: executionSettings({ compaction }), tasks: selected.map(({name,split,language,fixtureDigest,sourceRevision,budget,unavailable}) =>
+        ({name,split,language,fixtureDigest,sourceRevision,budget,unavailable})) }, null, 2));
+    return;
+  }
+  let unavailable; let modelConfiguration;
+  try { modelConfiguration = await preflight(); } catch (error) { unavailable = error.message; }
   console.log(`AgentExtension real-model checks · ${MODEL} via ${FORGE}\n`);
   const results = [];
-  for (const scenario of selected) results.push(await runScenario(scenario));
   const directory = process.env.AGENTEXTENSION_TEST_RESULTS_DIR ?? path.join(ROOT, 'test-results');
-  await fs.mkdir(directory, { recursive: true });
+  await fs.mkdir(directory, { recursive: true, mode: 0o700 });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const summary = { model: MODEL, forge: FORGE, node: process.version, platform: `${process.platform} ${os.release()}`, startedAt: stamp, results };
-  await fs.writeFile(path.join(directory, `model-${stamp}.json`), JSON.stringify(summary, null, 2));
+  for (let repetition = 1; repetition <= repetitions; repetition++) for (const scenario of selected) {
+    const reason = unavailable ?? scenario.unavailable;
+    if (reason) {
+      results.push(finish(scenario, { name: scenario.name, purpose: scenario.purpose, model: MODEL, environmentUnavailable: true,
+        reason, repetition, split: scenario.split, language: scenario.language, phase: 'unavailable', hunks: [], changes: [], draft: {}, checks: [], questions: [], suggestions: [],
+        workers: [], manifest: [], log: [], text: '', errors: [], unapprovedActions: 0 }, Date.now()));
+    } else results.push({ ...await runScenario(scenario), repetition });
+    // Keep completed attempts if a later attempt or the harness is interrupted.
+    const attemptFile = path.join(directory, `attempt-${stamp}-${String(results.length).padStart(3, '0')}.json`);
+    await fs.writeFile(attemptFile + '.tmp', JSON.stringify({ corpusVersion: loaded?.version ?? 'legacy-strict/1', model: MODEL,
+      modelConfiguration, plannedAttempts: selected.length * repetitions, completedAttempts: results.length,
+      hardware: {arch: os.arch(),cpu: os.cpus()[0]?.model,memoryBytes: os.totalmem()}, node: process.version,
+      result: results.at(-1) }, null, 2), { mode: 0o600 });
+    await fs.rename(attemptFile + '.tmp', attemptFile);
+  }
+  const summary = { corpusVersion: loaded?.version ?? 'legacy-strict/1', policy: loaded?.policy, repetitions,
+    hardware: {arch: os.arch(),cpu: os.cpus()[0]?.model,memoryBytes: os.totalmem()},
+    runtime: {server: require('../../trueforge/server/package.json').dependencies['@truefoundry/trueforge'],sdk: require('../../package.json').dependencies['@truefoundry/trueforge-sdk']},
+    model: MODEL, modelId: modelConfiguration?.modelId ?? process.env.AGENTEXTENSION_TEST_MODEL_ID, modelConfiguration,
+    forge: FORGE, node: process.version, platform: `${process.platform} ${os.release()}`, startedAt: stamp, results };
+  await fs.writeFile(path.join(directory, `model-${stamp}.json`), JSON.stringify(summary, null, 2), {mode:0o600});
   const lines = [`# Real-model check: ${MODEL}`, '', `Run ${stamp} · ${process.platform} · Node.js ${process.version}`, '',
     '| Scenario | Outcome | Seconds | Tokens | Missed checks |', '| --- | --- | --- | --- | --- |',
     ...results.map(item => `| ${item.name} | ${item.outcome} | ${item.seconds} | ${item.usage?.tokens?.total ?? '—'} | ${item.results.filter(check => !check.ok).map(check => `${check.required ? '*' : ''}${check.name}`).join('; ') || '—'} |`),
-    '', '`*` marks a required check. Full transcripts are in the JSON file next to this one.', ''];
-  await fs.writeFile(path.join(directory, 'model-latest.md'), lines.join('\n'));
-  await fs.writeFile(path.join(directory, 'model-latest.json'), JSON.stringify(summary, null, 2));
+    '', 'Only complete outcomes pass. A patch must be reviewed, applied in a disposable copy, and independently checked. Full evidence is in the JSON file next to this one.', ''];
+  await fs.writeFile(path.join(directory, 'model-latest.md'), lines.join('\n'), {mode:0o600});
+  await fs.writeFile(path.join(directory, 'model-latest.json'), JSON.stringify(summary, null, 2), {mode:0o600});
   console.log(`\nResults in ${directory}: model-latest.md and model-${stamp}.json`);
-  process.exitCode = results.every(item => item.outcome.startsWith('pass')) ? 0 : 1;
+  process.exitCode = successful(results) ? 0 : 1;
   // TrueForge client streams can keep the event loop open after the last scenario.
   setTimeout(() => process.exit(), 1_000).unref();
 }
 
-main().catch(error => { console.error(error.message); process.exit(2); });
+if (require.main === module) main().catch(error => { console.error(error.message); process.exit(2); });
+module.exports = { runScenario, preflight, implementationDigest, evaluationDigest, registerHostedMain };
