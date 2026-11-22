@@ -47,7 +47,7 @@ class RunReport {
     this.images.push({ name, snapshot: state.snapshot, origin: new URL(state.url).origin, digest: sha256(bytes) });
     return name;
   }
-  async save({ phase, revision, selection, changes = [], session, workers = [], plugins = [], permissions, applied = false, instructions, policy, usage, compactionSources }) {
+  async save({ phase, revision, selection, changes = [], session, workers = [], plugins = [], permissions, applied = false, instructions, policy, usage, compactionSources, progress, task }) {
     await fs.mkdir(this.directory, { recursive: true });
     const patch = patchFor(changes);
     await fs.writeFile(path.join(this.directory, 'draft.patch'), patch, { mode: 0o600 });
@@ -63,7 +63,7 @@ class RunReport {
       const name = `check-${index + 1}.patch`;
       await fs.writeFile(path.join(this.directory, name), check.patch, { mode: 0o600 });
       await fs.writeFile(path.join(this.directory, `check-${index + 1}.json`), JSON.stringify(check.changes ?? [], null, 2), { mode: 0o600 });
-      const outcome = check.exitCode === 0 ? 'passed' : check.exitCode == null ? 'skipped' : 'failed';
+      const outcome = check.verification === false ? 'diagnostic only' : check.exitCode === 0 ? 'passed' : check.exitCode == null ? 'skipped' : 'failed';
       const stale = check.revision !== revision || check.selection !== selection || digest(check.changes ?? []) !== digest(changes);
       lines.push(`| ${stale ? `stale (${outcome})` : outcome} | ${escape(check.command)} | ${escape(check.scope)} · revision ${check.revision} | [Checked patch](${name}) · [Full changed files](check-${index + 1}.json) · ${digest(check.changes ?? [])} |`);
     }
@@ -103,6 +103,18 @@ class RunReport {
       'This report records execution evidence. It does not prove model reasoning or browser findings are correct. Browser and native-app changes occur when approved. Editor Undo does not reverse them.', '',
       'Draft patches and screenshots can contain source code or visible page data. Review them before sharing.', '');
     const file = path.join(this.directory, 'report.md');
+    if (task) {
+      await fs.writeFile(path.join(this.directory, 'task.json'), JSON.stringify(task, null, 2), { mode: 0o600 });
+      lines.push('## Task evidence', '', '[Task state and unresolved checks](task.json)', '',
+        `Status: ${escape(task.status)}. Unresolved: ${task.unresolved.map(escape).join(', ') || 'none recorded'}.`,
+        'Declared check names do not prove that all requested behavior was verified.', '');
+    }
+    if (progress) {
+      await fs.writeFile(path.join(this.directory, 'progress.json'), JSON.stringify(progress, null, 2), { mode: 0o600 });
+      lines.push('## Run progress', '', '[Tool timing and progress evidence](progress.json)', '',
+        'Active time: ' + progress.activeMs + ' ms. User wait: ' + progress.waitingMs + ' ms.',
+        'Observed signal: ' + progress.diagnosis + '. This is not a proven root cause.', '');
+    }
     await fs.writeFile(file, lines.join('\n'), { mode: 0o600 });
     await prune(this.parent, this.runId);
     return file;

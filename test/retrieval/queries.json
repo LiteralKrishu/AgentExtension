@@ -1,0 +1,686 @@
+{
+  "version": "agent-capability-upgrade/1",
+  "sourceRevision": "5c5fe67",
+  "queries": [
+    {
+      "id": "query-01",
+      "query": "propose_lines",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-02",
+      "query": "applyWorkspaceChanges",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/apply.js"
+        ],
+        "test": [
+          "test/vscode.cjs"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-03",
+      "query": "PermissionBroker",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/permissions.js"
+        ],
+        "test": [
+          "test/permissions.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-04",
+      "query": "ContextManifest",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/prompt.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-05",
+      "query": "runForge",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/forge.js"
+        ],
+        "test": [
+          "test/live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-06",
+      "query": "runWorkerSession",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/worker-session.js"
+        ],
+        "test": [
+          "test/worker-live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-07",
+      "query": "safePath",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/workspace.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-08",
+      "query": "localUrl",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/forge.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-09",
+      "query": "create_file",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-10",
+      "query": "review_changes",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-11",
+      "query": "connector_read",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/connectors.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-12",
+      "query": "browser_visit",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/surface-live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-13",
+      "query": "run_skill_script",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/script-runner.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-14",
+      "query": "merge_worker_edits",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/workers.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-15",
+      "query": "suggest_note",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/memory.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-16",
+      "query": "diagnose_failure",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/workers.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-17",
+      "query": "Keep an edit inside the original selected code",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/draft.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-18",
+      "query": "Reject applying a patch after the source changed",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/apply.js"
+        ],
+        "test": [
+          "test/hardening.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-19",
+      "query": "Find implementation tests and documentation for a request",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/context.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-20",
+      "query": "Cancel a slow verification command and remove its temporary copy",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/workspace.js"
+        ],
+        "test": [
+          "test/hardening.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-21",
+      "query": "Run checks with network access blocked",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/workspace.js"
+        ],
+        "test": [
+          "test/permissions.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-22",
+      "query": "Show model token usage and estimated cost",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/usage.js"
+        ],
+        "test": [
+          "test/usage.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-23",
+      "query": "Ask a structured question while the agent is running",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/forge.js"
+        ],
+        "test": [
+          "test/extension-questions.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-24",
+      "query": "Load a skill only when implicit invocation is permitted",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/skills.js"
+        ],
+        "test": [
+          "test/skills.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-25",
+      "query": "Refresh connector OAuth credentials and bind the account",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/connector-oauth.js"
+        ],
+        "test": [
+          "test/connector-oauth.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-26",
+      "query": "Invalidate plugin approval when its content changes",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/plugins.js"
+        ],
+        "test": [
+          "test/plugins.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-27",
+      "query": "Recover a draft after restarting the editor",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/checkpoint.js"
+        ],
+        "test": [
+          "test/checkpoint.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-28",
+      "query": "Continue a reviewed task on another device",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/collaboration.js"
+        ],
+        "test": [
+          "test/session-continuation.test.js"
+        ],
+        "documentation": [
+          "docs/hosted-collaboration-https.md"
+        ]
+      }
+    },
+    {
+      "id": "query-29",
+      "query": "Share workspace text files from a matching Git base",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/workspace-sync.js"
+        ],
+        "test": [
+          "test/workspace-sync.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-30",
+      "query": "Merge independent personal notes from two devices",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/memory-sync.js"
+        ],
+        "test": [
+          "test/memory-sync.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-31",
+      "query": "Generate a scheduled report while VS Code is closed",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/background-runner.js"
+        ],
+        "test": [
+          "test/background-live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-32",
+      "query": "Prevent two timer owners from running one occurrence twice",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/schedules.js"
+        ],
+        "test": [
+          "test/schedules.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-33",
+      "query": "Save an unattended question for an interactive follow up",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/schedule-controller.js"
+        ],
+        "test": [
+          "test/extension-schedules.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-34",
+      "query": "Verify a redacted permission audit hash chain",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/audit.js"
+        ],
+        "test": [
+          "test/usage.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-35",
+      "query": "Apply administrator policy before a protected action",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/organization.js"
+        ],
+        "test": [
+          "test/organization.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-36",
+      "query": "Open a dedicated browser profile with approved origins",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/browser.js"
+        ],
+        "test": [
+          "test/surface-live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-37",
+      "query": "Reject a native app action when its observed window changed",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/computer.js"
+        ],
+        "test": [
+          "test/surface-live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-38",
+      "query": "Limit worker reads to explicitly named snapshot files",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/worker-session.js"
+        ],
+        "test": [
+          "test/workers.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-39",
+      "query": "Reject stale or overlapping worker edit proposals",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/workers.js"
+        ],
+        "test": [
+          "test/workers.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-40",
+      "query": "Run a hook before applying accepted changes",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/plugin-hooks.js"
+        ],
+        "test": [
+          "test/plugin-hooks.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    }
+  ]
+}

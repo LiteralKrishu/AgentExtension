@@ -59,7 +59,7 @@ async function packageExtension(output) {
   try {
     const assets = ['.vscodeignore', 'LICENSE', 'README.md', 'docs', 'media', 'native', 'plugins', 'skills',
       'trueforge/agent.json', 'trueforge/model.example.json',
-      'src/retrieval.js', 'src/context.js', ...runtimeDependencies.map(name => `node_modules/${name}`)];
+      ...runtimeDependencies.map(name => `node_modules/${name}`)];
     await Promise.all(assets.map(file => fs.cp(path.join(root, file), path.join(staging, file), { recursive: true,
       filter: source => source !== helper || (withHelper && existsSync(helper)) })));
     await stageRuntime(staging);
@@ -68,6 +68,9 @@ async function packageExtension(output) {
     delete packaged.devDependencies;
     delete packaged.scripts;
     await fs.writeFile(path.join(staging, 'package.json'), JSON.stringify(packaged, null, 2) + '\n');
+    // The worker has its own dependency graph. Bundle it so new retrieval modules ship with it.
+    await build({ absWorkingDir: root, entryPoints: ['./src/retrieval.js'], outfile: path.join(staging, 'src/retrieval.js'),
+      bundle: true, minify: true, platform: 'node', format: 'cjs', target: 'node22', external: runtimeDependencies });
     await build({
       absWorkingDir: root,
       entryPoints: { 'extension.bundle': manifest.main, 'background-cli': './src/background-cli.js', 'organization-service': './src/organization-service.js' },

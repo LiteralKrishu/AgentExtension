@@ -23,7 +23,7 @@ test('a matching bundled skill is loaded automatically and shown; the setting an
     const published = host.states.length;
     await host.send({ type: 'run', prompt: request });
     const done = await host.waitFor(state => prompts.length > before && host.states.length > published
-      && state.phase === 'done' && state.runActive === false && /^Run complete/.test(state.status ?? ''), 60_000, 'run end');
+      && state.phase === 'done' && state.runActive === false && /^Run ended/.test(state.status ?? ''), 60_000, 'run end');
     assert.ifError(model.state.error);
     return { done, prompt: prompts.at(-1) };
   };

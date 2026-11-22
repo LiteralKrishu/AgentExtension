@@ -1,0 +1,687 @@
+{
+  "version": "agent-capability-upgrade/retrieval/2",
+  "sourceRevision": "5c5fe676a444d51a5163c89abdb39dec0860817e",
+  "sourceVersion": "git-overlay/1:4bb46d0c9ce2b5ea5fc54a30c3e58f33097eb8f8fd8a53667a6888ec1a27a7a4",
+  "queries": [
+    {
+      "id": "query-01",
+      "query": "propose_lines",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-02",
+      "query": "applyWorkspaceChanges",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/apply.js"
+        ],
+        "test": [
+          "test/vscode.cjs"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-03",
+      "query": "PermissionBroker",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/permissions.js"
+        ],
+        "test": [
+          "test/permissions.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-04",
+      "query": "ContextManifest",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/prompt.js"
+        ],
+        "test": [
+          "test/instructions.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-05",
+      "query": "runForge",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/forge.js"
+        ],
+        "test": [
+          "test/live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-06",
+      "query": "runWorkerSession",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/worker-session.js"
+        ],
+        "test": [
+          "test/worker-live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-07",
+      "query": "safePath",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/workspace.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-08",
+      "query": "localUrl",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/forge.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-09",
+      "query": "create_file",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/vscode.cjs"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-10",
+      "query": "review_changes",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-11",
+      "query": "connector_read",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/connectors.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-12",
+      "query": "browser_visit",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/surface-live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-13",
+      "query": "run_skill_script",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/script-runner.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-14",
+      "query": "merge_worker_edits",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/workers.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-15",
+      "query": "suggest_note",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/memory.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-16",
+      "query": "diagnose_failure",
+      "kind": "identifier",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/workers.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-17",
+      "query": "Keep an edit inside the original selected code",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/draft.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-18",
+      "query": "Reject applying a patch after the source changed",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/apply.js"
+        ],
+        "test": [
+          "test/vscode.cjs"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-19",
+      "query": "Find implementation tests and documentation for a request",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/context.js"
+        ],
+        "test": [
+          "test/core.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-20",
+      "query": "Cancel a slow verification command and remove its temporary copy",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/workspace.js"
+        ],
+        "test": [
+          "test/workspace-command-cancellation.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-21",
+      "query": "Run checks with network access blocked",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/workspace.js"
+        ],
+        "test": [
+          "test/hardening.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-22",
+      "query": "Show model token usage and estimated cost",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/usage.js"
+        ],
+        "test": [
+          "test/usage.test.js"
+        ],
+        "documentation": [
+          "docs/features.md"
+        ]
+      }
+    },
+    {
+      "id": "query-23",
+      "query": "Ask a structured question while the agent is running",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/forge.js"
+        ],
+        "test": [
+          "test/extension-questions.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "query-24",
+      "query": "Load a skill only when implicit invocation is permitted",
+      "kind": "concept",
+      "split": "development",
+      "expected": {
+        "implementation": [
+          "src/skills.js"
+        ],
+        "test": [
+          "test/skills.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-01",
+      "query": "readChanges",
+      "kind": "identifier",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/git-review.js"
+        ],
+        "test": [
+          "test/editor-features.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-02",
+      "query": "readProfile",
+      "kind": "identifier",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/managed-forge.js"
+        ],
+        "test": [
+          "test/managed-vsix.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-03",
+      "query": "bodyPreview",
+      "kind": "identifier",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/browser.js"
+        ],
+        "test": [
+          "test/hardening.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-04",
+      "query": "validatePackage",
+      "kind": "identifier",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/plugin-packages.js"
+        ],
+        "test": [
+          "test/plugin-packages.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-05",
+      "query": "List available workflows without loading the bodies of unselected skills",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/skills.js"
+        ],
+        "test": [
+          "test/skills.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-06",
+      "query": "Bind a verification approval to only the hunks accepted during review",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/bridge.js"
+        ],
+        "test": [
+          "test/live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-07",
+      "query": "Remove an access token echoed in a connector reply before showing it to the agent",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/connectors.js"
+        ],
+        "test": [
+          "test/connectors.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-08",
+      "query": "Keep the installed plugin usable when importing a malformed upgrade fails",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/plugin-packages.js"
+        ],
+        "test": [
+          "test/plugin-packages.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-09",
+      "query": "Stop a worker response that exceeds its output size allowance",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/worker-session.js"
+        ],
+        "test": [
+          "test/worker-live.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-10",
+      "query": "Mark a read-only diff review stale after the accepted hunk selection changes",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/workers.js"
+        ],
+        "test": [
+          "test/workers.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-11",
+      "query": "Discard symbol-provider locations that point outside the approved workspace",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/editor-context.js"
+        ],
+        "test": [
+          "test/editor-features.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-12",
+      "query": "Skip a plugin hook when a permission rule denies that hook",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/plugin-hooks.js"
+        ],
+        "test": [
+          "test/plugin-hooks.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-13",
+      "query": "Recheck a declared script content digest before executing the approved input",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/skill-script.js"
+        ],
+        "test": [
+          "test/script-runner.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-14",
+      "query": "Preserve independent edits on the same line when resuming an inline draft",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/checkpoint.js"
+        ],
+        "test": [
+          "test/checkpoint.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-15",
+      "query": "Keep consumed tool grants unavailable after conversation compaction",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/permissions.js"
+        ],
+        "test": [
+          "test/permissions.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    },
+    {
+      "id": "v2-held-16",
+      "query": "Reject a reviewed hunk whose text was forged while retaining its identifier",
+      "kind": "concept",
+      "split": "held-out",
+      "expected": {
+        "implementation": [
+          "src/forge.js"
+        ],
+        "test": [
+          "test/permissions.test.js"
+        ],
+        "documentation": [
+          "README.md"
+        ]
+      }
+    }
+  ]
+}

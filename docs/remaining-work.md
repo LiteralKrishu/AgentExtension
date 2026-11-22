@@ -2,6 +2,8 @@
 
 This inventory tracks open work after the Phase 2–11 implementation and post-implementation checks. AgentExtension 0.6.1 is the upgrade baseline. [Current features](features.md) · [Implementation plan](remaining-work/IMPLEMENTATION.md) · [Verification record](milestones.md#post-implementation-verification)
 
+The next capability roadmap starts from version 0.7.1. It puts reliable task completion and code retrieval before broader execution, background coding, and remote work. See [Agent Capability Upgrade](agent-capability-upgrade/IMPLEMENTATION.md), its [research](agent-capability-upgrade/RESEARCH.md), and [progress](agent-capability-upgrade/PROGRESS.md). The progress record separates implemented phases from pending acceptance gates. The acceptance gaps below remain open until verified.
+
 ## Features to build
 
 | Area | Current behavior | Remaining work |

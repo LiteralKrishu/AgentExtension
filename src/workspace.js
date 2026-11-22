@@ -3,6 +3,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { execFile, spawn } = require('node:child_process');
 const { promisify } = require('node:util');
+const { createHash } = require('node:crypto');
 const { MAX_TEXT } = require('./draft');
 
 const exec = promisify(execFile);
@@ -10,12 +11,30 @@ const exec = promisify(execFile);
 const GIT_HARDENING = ['--no-optional-locks', '--no-replace-objects', '--literal-pathspecs',
   '-c', 'core.fsmonitor=false', '-c', 'protocol.allow=never'];
 const gitEnvironment = () => ({ ...process.env, GIT_NO_LAZY_FETCH: '1', GIT_TERMINAL_PROMPT: '0' });
-const EXCLUDED = /(?:^|\/)(?:\.[^/]+|node_modules|vendor|dist|build|coverage|__pycache__|venv)(?:\/|$)|(?:^|\/)(?:credentials|secrets)(?:\.[^/]+)?$|(?:^|\/)(?:id_rsa|id_ed25519)(?:\.[^/]+)?$|\.(?:pem|key|p12|pfx|lock)$/i;
+const EXCLUDED = /(?:^|\/)(?:\.[^/]+|node_modules|vendor|dist|build|coverage|__pycache__|venv)(?:\/|$)|(?:^|\/)(?:credentials|secrets)(?:\.[^/]+)?$|(?:^|\/)(?:id_rsa|id_ed25519)(?:\.[^/]+)?$|\.(?:pem|key|p12|pfx)$/i;
+// Lockfiles stay out of search and editor tools but are part of a command snapshot's build inputs.
+const LOCKFILE = /\.lock$/i;
+const SNAPSHOT_QUOTA = Object.freeze({ files: 100_000, bytes: 2_000_000_000 });
+const quotaError = message => Object.assign(new Error(message), { code: 'ESNAPSHOTQUOTA' });
+const sha256 = data => createHash('sha256').update(data).digest('hex');
+const sameFile = (a, b) => a.size === b.size && a.mtimeMs === b.mtimeMs && a.ctimeMs === b.ctimeMs && a.ino === b.ino;
 const NON_SOURCE = /\.(?:svg|map|jsonl|csv|png|jpe?g|gif|webp|pdf|zip|tgz|woff2?|ico)$/i;
+const emptyInterpreter = (command, args) => /^(?:node|nodejs|python(?:\d+(?:\.\d+)*)?|ruby|perl|bash|sh|zsh)(?:\.exe)?$/i.test(command)
+  && Array.isArray(args) && (args.length === 0 || args.length === 1 && args[0] === '-');
+function diagnosticCommand(command,args) {
+  if (!Array.isArray(args)) return false;
+  if (emptyInterpreter(command,args)) return true;
+  if (args.length===1 && ['--help','-h','--version'].includes(args[0])) return true;
+  // These runtime flags exit before a later script argument can run.
+  if (/^(?:node|nodejs|npm|npx)(?:\.exe)?$/i.test(command)&&args[0]==='-v') return true;
+  if (/^python(?:\d+(?:\.\d+)*)?(?:\.exe)?$/i.test(command)&&args[0]==='-V') return true;
+  return /^(?:node|nodejs|npm|npx|pytest|py\.test|python(?:\d+(?:\.\d+)*)?)(?:\.exe)?$/i.test(command)&&
+    ['--help','-h','--version'].some(flag=>args.includes(flag));
+}
 
-function safePath(file) {
+function safePath(file, { lockfiles = false } = {}) {
   if (!file || file.includes('\\') || file.includes('\0') || file.includes(':')
-    || file.split('/').some(part => !part || part === '.' || part === '..') || EXCLUDED.test(file)) {
+    || file.split('/').some(part => !part || part === '.' || part === '..') || EXCLUDED.test(file) || (!lockfiles && LOCKFILE.test(file))) {
     throw new Error('Use a visible, workspace-relative path with no traversal or private files.');
   }
   return file;
@@ -28,8 +47,8 @@ class Workspace {
     this.findPaths = findPaths;
   }
 
-  async resolve(file, newFile = false) {
-    safePath(file);
+  async resolve(file, newFile = false, options) {
+    safePath(file, options);
     let full = await fs.realpath(this.root);
     if (this.identity && full !== this.identity) throw new Error('Workspace identity changed. Start a new run.');
     const parts = file.split('/');
@@ -61,6 +80,29 @@ class Workspace {
     return text;
   }
 
+  // A caller can share directory checks within one bounded inventory pass. Reads still resolve afresh.
+  async inspect(file, directories = new Map()) {
+    safePath(file);
+    if (!directories.has('')) directories.set('', fs.realpath(this.root).then(root => {
+      if (this.identity && root !== this.identity) throw new Error('Workspace identity changed. Start a new run.');
+      return root;
+    }));
+    const parts = file.split('/');
+    let full = await directories.get('');
+    for (let index = 0; index < parts.length - 1; index++) {
+      full = path.join(full, parts[index]);
+      const key = parts.slice(0, index + 1).join('/');
+      if (!directories.has(key)) directories.set(key, fs.lstat(full).then(stat => {
+        if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error('Symbolic links are outside the editor tool scope.');
+      }));
+      await directories.get(key);
+    }
+    full = path.join(full, parts.at(-1));
+    const stat = await fs.lstat(full, { bigint: true });
+    if (stat.isSymbolicLink() || !stat.isFile()) throw new Error('The path must point to a regular file without symbolic links.');
+    return { full, stat };
+  }
+
   async gitRevision(signal) {
     const options = { cwd: this.root, signal, timeout: 5_000, maxBuffer: 16_000, env: gitEnvironment() };
     try {
@@ -73,7 +115,7 @@ class Workspace {
     throw new Error('Open the root of a Git repository with a commit.');
   }
 
-  async paths(signal) {
+  async paths(signal, { limit = 12_000, lockfiles = false } = {}) {
     if (this.identity && await fs.realpath(this.root) !== this.identity) throw new Error('Workspace identity changed. Start a new run.');
     let files;
     try {
@@ -83,11 +125,11 @@ class Workspace {
       files = stdout.split('\0');
     } catch {
       signal?.throwIfAborted();
-      files = await this.findPaths(signal);
+      files = await this.findPaths(signal, limit);
     }
     return [...new Set(files)].filter(file => {
-      try { return Boolean(safePath(file)); } catch { return false; }
-    }).slice(0, 12_000);
+      try { return Boolean(safePath(file, { lockfiles })); } catch { return false; }
+    }).slice(0, limit);
   }
 
   async sourcePaths(signal) {
@@ -112,32 +154,71 @@ class Workspace {
     return files;
   }
 
-  async command(command, args, changes, signal) {
+  // Materializes every permitted file and lockfile into a private copy-on-write folder, overlays open editors, and
+  // applies the draft. It fails with a quota reason rather than checking a partial tree. The caller removes the folder.
+  async snapshot(changes, signal, { overlay = true } = {}) {
+    const quota = this.quota ?? SNAPSHOT_QUOTA;
+    const paths = await this.paths(signal, { limit: quota.files + 1, lockfiles: true });
+    if (paths.length > quota.files) throw quotaError(`The command snapshot needs more than its ${quota.files}-file limit.`);
+    const manifest = [];
+    let bytes = 0;
+    for (const file of paths) {
+      signal.throwIfAborted();
+      let source;
+      try { source = await this.resolve(file, false, { lockfiles: true }); } catch { continue; }
+      const stat = await fs.stat(source);
+      bytes += stat.size;
+      if (bytes > quota.bytes) throw quotaError(`The command snapshot exceeds its ${quota.bytes}-byte limit.`);
+      manifest.push({ file, source, stat });
+    }
+    const { bavail, bsize } = await fs.statfs(os.tmpdir());
+    if (bavail * bsize < bytes * 1.1) throw quotaError('There is not enough free disk space for the command snapshot.');
     const directory = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'agentextension-')));
     try {
-      let size = 0;
-      for (const file of await this.paths(signal)) {
+      const sources = new Map();
+      const folders = new Set();
+      this.hashes ??= new Map();
+      for (const { file, source, stat } of manifest) {
         signal.throwIfAborted();
-        let source;
-        try { source = await this.resolve(file); } catch { continue; }
-        size += (await fs.stat(source)).size;
-        if (size > 64_000_000) throw new Error('The workspace is too large to stage a command snapshot.');
         const target = path.join(directory, file);
-        await fs.mkdir(path.dirname(target), { recursive: true });
-        await fs.copyFile(source, target);
-        const open = this.openText(source);
-        if (open !== undefined) await fs.writeFile(target, open);
+        if (!folders.has(path.dirname(target))) { await fs.mkdir(path.dirname(target), { recursive: true }); folders.add(path.dirname(target)); }
+        // A clone is a private writable copy. Never hard-link: a check could then modify the workspace.
+        await fs.copyFile(source, target, fs.constants.COPYFILE_FICLONE);
+        if (!sameFile(stat, await fs.stat(source))) throw new Error(`${file} changed while the command snapshot was prepared.`);
+        const open = overlay ? this.openText(source) : undefined;
+        if (open !== undefined) { await fs.writeFile(target, open); sources.set(file, sha256(open)); continue; }
+        const cached = this.hashes.get(source);
+        let hash = cached && sameFile(cached.stat, stat) ? cached.hash : undefined;
+        if (!hash) { hash = sha256(await fs.readFile(target)); this.hashes.set(source, { stat, hash }); }
+        sources.set(file, hash);
       }
+      const inputs = new Map(sources);
       for (const { file, before, after } of changes) {
         signal.throwIfAborted();
         if (await this.read(file, before === null) !== before) throw new Error(`${file} changed since the draft was staged.`);
         const target = path.join(directory, file);
         await fs.mkdir(path.dirname(target), { recursive: true });
         await fs.writeFile(target, after);
+        inputs.set(file, sha256(after));
       }
-      const result = await runIsolated(command, args, directory, signal, { hidden: [await fs.realpath(this.root)] });
+      return { directory, sources, inputs, files: manifest.length, bytes };
+    } catch (error) {
+      await fs.rm(directory, { force: true, recursive: true });
+      throw error;
+    }
+  }
+
+  async command(command, args, changes, signal) {
+    const { directory, inputs } = await this.snapshot(changes, signal);
+    try {
+      // A configured container environment never falls back to the host runner.
+      const result = this.environment ? await this.environment.run(command, args, directory, signal)
+        : await runIsolated(command, args, directory, signal, { hidden: [await fs.realpath(this.root)] });
+      // Bind the result to its exact inputs and to the toolchain environment that ran it.
+      const inputDigest = sha256(JSON.stringify([...inputs].sort(([a], [b]) => a.localeCompare(b))));
+      const environmentDigest = sha256(JSON.stringify(result.environment ?? [process.platform, process.arch, process.version, process.env.PATH ?? '']));
       // Show workspace-relative paths instead of the temporary snapshot folder.
-      return { ...result, output: result.output.split(`${directory}${path.sep}`).join('').split(directory).join('.') };
+      return { ...result, inputDigest, environmentDigest, output: result.output.split(`${directory}${path.sep}`).join('').split(directory).join('.') };
     } finally {
       await fs.rm(directory, { force: true, recursive: true });
     }
@@ -176,7 +257,7 @@ const DARWIN_SERVICES = ['com.apple.system.opendirectoryd.libinfo', 'com.apple.s
 // The command reads only the staged copy, system folders and toolchains. The home folder, the real workspace
 // (including files excluded from the copy such as .env), shared temporary folders and service sockets stay
 // unreachable. Network and other writes are denied.
-async function sandboxArguments(command, args, cwd, { hidden = [], platform = process.platform, searchPath } = {}) {
+async function sandboxArguments(command, args, cwd, { hidden = [], platform = process.platform, searchPath, readOnly = false } = {}) {
   let home;
   try { home = await fs.realpath(os.homedir()); } catch { home = os.homedir(); }
   // The home folder comes first so a toolchain under it is measured against home, not against /Users.
@@ -193,7 +274,7 @@ async function sandboxArguments(command, args, cwd, { hidden = [], platform = pr
       ...readable.map(folder => `(allow file-read* (subpath ${quote(folder)}))`),
       // Path resolution needs the metadata, not the contents, of the folders above the copy and toolchains.
       `(allow file-read-metadata ${[cwd, ...readable].map(folder => `(path-ancestors ${quote(folder)})`).join(' ')})`,
-      `(allow file-read* file-write* (subpath ${quote(cwd)})) (allow file-write* (literal "/dev/null"))`].join(' ');
+      `(allow ${readOnly ? 'file-read*' : 'file-read* file-write*'} (subpath ${quote(cwd)})) (allow file-write* (literal "/dev/null"))`].join(' ');
     return { executable: '/usr/bin/sandbox-exec', parameters: ['-p', profile, command, ...args] };
   }
   if (platform === 'linux') {
@@ -201,7 +282,7 @@ async function sandboxArguments(command, args, cwd, { hidden = [], platform = pr
     return { executable: 'bwrap', parameters: ['--unshare-all', '--die-with-parent', '--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc',
       ...folders.flatMap(folder => ['--tmpfs', folder]),
       ...readable.flatMap(folder => ['--ro-bind', folder, folder]),
-      '--bind', cwd, cwd, '--chdir', cwd, '--', command, ...args] };
+      readOnly ? '--ro-bind' : '--bind', cwd, cwd, '--chdir', cwd, '--', command, ...args] };
   }
   throw new Error('Isolated command execution is available on macOS and on Linux with bubblewrap.');
 }
@@ -233,7 +314,8 @@ async function runIsolated(command, args, cwd, signal, options = {}) {
     const cancel = () => stop('Command cancelled.');
     const timer = setTimeout(() => stop('Command timed out after 30 seconds.'), 30_000);
     signal.addEventListener('abort', cancel, { once: true });
-    const add = data => { output += data.toString().slice(0, Math.max(0, 8_000 - output.length)); };
+    const outputLimit = Math.min(256_000, Math.max(1, options.maxOutputBytes ?? 8_000));
+    const add = data => { output += data.toString().slice(0, Math.max(0, outputLimit - output.length)); };
     child.stdout.on('data', add);
     child.stderr.on('data', add);
     child.on('error', reject);
@@ -246,4 +328,4 @@ async function runIsolated(command, args, cwd, signal, options = {}) {
   });
 }
 
-module.exports = { Workspace, safePath, runIsolated, sandboxArguments, readableToolchains, GIT_HARDENING, gitEnvironment };
+module.exports = { Workspace, SNAPSHOT_QUOTA, safePath, runIsolated, sandboxArguments, readableToolchains, GIT_HARDENING, gitEnvironment, emptyInterpreter, diagnosticCommand };

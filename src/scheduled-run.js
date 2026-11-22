@@ -1,5 +1,8 @@
 const { Draft } = require('./draft');
-const { Retrieval } = require('./retrieval');
+const { Retrieval, retrievalBudget } = require('./retrieval');
+const { FreshSearch, searchExecutable } = require('./search');
+const { RepositoryIndex } = require('./repository-index');
+const { Relationships } = require('./relationships');
 const { runForge, REPORT_INSTRUCTIONS } = require('./forge');
 const { PermissionBroker } = require('./permissions');
 const { ContextManifest, composePrompt } = require('./prompt');
@@ -23,14 +26,24 @@ async function runScheduledReport({ schedule, occurrence, trigger, workspace, se
   const selected = connectorConfigs.filter(config => config.tools.length && schedule.connectors.includes(config.id));
   if (selected.length !== schedule.connectors.length) throw new Error('A connector in this schedule is no longer configured. Review the schedule.');
   const retrieval = new Retrieval(signal);
+  const searcher = new FreshSearch(workspace, { executable: await searchExecutable() });
   const started = now();
   let text = '';
   let question;
   let scopeChanged = false;
   const run = {
-    readOnly: true, budget, workspace, signal, controller, permissions, maxTurns: schedule.budget.connectorReads + 3,
+    readOnly: true, budget, workspace, signal, controller, permissions, taskRequest: schedule.prompt, maxTurns: schedule.budget.connectorReads + 3,
     usage: new RunUsage({ maxTokens: budget.limits.maxTokens }, now),
-    search: (query, limit) => retrieval.query('search', query, limit),
+    search: async (query, limit) => (await searcher.query({ query, limit }, signal)).matches,
+    searchDetailed: async input => {
+      if (input.mode === 'related' && run.relationships) {
+        if (input.cursor) throw new Error('Related lookups return bounded hints without pages. Omit cursor.');
+        const seeds = run.relationships.files.has(input.query) ? [input.query] : [...new Set((await searcher.query({ query: input.query, limit: 4 }, signal)).matches.map(hit => hit.file))];
+        return { matches: await run.relationships.currentHints(workspace, seeds, signal, input), coverage: { ...run.relationships.coverage, complete: false, reason: 'bounded-hints', backend: 'inferred-relationships' }, nextCursor: null };
+      }
+      return searcher.query(input, signal);
+    },
+    searchModes: ['keywords', 'literal', 'word', 'path', 'related', ...(searcher.executable ? ['regex'] : [])],
     resetDraft() { this.draft = new Draft((file, create) => workspace.read(file, create)); this.permissions.reset(); },
     onTool: name => onStatus(`Scheduled report: ${name}`),
     deferQuestion: value => { question = value; },
@@ -71,8 +84,10 @@ async function runScheduledReport({ schedule, occurrence, trigger, workspace, se
       }
     }
     permissions.require(permissions.action('context_index', 'workspace.read', workspace.root));
-    const index = await workspace.index(signal);
-    const assembled = await retrieval.query('assemble', index, schedule.prompt);
+    const { files: index } = await new RepositoryIndex(workspace, storage).snapshot(signal);
+    const contextBudget = await retrievalBudget(settings, signal);
+    let assembled = await retrieval.query('assemble', index, schedule.prompt, contextBudget.characters);
+    run.relationships = new Relationships(index);
     const scope = { schedule: schedule.name, occurrence: `${occurrence.slot} ${schedule.timeZone}`, trigger,
       connectors: run.connectors?.catalog() ?? [], budget: budget.limits,
       ...(inputs ? { skills: inputs.skills.map(skill => skill.name),

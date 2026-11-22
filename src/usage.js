@@ -56,6 +56,21 @@ class RunUsage {
     if (maxMinutes && this.elapsedMs() >= maxMinutes * 75_000) return `Run budget exceeded: ${Math.round(this.elapsedMs() / 60_000)} minutes.`;
     return '';
   }
+  notice() {
+    const { maxTokens, maxMinutes, maxToolCalls } = this.limits;
+    const fraction = Math.max(maxTokens ? this.total / maxTokens : 0,
+      maxMinutes ? this.elapsedMs() / (maxMinutes * 60_000) : 0,
+      maxToolCalls ? this.toolCalls / maxToolCalls : 0);
+    const stage = fraction >= 1 ? 4 : fraction >= .9 ? 3 : fraction >= .75 ? 2 : fraction >= .5 ? 1 : 0;
+    if (!stage || stage <= (this.lastNotice ?? 0)) return undefined;
+    this.lastNotice = stage;
+    return { stage: stage === 4 ? 'review-only' : stage >= 2 ? 'finish-soon' : 'half-used',
+      remainingTokens: maxTokens ? Math.max(0, maxTokens - this.total) : null,
+      remainingToolCalls: maxToolCalls ? Math.max(0, maxToolCalls - this.toolCalls) : null,
+      remainingSeconds: maxMinutes ? Math.max(0, Math.floor(maxMinutes * 60 - this.elapsedMs() / 1000)) : null,
+      note: stage === 4 ? 'The host budget is reached. Only review_changes can proceed. Finish with an accurate account of missing work.'
+        : 'Use the remaining budget to finish the requested changes, run required checks, and request review. Keep edits small. Do not claim an omitted check passed.' };
+  }
   // Called before each editor tool. Throws once a limit is reached, except for the tool that hands work to review.
   tool(name) {
     const reached = this.exceeded();

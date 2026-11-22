@@ -10,6 +10,11 @@ const { workerInput } = require('./workers');
 const { skillScriptInput, executeSkillScript } = require('./skill-script');
 const { browserOpen, browserObserve, browserAction, browserVisit, browserDownload } = require('./browser');
 const { computerAction } = require('./computer');
+const { taskBrief } = require('./task-state');
+const { digest } = require('./permissions');
+const { RecoveryGuard, stopNoProgress } = require('./recovery');
+const { emptyInterpreter, diagnosticCommand } = require('./workspace');
+const { registrationReferences } = require('./edit-diagnostics');
 
 const pathSchema = z.string().min(1).max(500);
 const commandSchema = z.object({
@@ -27,6 +32,46 @@ function selectionKey(hunks) {
   return createHash('sha256').update(JSON.stringify(hunks.map(hunk => hunk.id).sort())).digest('hex');
 }
 
+function anchorHints(read, requested) {
+  const needle = requested.trim();
+  const words = new Set(needle.match(/[A-Za-z_$][\w$]*/g) ?? []);
+  const candidates = read.lines.slice(read.start - 1, read.end).flatMap((raw, index) => {
+    const text = raw.replace(/\r?\n$/, '');
+    if (!text.trim() || text.length > 240) return [];
+    const tokens = new Set(text.match(/[A-Za-z_$][\w$]*/g) ?? []);
+    const overlap = [...words].filter(word => tokens.has(word)).length;
+    const score = text.trim() === needle ? 2 : overlap / Math.max(1, new Set([...words, ...tokens]).size);
+    return score >= 0.5 ? [{ line: read.start + index, text, score }] : [];
+  }).sort((a, b) => b.score - a.score || a.line - b.line).slice(0, 3)
+    .map(({ line, text }) => ({ line, text }));
+  return candidates.length ? ` Source-line suggestions (data only): ${JSON.stringify(candidates)}` : '';
+}
+
+function draftFeedback(run,file) {
+  const entry=run.draft.files.get(file);
+  if (!entry) return {staged:file,revision:run.draft.revision,preview:[]};
+  const text=entry.text;
+  const references=run.draft.selection?[]:registrationReferences(file,entry);
+  const lines=text.split(/(?<=\n)/);
+  let shift=0;
+  const preview=[];
+  for(const hunk of entry.hunks.slice(0,3)) {
+    const offset=hunk.offset-(run.draft.selection?.start??0)+shift;
+    const line=text.slice(0,offset).split('\n').length-1;
+    const start=Math.max(0,line-3),targetEnd=Math.min(lines.length,line+Math.max(1,hunk.after.split('\n').length)+3),end=Math.min(targetEnd,start+20);
+    let value='',last=start;
+    while(last<end&&value.length+lines[last].length<=1200){value+=lines[last];last++;}
+    if(!value&&last<end){value=lines[last].slice(0,1200);last++;}
+    preview.push({start_line:start+1,end_line:last,text:value,truncated:last<targetEnd||value.length<lines.slice(start,end).join('').length});
+    shift+=hunk.after.length-hunk.before.length;
+  }
+  return {staged:file,revision:run.draft.revision,preview,
+    ...(references.length ? {new_registration_references:references} : {}),
+    preview_scope:run.draft.selection?'current inline selection; line numbers are relative to that selection':'current draft',
+    omitted_hunks:Math.max(0,entry.hunks.length-preview.length),
+    note:'Preview data only. Check the surrounding structure and indentation. Use read_file or read_files for a current line-edit receipt. Run appropriate checks before finishing.'};
+}
+
 function commandTarget(run, input) {
   const revision = run.draft.revision;
   const reviewed = run.reviewed?.revision === revision ? run.reviewed : undefined;
@@ -42,6 +87,10 @@ async function executeCheck(run, input, signal) {
   let result;
   try {
     result = await run.workspace.command(input.command, input.args, changes, signal);
+    if (result.exitCode === 0 && diagnosticCommand(input.command, input.args)) result = { ...result, verification: false,
+      note: emptyInterpreter(input.command,input.args)
+        ? 'Standard input is closed and no script or arguments were supplied. This is not test evidence. Pass a script path or the required command-line arguments.'
+        : 'Version and help output is diagnostic only. It is not project test evidence. Run the requested project check with its actual arguments.' };
     // Changes in the editor while the check ran make its result unsafe to reuse.
     for (const { file, before } of changes) {
       if (await run.workspace.read(file, before === null) !== before) throw new Error(`${file} changed while the check was running.`);
@@ -52,11 +101,16 @@ async function executeCheck(run, input, signal) {
   }
   signal.throwIfAborted();
   await run.onCheck?.({ ...input, ...result, revision, scope, selection, changes }, signal);
-  return { ...result, revision, scope };
+  run.recoveryGuard ??= new RecoveryGuard();
+  if (run.recoveryGuard.check(input, result)) stopNoProgress(run, 'The same check failed three times on identical inputs. The draft was saved. Repair it before checking again.');
+  const pythonSource = /^(?:python(?:\d+(?:\.\d+)*)?|pytest|py\.test)(?:\.exe)?$/i.test(input.command)
+    && changes.some(change => /^src\/.*\.py$/.test(change.file));
+  return { ...result, revision, scope, execution_scope: 'disposable workspace copy; command writes do not stage editor changes', stdin: 'closed',
+    ...(pythonSource ? { import_guidance: 'Python can import an installed package instead of the staged src tree. Confirm the imported module path. For pytest, use -o pythonpath=src when the project needs that source layout. For other Python checks, explicitly add src to sys.path before importing the package. This is environment guidance, not proof of which module this command imported.' } : {}) };
 }
 
 function actionFor(run, name, args) {
-  const effect = { search_workspace: 'workspace.read', read_file: 'workspace.read',
+  const effect = { search_workspace: 'workspace.read', read_file: 'workspace.read', read_files: 'workspace.read',
     propose_write: 'draft.edit', propose_lines: 'draft.edit', create_file: 'draft.edit',
     propose_plan: 'plan.approve', review_changes: 'draft.review', run_command: 'command.execute', merge_worker_edits: 'draft.edit',
     list_skills: 'skill.read', select_skill: 'skill.read', read_skill_resource: 'skill.read',
@@ -69,12 +123,13 @@ function actionFor(run, name, args) {
 
 function toolsFor(run, receipts) {
   const server = new McpServer({ name: 'agentextension-editor', version });
-  const readOnlyTools = new Set(['search_workspace', 'read_file', 'list_connector_tools', 'connector_read',
+  const readOnlyTools = new Set(['search_workspace', 'read_file', 'read_files', 'list_connector_tools', 'connector_read',
     ...(run.scheduledWorkers ? ['research_repository', 'run_worker'] : [])]);
   function tool(name, description, schema, readOnlyHint, handler) {
     if (run.readOnly && !readOnlyTools.has(name)) return;
     server.registerTool(name, { description, inputSchema: schema, annotations: { readOnlyHint } },
       async (args, extra) => {
+        const finishProgress = run.progress?.tool(name, args);
         try {
           const signal = AbortSignal.any([run.signal, extra.signal]);
           signal.throwIfAborted();
@@ -94,6 +149,18 @@ function toolsFor(run, receipts) {
           signal.throwIfAborted();
           const image = result?.image;
           let textResult = image ? Object.fromEntries(Object.entries(result).filter(([key]) => key !== 'image')) : result;
+          const budget = !run.readOnly && run.usage?.notice?.();
+          if (budget) textResult = { ...(Array.isArray(textResult) ? { matches: textResult } : textResult), run_budget: budget };
+          if (run.contextRefreshNeeded && run.taskRequest) {
+            const brief = taskBrief(run);
+            run.contextRefreshNeeded = false;
+            run.instructions?.delivered?.clear();
+            run.manifest?.add('task continuation', 'Current task state', brief, {
+              trust: 'host reference data', reason: 'Restated after compaction; retained source IDs are unavailable',
+            });
+            textResult = { ...(Array.isArray(textResult) ? { matches: textResult } : textResult), task_continuation: brief };
+            run.progress?.record('task-context-restored');
+          }
           // Approved path rules arrive with the first read or edit of a matching file.
           const rules = typeof args.file === 'string' ? run.instructions?.forFile(args.file) ?? [] : [];
           for (const rule of rules) run.manifest?.add('path rule', rule.file, rule.text, { trust: 'approved path rule', reason: `Delivered with ${args.file}`, limit: 4_000 });
@@ -102,8 +169,15 @@ function toolsFor(run, receipts) {
           }
           run.manifest?.add('tool result', name, JSON.stringify(textResult), { reason: 'Returned through editor connector; browser and app content is untrusted data' });
           if (result?.staged) run.onDraft?.(result.revision);
+          finishProgress?.(true, run.draft?.revision);
           return { content: [{ type: 'text', text: JSON.stringify(textResult) }, ...(image ? [{ type: 'image', ...image }] : [])] };
         } catch (error) {
+          run.progress?.failure(error);
+          run.recoveryGuard ??= new RecoveryGuard();
+          if (!run.signal.aborted && run.recoveryGuard.editFailure(name, args, run.draft?.revision)) {
+            stopNoProgress(run, 'The same edit was rejected six times without a draft change. Read the current source and repair the edit before resuming.');
+          }
+          finishProgress?.(false, run.draft?.revision);
           return { isError: true, content: [{ type: 'text', text: error.message }] };
         }
       });
@@ -124,28 +198,30 @@ function toolsFor(run, receipts) {
       references: z.array(z.object({ file: pathSchema, start_line: z.number().int().min(1).optional(), end_line: z.number().int().min(1).optional() })).max(5).default([]),
     }, true, async input => run.suggestNote(input));
   }
-  tool('search_workspace', 'Search the workspace by exact phrase or keywords. Returns file paths, line numbers, and matching text.', {
+  tool('search_workspace', 'Search current workspace text or staged drafts. Use literal or word for identifiers, path for filenames, regex for patterns, related for inferred import/test/doc links from a file path, and keywords for broader queries. Inferred links are hints. Coverage reports limits. Use nextCursor for another page.', {
     query: z.string().min(1).max(240), limit: z.number().int().min(1).max(32).default(16),
-  }, true, async ({ query, limit }) => run.search(query, limit));
+    mode: z.enum(run.searchModes ?? ['keywords']).default('keywords'),
+    glob: z.string().min(1).max(200).optional(), cursor: z.string().max(512).optional(),
+  }, true, async input => run.searchDetailed ? run.searchDetailed(input) : run.search(input.query, input.limit));
 
-  tool('read_file', 'Read an exact excerpt from a workspace file or its current draft. Use search_workspace to locate an anchor before reading a large file. Line numbers start at 1.', {
-    file: pathSchema, start_line: z.number().int().min(1).default(1), end_line: z.number().int().min(1).optional(),
-  }, true, async ({ file, start_line, end_line }) => {
+  const excerptSchema = z.object({file: pathSchema, start_line: z.number().int().min(1).default(1), end_line: z.number().int().min(1).optional()});
+  async function readExcerpt({file,start_line,end_line},maxCharacters=5000) {
     // Repeated identical reads at one draft revision are a sign of a loop. Warn after two, refuse after six.
-    const readKey = JSON.stringify([file, start_line, end_line ?? null, run.draft.revision]);
-    const repeats = (receipts.reads.get(readKey) ?? 0) + 1;
-    receipts.reads.set(readKey, repeats);
-    if (repeats > 6) throw new Error(`You have read ${file} lines ${start_line}${end_line ? `-${end_line}` : ''} ${repeats - 1} times without any change. Stop reading it. Stage an edit, run a check, call review_changes, or finish with a summary.`);
     const entry = run.draft.files.get(file);
     const base = entry ? entry.base : await run.workspace.read(file);
     const source = run.draft.current(file, base);
+    const readKey = JSON.stringify([file, start_line, end_line ?? null, run.draft.revision, digest(source)]);
+    const repeats = (receipts.reads.get(readKey) ?? 0) + 1;
+    receipts.reads.set(readKey, repeats);
+    if (receipts.reads.size > 64) receipts.reads.delete(receipts.reads.keys().next().value);
+    if (repeats > 6) throw new Error(`You have read ${file} lines ${start_line}${end_line ? `-${end_line}` : ''} ${repeats - 1} times without any change. Stop reading it. Stage an edit, run a check, call review_changes, or finish with a summary.`);
     const lines = source.split(/(?<=\n)/);
     const requestedEnd = Math.min(end_line ?? start_line + 79, lines.length);
     if (start_line > requestedEnd) throw new Error(`Choose a line range within the file's ${lines.length} lines.`);
     const limit = Math.min(requestedEnd, start_line + 119);
     let end = start_line - 1;
     let text = '';
-    while (end < limit && text.length + lines[end].length <= 5_000) {
+    while (end < limit && text.length + lines[end].length <= maxCharacters) {
       text += lines[end];
       end++;
     }
@@ -155,39 +231,82 @@ function toolsFor(run, receipts) {
     if (receipts.entries.size > 32) receipts.entries.delete(receipts.entries.keys().next().value);
     return { file, receipt, total_lines: lines.length, start_line, end_line: end, text, truncated: end < requestedEnd,
       ...(repeats > 2 ? { note: `Read ${repeats} times at this draft revision. The text has not changed. Use it instead of reading again.` } : {}) };
+  }
+  tool('read_file', 'Read an exact excerpt from a workspace file or its current draft. Use search_workspace to locate an anchor before reading a large file. Line numbers start at 1.',
+    excerptSchema.shape,true,input=>readExcerpt(input));
+
+  tool('read_files','Read up to four known source excerpts in one call. Give a file and 1-based line range for each. Each successful excerpt has its own edit receipt. The batch returns at most 12000 source characters; coverage lists errors and omitted excerpts. Use search_workspace first when locations are unknown.',{
+    files:z.array(excerptSchema).min(1).max(4),
+  },true,async({files},signal)=>{
+    const excerpts=[];let remaining=12000;
+    for(const input of files){
+      signal.throwIfAborted();
+      if(!remaining){excerpts.push({file:input.file,error:'Batch source-character budget reached.'});continue;}
+      try{const excerpt=await readExcerpt(input,Math.min(5000,remaining));remaining-=excerpt.text.length;excerpts.push(excerpt);}
+      catch(error){run.progress?.failure(error);excerpts.push({file:input.file,error:error.message});}
+    }
+    return {excerpts,coverage:{requested:files.length,returned:excerpts.filter(item=>!item.error).length,
+      sourceCharacters:12000-remaining,complete:excerpts.every(item=>!item.error&&!item.truncated)}};
   });
 
-  tool('propose_lines', 'Stage a line edit from a read_file receipt. Copy one unique source line without its newline as anchor_line, or give its 1-based start_line. delete_count is the number of existing lines to replace from that line. It defaults to 0, which inserts before the line. To replace the line, use delete_count: 1. Include a newline after each inserted line. Use propose_write for inline selections.', {
+  tool('propose_lines', 'Stage whole lines from a current read receipt. Prefer anchor_line copied exactly from the source, including indentation. delete_count defaults to 0 (insert before the anchor); use 1 to replace it. For insertion immediately after that source line, set insert_after: true with delete_count: 0. A repeated anchor also needs its exact start_line. Numeric start_line alone remains available for before-line edits. Prefer new_lines: literal lines without line endings. The host joins them and adds the final newline. Alternatively use new_text for exact text, including an intentional missing final newline. Supply exactly one format. Use propose_write for inline selections.', {
     receipt: z.number().int().min(1),
-    anchor_line: z.string().max(5000).regex(/^[^\r\n]+$/).optional(),
+    anchor_line: z.string().min(1).max(5000).optional(),
     start_line: z.number().int().min(1).optional(),
+    insert_after: z.boolean().default(false),
     delete_count: z.number().int().min(0).default(0),
-    new_text: z.string().max(MAX_TEXT),
-  }, false, async ({ receipt, anchor_line, start_line, delete_count, new_text }) => {
+    new_text: z.string().max(MAX_TEXT).optional(),
+    new_lines: z.array(z.string().max(5000).refine(line=>!/[\r\n]/.test(line),
+      'Each new_lines item must be one line without its line ending.')).max(240).optional(),
+  }, false, async ({ receipt, anchor_line, start_line, insert_after, delete_count, new_text, new_lines }) => {
+    if ((new_text !== undefined) === (new_lines !== undefined)) throw new Error('Invalid input for propose_lines: supply exactly one of new_text or new_lines.');
+    const inputFormat = new_lines !== undefined ? 'new_lines' : 'new_text';
+    if (new_lines !== undefined) {
+      new_text = new_lines.length ? new_lines.join('\n') + '\n' : '';
+      if (new_text.length > MAX_TEXT) throw new Error('Invalid input for propose_lines: the joined lines exceed the text limit.');
+    }
     const read = receipts.entries.get(receipt);
     if (!read || read.draft !== run.draft) throw new Error('Read the target lines to get a current receipt.');
+    if (insert_after && (anchor_line === undefined || delete_count !== 0)) {
+      throw new Error('insert_after requires an exact anchor_line and delete_count: 0. Use a normal line replacement to delete existing lines.');
+    }
+    const normalized = [];
     if (anchor_line !== undefined) {
+      const anchor = anchor_line.replace(/\r?\n$/, '');
+      if (anchor !== anchor_line) normalized.push('Removed the copied anchor line ending.');
+      anchor_line = anchor;
+      if (!anchor_line || /[\r\n]/.test(anchor_line)) throw new Error('anchor_line must contain one source line. For a multiline block, use propose_write with exact old_text and new_text.');
       const excerpt = read.lines.slice(read.start - 1, read.end).map(line => line.replace(/\r?\n$/, ''));
-      const index = excerpt.indexOf(anchor_line);
-      if (index < 0 || index !== excerpt.lastIndexOf(anchor_line)) throw new Error('Copy one unique source line from the read excerpt.');
-      const anchoredLine = read.start + index;
-      if (start_line !== undefined && start_line !== anchoredLine) throw new Error(`The anchor is on line ${anchoredLine}. Use anchor_line alone or correct start_line.`);
+      const matches = excerpt.flatMap((line, index) => line === anchor_line ? [read.start + index] : []);
+      if (!matches.length || matches.length > 1 && start_line === undefined) throw new Error(`The anchor must match one unique source line in receipt ${receipt}. Use start_line between ${read.start} and ${read.end} with the matching anchor_line to select a repeated line, or copy one unique line exactly. Keep indentation and decode JSON string escapes once.${anchorHints(read, anchor_line)}`);
+      const anchoredLine = start_line ?? matches[0];
+      if (!matches.includes(anchoredLine)) throw new Error(`The anchor is on line ${matches.join(', ')}. Use anchor_line alone when unique, or correct start_line.${anchorHints(read, anchor_line)}`);
       start_line = anchoredLine;
     }
     if (start_line === undefined) throw new Error('Supply anchor_line or start_line.');
+    const targetLine = start_line;
+    if (insert_after) {
+      if (!read.lines[start_line - 1].endsWith('\n')) throw new Error('The final source line has no line ending. Use propose_write to replace it with the exact intended text and line ending.');
+      start_line++;
+    }
     const endLine = start_line + delete_count;
     if (start_line < read.start || endLine > read.end + 1) throw new Error('The edit must stay within the read excerpt.');
     const start = read.lines.slice(0, start_line - 1).join('').length;
     const end = start + read.lines.slice(start_line - 1, endLine - 1).join('').length;
     if (new_text && end < read.source.length && !new_text.endsWith('\n')) {
-      throw new Error('End the new text with a newline when the edit is followed by existing lines.');
+      new_text += '\n';
+      normalized.push('Added a replacement line ending before the following source line.');
     }
     await run.draft.replaceRange(read.file, read.source, start, end, new_text);
     // Small models often mean to replace the anchor but leave delete_count at 0. Say so when the result looks like a duplicate.
     const anchor = read.lines[start_line - 1]?.replace(/\r?\n$/, '').trim();
     const first = new_text.split('\n')[0].trim();
-    const similar = delete_count === 0 && anchor && first && first !== anchor && first.split('(')[0] === anchor.split('(')[0];
-    return { staged: read.file, revision: run.draft.revision,
+    const repeatedDeclaration = first === anchor && /^(?:(?:export|default|public|private|static|async)\s+)*(?:def|class|function|const|let|var|interface|type)\s/.test(first);
+    const similar = !insert_after && delete_count === 0 && anchor && first &&
+      (repeatedDeclaration || first !== anchor && first.split('(')[0] === anchor.split('(')[0]);
+    return { ...draftFeedback(run,read.file), input_format: inputFormat,
+      ...(insert_after ? { inserted_after_line: targetLine } : {}),
+      ...(normalized.length ? { format_notes: normalized } : {}),
       ...(similar ? { warning: `Inserted before line ${start_line} without deleting it, so the draft keeps both versions. To replace that line, read again and use delete_count: 1.` } : {}) };
   });
 
@@ -195,14 +314,14 @@ function toolsFor(run, receipts) {
     file: pathSchema, old_text: z.string().min(1).max(MAX_TEXT), new_text: z.string().max(MAX_TEXT),
   }, false, async ({ file, old_text, new_text }) => {
     await run.draft.replace(file, old_text, new_text);
-    return { staged: file, revision: run.draft.revision };
+    return draftFeedback(run,file);
   });
 
   tool('create_file', 'Stage a new UTF-8 file in an existing workspace folder. The file is only created if the user applies its hunk.', {
     file: pathSchema, text: z.string().min(1).max(MAX_TEXT),
   }, false, async ({ file, text }) => {
     await run.draft.create(file, text);
-    return { staged: file, revision: run.draft.revision };
+    return draftFeedback(run,file);
   });
 
   tool('review_changes', 'Ask the user to review all staged hunks. This is required before the user can apply them.', {}, false, async () => {
@@ -211,10 +330,12 @@ function toolsFor(run, receipts) {
     run.reviewGrant = undefined;
     run.reviewed = review;
     run.onReview?.(selectionKey(review.hunks));
-    return { revision: review.revision, accepted_hunks: review.hunks.length, rejected_hunks: review.rejected, applied: false };
+    return { revision: review.revision, accepted_hunks: review.hunks.length, rejected_hunks: review.rejected, applied: false,
+      next_step: 'The user applies accepted hunks after this run ends. Respect rejected hunks. Run any missing required checks; rerun checks if the accepted subset changed. When the requested work and checks are done, finish with an accurate summary.',
+      ...(review.repeated ? { already_reviewed: true } : {}) };
   });
 
-  tool('run_command', 'Run one approved executable in an isolated workspace copy. Checks run against all staged hunks before review and only accepted hunks after review. No shell or network.', commandSchema, false,
+  tool('run_command', 'Run one approved executable in an isolated workspace copy. Put the executable in command and each argument in args, for example command: "python", args: ["-m", "pytest", "tests/test_cli.py"]. Checks run against all staged hunks before review and only accepted hunks after review. Python imports start at the copy root; for a src layout, pytest may need args ["-m", "pytest", "-o", "pythonpath=src", "tests"]. Confirm imports use the staged source. No shell or network.', commandSchema, false,
     (input, signal) => executeCheck(run, input, signal));
   if (run.skillSelection) {
     tool('list_skills', 'List eligible text workflows by ID, name and description. Use select_skill to load one that fits the user request.', {},

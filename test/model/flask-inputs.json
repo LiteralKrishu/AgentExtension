@@ -1,0 +1,15 @@
+{
+  "sourceRevision": "22d924701a6ae2e4cd01e9a15bbaf3946094af65",
+  "inputs": [
+    {
+      "file": "tests/test_apps/.env",
+      "text": "FOO=env\nSPAM=1\nEGGS=2\nHAM=\u706b\u817f\n",
+      "sha256": "3739562018bb8d8aeddbb540fb4c53e61af5385fb4d3b613e784057c3129ccc0"
+    },
+    {
+      "file": "tests/test_apps/.flaskenv",
+      "text": "FOO=flaskenv\nBAR=bar\nEGGS=0\n",
+      "sha256": "8933d1515cd054314d9f79b2295ac7833604768cb91e2762607a5560609ea6ac"
+    }
+  ]
+}

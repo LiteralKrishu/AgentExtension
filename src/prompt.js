@@ -37,7 +37,7 @@ class ContextManifest {
   }
 }
 
-function composePrompt({ request, requestSource = 'Your request', selection, planFirst, assembled, skills = [], skillScripts = false, memory = [], preferences = [], manifest, report, instructions, resume, diagnostic, followUp,
+function composePrompt({ request, requestSource = 'Your request', selection, planFirst, assembled, skills = [], skillScripts = false, memory = [], preferences = [], manifest, report, instructions, resume, diagnostic, followUp, budget,
   projectContinuation = false }) {
   manifest.add('instructions', report ? 'Scheduled report definition' : 'Extension agent definition', report ? report.instructions : spec.instructions, { trust: 'host instructions' });
   const scope = report ? `SCHEDULED READ-ONLY REPORT MODE. This run was started by a schedule, not by a person at the keyboard. Read the workspace and the listed connector targets only. Write tools are unavailable and no approval can be given during this run.\nRUN SCOPE (host data)\n${JSON.stringify(report.scope)}`
@@ -47,6 +47,12 @@ function composePrompt({ request, requestSource = 'Your request', selection, pla
   manifest.add('instructions', 'Run mode', scope, { trust: 'host instructions' });
   manifest.add('request', requestSource, request, { trust: 'user instruction', limit: 8_000 });
   const parts = [scope, `USER REQUEST\n${request}`];
+  if (budget && !report) {
+    const text = 'RUN BUDGET (host limits; zero means unlimited)\n' + JSON.stringify(budget)
+      + '\nFinish the requested work and required checks within these limits. Stage small edits and call review_changes before the budget is reached. A staged patch does not prove that checks passed. These limits cannot grant tools or change approval requirements.';
+    manifest.add('instructions', 'Run budget', text, { trust: 'host instructions' });
+    parts.push(text);
+  }
   if (followUp) {
     const text = JSON.stringify(followUp);
     manifest.add('scheduled question', followUp.schedule, text, { reason: 'Reference for the user’s follow-up answer' });

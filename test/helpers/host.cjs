@@ -41,7 +41,7 @@ async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, 
       getDiagnostics: () => [],
     },
     WorkspaceEdit: class { constructor() { this.edits = []; } replace(...args) { this.edits.push(['replace', ...args]); } createFile(...args) { this.edits.push(['create', ...args]); } },
-    env: { openExternal: async () => true },
+    env: { openExternal: async () => true, appRoot: process.env.AGENTEXTENSION_TEST_EDITOR_APP_ROOT },
     commands: { registerCommand: (name, handler) => {
       commands.set(name, handler); return { dispose: () => commands.delete(name) };
     }, executeCommand: async (...args) => { shown.info.push(`command:${args[0]}`); } },
@@ -116,6 +116,15 @@ async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, 
   for (const key of Object.keys(require.cache)) if (key.includes(`${path.sep}src${path.sep}`)) delete require.cache[key];
   const extension = require(extensionEntry);
   extension.activate(context);
+  // VS Code does not await event listeners. Tests can explicitly await a finite action
+  // without blocking interactive runs that need later question or review messages.
+  const messageWork = new WeakMap();
+  const handle = provider.handle.bind(provider);
+  provider.handle = message => {
+    const work = Promise.resolve(handle(message));
+    messageWork.set(message, work);
+    return work;
+  };
   provider.resolveWebviewView({ onDidDispose: () => disposable, webview: { options: {}, cspSource: 'test', asWebviewUri: value => value,
     set html(value) { this.markup = value; }, get html() { return this.markup; },
     postMessage: async message => { states.push(structuredClone(message.state)); return true; },
@@ -125,8 +134,9 @@ async function startHost(t, { root, settings, workspaceSettings = {}, env = {}, 
     vscode, context, storage, answers, shown, listeners, settings, secrets, commands,
     command: (name, ...args) => commands.get(`agentextension.${name}`)(...args),
     codeActions,
-    // Sends a webview message and waits for the extension's handler to finish.
+    // Mirror event delivery for interactive actions; explicitly join finite actions with sendAndWait.
     send: async message => { await receive(message); await sleep(60); },
+    sendAndWait: async message => { await receive(message); await messageWork.get(message); messageWork.delete(message); },
     state, states,
     waitFor: async (check, timeout = 60_000, label = 'condition') => {
       const end = Date.now() + timeout;
@@ -171,7 +181,9 @@ async function scriptedModel(t, baseUrl, script, { costInUsd } = {}) {
         const payload = direct ? args : { mcp_server: server, tool_name: tool, input: args };
         return send({ tool_calls: [{ index: 0, id: `c${round}`, type: 'function', function: { name, arguments: JSON.stringify(payload) } }] }, promptTokens);
       };
-      await script({ round, tools, all, input, call, say: (content, promptTokens) => send({ content }, promptTokens), results: input.messages.filter(message => message.role === 'tool') });
+      await script({ round, tools, all, input, call, say: (content, promptTokens) => send({ content }, promptTokens),
+        fail: () => res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: 'Scripted transient model failure', type: 'authentication_error' } })),
+        results: input.messages.filter(message => message.role === 'tool') });
     } catch (error) { state.error ??= error; res.writeHead(500).end(); }
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));

@@ -1,0 +1,689 @@
+{
+  "version": 1,
+  "recordedDate": "2026-11-22",
+  "qualifiedMainProfile": null,
+  "profiles": [
+    {
+      "version": 1,
+      "model": "local-lm-studio/qwen",
+      "modelId": "agentextension-upgrade-qwen",
+      "localOnly": true,
+      "apiSpend": 0,
+      "hardware": "Apple M5, 10 cores, 24 GiB memory",
+      "runtime": "TrueForge 0.184.2; SDK 0.184.1; Node.js 24.18.0",
+      "contextLength": 32768,
+      "maxOutputTokens": 2600,
+      "temperature": null,
+      "determinism": "Provider default; unavailable in setup metadata",
+      "toolCompatibility": "Observed complete edit-and-check; larger Flask task unqualified. Scripted local tests exercise tool schemas and review.",
+      "cancellation": "Local scripted stream, review, repeated rejected edit, and repeated failed check tests passed.",
+      "compaction": "Disabled in live coding benchmarks. A separate local scripted compaction test passed.",
+      "timeoutSeconds": 600,
+      "fallbackModel": "",
+      "automaticRetries": 1,
+      "qualification": "not qualified",
+      "limitations": [
+        "No complete 60-attempt qualification batch.",
+        "Retrieval quality is below the frozen gate.",
+        "At least one recorded Flask Task B timeout.",
+        "Local execution does not establish Cursor or Codex parity.",
+        "All three frozen replacement Flask trials ended incomplete or timed out."
+      ],
+      "modelName": "Qwen 3.5 9B MLX 4-bit"
+    },
+    {
+      "version": 1,
+      "model": "local-upgrade-coder/main",
+      "modelId": "agentextension-upgrade-coder",
+      "localOnly": true,
+      "apiSpend": 0,
+      "hardware": "Apple M5, 10 cores, 24 GiB memory",
+      "runtime": "TrueForge 0.184.2; SDK 0.184.1; Node.js 24.18.0",
+      "contextLength": 32768,
+      "maxOutputTokens": 2600,
+      "temperature": null,
+      "determinism": "Provider default; unavailable in setup metadata",
+      "toolCompatibility": "Observed complete edit-and-check after review-flow repair. Flask timed out. Repeated empty interpreter commands and anchor-format errors were observed in earlier attempts.",
+      "cancellation": "Local scripted stream, review, repeated rejected edit, and repeated failed check tests passed.",
+      "compaction": "Disabled in live coding benchmarks. A separate local scripted compaction test passed.",
+      "timeoutSeconds": 600,
+      "fallbackModel": "",
+      "automaticRetries": 1,
+      "qualification": "not qualified",
+      "limitations": [
+        "No complete 60-attempt qualification batch.",
+        "Retrieval quality is below the frozen gate.",
+        "Recorded Flask trials failed or timed out.",
+        "Scripted cancellation and compaction tests do not establish model quality in those states.",
+        "Historical trials use different implementation digests. Do not combine them into one qualified profile."
+      ],
+      "modelName": "Qwen3 Coder 30B-A3B Instruct Q3_K_S",
+      "observations": [
+        {
+          "task": "edit-and-check",
+          "outcome": "complete",
+          "seconds": 45,
+          "tokens": 51570,
+          "toolCalls": 10,
+          "implementationDigest": "e46499f680be484685b1b07d087f16d60d44f9e6c6d046a2da721a8d2e5da558"
+        },
+        {
+          "task": "flask-task-b",
+          "outcome": "timed-out",
+          "seconds": 721,
+          "tokens": 223482,
+          "toolCalls": 25,
+          "implementationDigest": "e46499f680be484685b1b07d087f16d60d44f9e6c6d046a2da721a8d2e5da558"
+        },
+        {
+          "task": "flask-task-b",
+          "outcome": "timed-out",
+          "seconds": 878,
+          "tokens": 467082,
+          "toolCalls": 27,
+          "implementationDigest": "38e7102cbb405557304feccf0fa38cc03ded359c4e344651e634e0cb72abe6ef"
+        }
+      ],
+      "modelConfiguration": {
+        "model": "local-upgrade-coder/main",
+        "modelId": "agentextension-upgrade-coder",
+        "properties": {
+          "contextLength": 32768,
+          "maxOutputTokens": 2600
+        },
+        "compaction": false,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": "",
+        "temperature": null,
+        "determinism": "Provider defaults; temperature was not exposed by this setup.",
+        "localOnly": true
+      },
+      "toolTextProbe": {
+        "model": "agentextension-upgrade-coder",
+        "settings": {
+          "toolChoice": "required",
+          "maxOutputTokens": 512,
+          "temperature": "provider default",
+          "timeoutMs": 90000
+        },
+        "apiSpend": 0,
+        "results": [
+          {
+            "name": "single-line",
+            "stream": false,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 2526.047125
+          },
+          {
+            "name": "single-line",
+            "stream": true,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 625.6410420000002
+          },
+          {
+            "name": "multiline",
+            "stream": false,
+            "ok": false,
+            "category": "changed-text",
+            "ms": 951.3916249999997
+          },
+          {
+            "name": "multiline",
+            "stream": true,
+            "ok": false,
+            "category": "changed-text",
+            "ms": 769.8640829999995
+          },
+          {
+            "name": "literal-escapes",
+            "stream": false,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 1209.9317089999995
+          },
+          {
+            "name": "literal-escapes",
+            "stream": true,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 943.6835840000003
+          }
+        ],
+        "observation": "Both multiline cases omitted one trailing newline. This diagnostic does not isolate model generation from the serving parser."
+      }
+    },
+    {
+      "version": 1,
+      "model": "local-upgrade-gpt-oss/main",
+      "modelId": "agentextension-upgrade-gpt-oss",
+      "modelName": "GPT-OSS 20B MXFP4",
+      "localOnly": true,
+      "apiSpend": 0,
+      "hardware": "Apple M5, 10 cores, 24 GiB memory",
+      "runtime": "LM Studio 0.4.28+2; TrueForge 0.184.2; SDK 0.184.1; Node.js 24.18.0",
+      "contextLength": 32768,
+      "maxOutputTokens": 2600,
+      "temperature": null,
+      "determinism": "Provider default; not exposed by the evaluated setup",
+      "toolCompatibility": "Small coding task passed. Flask failed independent acceptance with only a CLI file changed. Synthetic tool-text probe passed three of six exact comparisons.",
+      "cancellation": "Separate local scripted host cancellation tests passed. No claim of live-model cancellation qualification.",
+      "compaction": "Disabled in live coding trials; separate scripted compaction checks passed.",
+      "timeoutSeconds": 600,
+      "fallbackModel": "",
+      "automaticRetries": 1,
+      "qualification": "not qualified",
+      "modelConfiguration": {
+        "model": "local-upgrade-gpt-oss/main",
+        "modelId": "agentextension-upgrade-gpt-oss",
+        "properties": {
+          "contextLength": 32768,
+          "maxOutputTokens": 2600
+        },
+        "compaction": false,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": "",
+        "temperature": null,
+        "determinism": "Provider defaults; temperature was not exposed by this setup.",
+        "localOnly": true
+      },
+      "observations": [
+        {
+          "task": "edit-and-check",
+          "outcome": "complete",
+          "seconds": 18,
+          "tokens": 11492,
+          "toolCalls": 3,
+          "implementationDigest": "0941cf82329798ae7f4a151515d21f0ba27e9531c86ed1632de809602d69f2d7",
+          "evaluationDigest": "11a996a2f9287c203983b481e0809c21721ce489df46d4864fee49d5f9c2372b",
+          "authorizationEvidence": {
+            "version": 1,
+            "scope": "Completed parent tool calls matched to observed host permission records",
+            "complete": true,
+            "observedRequests": 3,
+            "completedCalls": 3,
+            "successfulCalls": 3,
+            "unmatchedSuccessfulCalls": [],
+            "unapprovedActions": 0
+          }
+        },
+        {
+          "task": "flask-task-b",
+          "outcome": "failed",
+          "seconds": 617,
+          "tokens": 344551,
+          "toolCalls": 29,
+          "implementationDigest": "0941cf82329798ae7f4a151515d21f0ba27e9531c86ed1632de809602d69f2d7",
+          "evaluationDigest": "11a996a2f9287c203983b481e0809c21721ce489df46d4864fee49d5f9c2372b",
+          "authorizationEvidence": {
+            "version": 1,
+            "scope": "Completed parent tool calls matched to observed host permission records",
+            "complete": true,
+            "observedRequests": 29,
+            "completedCalls": 29,
+            "successfulCalls": 28,
+            "unmatchedSuccessfulCalls": [],
+            "unapprovedActions": 0
+          }
+        }
+      ],
+      "limitations": [
+        "No full 60-attempt qualification batch.",
+        "Flask lacked test and documentation changes and failed independent syntax and behavior checks.",
+        "Retrieval quality is below the frozen core gate.",
+        "The synthetic text probe does not isolate model generation from serving-parser behavior."
+      ],
+      "toolTextProbe": {
+        "settings": {
+          "toolChoice": "required",
+          "maxOutputTokens": 512,
+          "temperature": "provider default",
+          "timeoutMs": 90000
+        },
+        "results": [
+          {
+            "name": "single-line",
+            "stream": false,
+            "ok": false,
+            "category": "changed-text"
+          },
+          {
+            "name": "single-line",
+            "stream": true,
+            "ok": true,
+            "category": "exact-round-trip"
+          },
+          {
+            "name": "multiline",
+            "stream": false,
+            "ok": true,
+            "category": "exact-round-trip"
+          },
+          {
+            "name": "multiline",
+            "stream": true,
+            "ok": true,
+            "category": "exact-round-trip"
+          },
+          {
+            "name": "literal-escapes",
+            "stream": false,
+            "ok": false,
+            "category": "changed-text"
+          },
+          {
+            "name": "literal-escapes",
+            "stream": true,
+            "ok": false,
+            "category": "changed-text"
+          }
+        ]
+      }
+    },
+    {
+      "version": 1,
+      "model": "local-upgrade-coder/main",
+      "modelId": "agentextension-upgrade-coder",
+      "localOnly": true,
+      "apiSpend": 0,
+      "hardware": "Apple M5, 10 cores, 24 GiB memory",
+      "runtime": "TrueForge 0.184.2; SDK 0.184.1; Node.js 24.18.0",
+      "contextLength": 32768,
+      "maxOutputTokens": 2600,
+      "temperature": null,
+      "determinism": "Provider default; unavailable in setup metadata",
+      "toolCompatibility": "Small task failed at the 12 approval-pause limit after successful tests and repeated bare interpreter calls. Flask staged CLI and tests but timed out without review or independent acceptance.",
+      "cancellation": "Local scripted stream, review, repeated rejected edit, and repeated failed check tests passed.",
+      "compaction": "Disabled; zero public compaction events.",
+      "timeoutSeconds": 600,
+      "fallbackModel": "",
+      "automaticRetries": 1,
+      "qualification": "not qualified",
+      "limitations": [
+        "No complete 60-attempt qualification batch.",
+        "Retrieval quality is below the frozen gate.",
+        "Recorded Flask trials failed or timed out.",
+        "Scripted cancellation and compaction tests do not establish model quality in those states.",
+        "Historical trials use different implementation digests. Do not combine them into one qualified profile.",
+        "The Python checks imported installed Flask under default paths; a separate disposable diagnostic confirmed the source-selection gap. This does not prove the partial model patch is correct."
+      ],
+      "modelName": "Qwen3 Coder 30B-A3B Instruct Q3_K_S",
+      "observations": [
+        {
+          "task": "edit-and-check",
+          "outcome": "failed",
+          "seconds": 150,
+          "tokens": 117641,
+          "toolCalls": 18,
+          "implementationDigest": "6544be8f280f7ab2dbc5ea1e4fe312675a4e951c7783d64d7546201a683a9c0f",
+          "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
+        },
+        {
+          "task": "flask-task-b",
+          "outcome": "timed-out",
+          "seconds": 721,
+          "tokens": 402675,
+          "toolCalls": 27,
+          "implementationDigest": "6544be8f280f7ab2dbc5ea1e4fe312675a4e951c7783d64d7546201a683a9c0f",
+          "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
+        }
+      ],
+      "modelConfiguration": {
+        "model": "local-upgrade-coder/main",
+        "modelId": "agentextension-upgrade-coder",
+        "properties": {
+          "contextLength": 32768,
+          "maxOutputTokens": 2600
+        },
+        "compaction": false,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": "",
+        "temperature": null,
+        "determinism": "Provider defaults; temperature was not exposed by this setup.",
+        "localOnly": true
+      },
+      "toolTextProbe": {
+        "model": "agentextension-upgrade-coder",
+        "settings": {
+          "toolChoice": "required",
+          "maxOutputTokens": 512,
+          "temperature": "provider default",
+          "timeoutMs": 90000
+        },
+        "apiSpend": 0,
+        "results": [
+          {
+            "name": "single-line",
+            "stream": false,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 2526.047125
+          },
+          {
+            "name": "single-line",
+            "stream": true,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 625.6410420000002
+          },
+          {
+            "name": "multiline",
+            "stream": false,
+            "ok": false,
+            "category": "changed-text",
+            "ms": 951.3916249999997
+          },
+          {
+            "name": "multiline",
+            "stream": true,
+            "ok": false,
+            "category": "changed-text",
+            "ms": 769.8640829999995
+          },
+          {
+            "name": "literal-escapes",
+            "stream": false,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 1209.9317089999995
+          },
+          {
+            "name": "literal-escapes",
+            "stream": true,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 943.6835840000003
+          }
+        ],
+        "observation": "Both multiline cases omitted one trailing newline. This diagnostic does not isolate model generation from the serving parser."
+      },
+      "variant": "Registration reference guidance; compaction disabled",
+      "executionSettings": {
+        "compaction": false,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": ""
+      }
+    },
+    {
+      "version": 1,
+      "model": "local-upgrade-coder/main",
+      "modelId": "agentextension-upgrade-coder",
+      "localOnly": true,
+      "apiSpend": 0,
+      "hardware": "Apple M5, 10 cores, 24 GiB memory",
+      "runtime": "TrueForge 0.184.2; SDK 0.184.1; Node.js 24.18.0",
+      "contextLength": 32768,
+      "maxOutputTokens": 2600,
+      "temperature": null,
+      "determinism": "Provider default; unavailable in setup metadata",
+      "toolCompatibility": "Small task completed with one real test command and independent acceptance. Flask timed out with one partial CLI edit and no check or review. Python source guidance was not exercised by the live Flask attempt.",
+      "cancellation": "Local scripted stream, review, repeated rejected edit, and repeated failed check tests passed.",
+      "compaction": "Disabled; zero public compaction events.",
+      "timeoutSeconds": 600,
+      "fallbackModel": "",
+      "automaticRetries": 1,
+      "qualification": "not qualified",
+      "limitations": [
+        "No complete 60-attempt qualification batch.",
+        "Retrieval quality is below the frozen gate.",
+        "Recorded Flask trials failed or timed out.",
+        "Scripted cancellation and compaction tests do not establish model quality in those states.",
+        "Historical trials use different implementation digests. Do not combine them into one qualified profile.",
+        "Development packing diagnostics overlapped this smoke; elapsed time does not isolate an implementation effect."
+      ],
+      "modelName": "Qwen3 Coder 30B-A3B Instruct Q3_K_S",
+      "observations": [
+        {
+          "task": "edit-and-check",
+          "outcome": "complete",
+          "seconds": 64,
+          "tokens": 27326,
+          "toolCalls": 4,
+          "implementationDigest": "92361f0925d22f7616938e20ce9d87c68727a87649751afbb065700d1ec33289",
+          "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
+        },
+        {
+          "task": "flask-task-b",
+          "outcome": "timed-out",
+          "seconds": 721,
+          "tokens": 345151,
+          "toolCalls": 27,
+          "implementationDigest": "92361f0925d22f7616938e20ce9d87c68727a87649751afbb065700d1ec33289",
+          "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
+        }
+      ],
+      "modelConfiguration": {
+        "model": "local-upgrade-coder/main",
+        "modelId": "agentextension-upgrade-coder",
+        "properties": {
+          "contextLength": 32768,
+          "maxOutputTokens": 2600
+        },
+        "compaction": false,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": "",
+        "temperature": null,
+        "determinism": "Provider defaults; temperature was not exposed by this setup.",
+        "localOnly": true
+      },
+      "toolTextProbe": {
+        "model": "agentextension-upgrade-coder",
+        "settings": {
+          "toolChoice": "required",
+          "maxOutputTokens": 512,
+          "temperature": "provider default",
+          "timeoutMs": 90000
+        },
+        "apiSpend": 0,
+        "results": [
+          {
+            "name": "single-line",
+            "stream": false,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 2526.047125
+          },
+          {
+            "name": "single-line",
+            "stream": true,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 625.6410420000002
+          },
+          {
+            "name": "multiline",
+            "stream": false,
+            "ok": false,
+            "category": "changed-text",
+            "ms": 951.3916249999997
+          },
+          {
+            "name": "multiline",
+            "stream": true,
+            "ok": false,
+            "category": "changed-text",
+            "ms": 769.8640829999995
+          },
+          {
+            "name": "literal-escapes",
+            "stream": false,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 1209.9317089999995
+          },
+          {
+            "name": "literal-escapes",
+            "stream": true,
+            "ok": true,
+            "category": "exact-round-trip",
+            "ms": 943.6835840000003
+          }
+        ],
+        "observation": "Both multiline cases omitted one trailing newline. This diagnostic does not isolate model generation from the serving parser."
+      },
+      "variant": "Command preflight and Python source guidance; compaction disabled",
+      "executionSettings": {
+        "compaction": false,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": ""
+      }
+    }
+  ],
+  "environment": {
+    "lmStudioVersion": "0.4.28+2",
+    "editorVersion": "1.146.0",
+    "editorUse": "Native search binary only; coding uses a host fixture, not interactive editor UI acceptance."
+  },
+  "experiments": [
+    {
+      "version": 1,
+      "model": "local-upgrade-gpt-oss/main",
+      "modelId": "agentextension-upgrade-gpt-oss",
+      "modelName": "GPT-OSS 20B MXFP4",
+      "localOnly": true,
+      "apiSpend": 0,
+      "hardware": "Apple M5, 10 cores, 24 GiB memory",
+      "runtime": "LM Studio 0.4.28+2; TrueForge 0.184.2; SDK 0.184.1; Node.js 24.18.0",
+      "contextLength": 32768,
+      "maxOutputTokens": 2600,
+      "temperature": null,
+      "determinism": "Provider default; not exposed by the evaluated setup",
+      "toolCompatibility": "Small task complete. Flask ended incomplete without staged changes.",
+      "cancellation": "Separate local scripted host cancellation tests passed. No claim of live-model cancellation qualification.",
+      "compaction": "Enabled in live trials. No compaction event occurred in the first two-task smoke batch.",
+      "timeoutSeconds": 600,
+      "fallbackModel": "",
+      "automaticRetries": 1,
+      "qualification": "not qualified",
+      "modelConfiguration": {
+        "model": "local-upgrade-gpt-oss/main",
+        "modelId": "agentextension-upgrade-gpt-oss",
+        "properties": {
+          "contextLength": 32768,
+          "maxOutputTokens": 2600
+        },
+        "compaction": true,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": "",
+        "temperature": null,
+        "determinism": "Provider defaults; temperature was not exposed by this setup.",
+        "localOnly": true
+      },
+      "observations": [
+        {
+          "task": "edit-and-check",
+          "outcome": "complete",
+          "seconds": 27,
+          "tokens": 12121,
+          "toolCalls": 3,
+          "compactions": 0,
+          "implementationDigest": "76a11f970e8cf7a7960e6b7f44f0604649dd2c398a238e3063ba25e3d60bb870",
+          "evaluationDigest": "e7e6aaee0cce123e5e409413b2dc0f229baa23510a62834f1c3f905634026c03"
+        },
+        {
+          "task": "flask-task-b",
+          "outcome": "incomplete",
+          "seconds": 354,
+          "tokens": 279127,
+          "toolCalls": 25,
+          "compactions": 0,
+          "implementationDigest": "76a11f970e8cf7a7960e6b7f44f0604649dd2c398a238e3063ba25e3d60bb870",
+          "evaluationDigest": "e7e6aaee0cce123e5e409413b2dc0f229baa23510a62834f1c3f905634026c03"
+        }
+      ],
+      "limitations": [
+        "Partial batch; no 60-attempt qualification.",
+        "No recorded live compaction event.",
+        "Flask ended without a patch or check.",
+        "Both retrieval recall targets remain missed."
+      ],
+      "variant": "compaction-enabled",
+      "executionSettings": {
+        "compaction": true,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": ""
+      }
+    },
+    {
+      "version": 1,
+      "model": "local-upgrade-gpt-oss/main",
+      "modelId": "agentextension-upgrade-gpt-oss",
+      "modelName": "GPT-OSS 20B MXFP4",
+      "localOnly": true,
+      "apiSpend": 0,
+      "hardware": "Apple M5, 10 cores, 24 GiB memory",
+      "runtime": "LM Studio 0.4.28+2; TrueForge 0.184.2; SDK 0.184.1; Node.js 24.18.0",
+      "contextLength": 32768,
+      "maxOutputTokens": 2600,
+      "temperature": null,
+      "determinism": "Provider default; not exposed by the evaluated setup",
+      "toolCompatibility": "Small task complete. Flask reached review with a syntax error, no test or documentation changes, and no agent check.",
+      "cancellation": "Separate local scripted host cancellation tests passed. No claim of live-model cancellation qualification.",
+      "compaction": "Enabled in live trials. No compaction event occurred in the first two-task smoke batch.",
+      "timeoutSeconds": 600,
+      "fallbackModel": "",
+      "automaticRetries": 1,
+      "qualification": "not qualified",
+      "modelConfiguration": {
+        "model": "local-upgrade-gpt-oss/main",
+        "modelId": "agentextension-upgrade-gpt-oss",
+        "properties": {
+          "contextLength": 32768,
+          "maxOutputTokens": 2600
+        },
+        "compaction": true,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": "",
+        "temperature": null,
+        "determinism": "Provider defaults; temperature was not exposed by this setup.",
+        "localOnly": true
+      },
+      "observations": [
+        {
+          "task": "edit-and-check",
+          "outcome": "complete",
+          "seconds": 22,
+          "tokens": 11951,
+          "toolCalls": 3,
+          "compactions": 0,
+          "implementationDigest": "678d1c31a61a948e604b1790ef6fb6ea1b0dcaad8012f863539f7ca67895eb3f",
+          "evaluationDigest": "abddf473b523df79c93a269d40dc42d56849d1e342cf497ea3b7d5eae92d1762"
+        },
+        {
+          "task": "flask-task-b",
+          "outcome": "failed",
+          "seconds": 635,
+          "tokens": 499063,
+          "toolCalls": 30,
+          "compactions": 0,
+          "implementationDigest": "678d1c31a61a948e604b1790ef6fb6ea1b0dcaad8012f863539f7ca67895eb3f",
+          "evaluationDigest": "abddf473b523df79c93a269d40dc42d56849d1e342cf497ea3b7d5eae92d1762"
+        }
+      ],
+      "limitations": [
+        "Partial batch; no 60-attempt qualification.",
+        "No live compaction event.",
+        "Flask failed independent syntax and behavior checks, omitted tests and documentation, and exceeded its budget.",
+        "Both retrieval recall targets remain missed.",
+        "The full regression suite overlapped this smoke."
+      ],
+      "variant": "compaction enabled after completion follow-up",
+      "executionSettings": {
+        "compaction": true,
+        "turnTimeoutSeconds": 600,
+        "workerTimeoutSeconds": 180,
+        "fallbackModel": ""
+      }
+    }
+  ]
+}

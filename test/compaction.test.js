@@ -46,6 +46,7 @@ test('a real TrueForge compaction exposes event metadata and marks recorded sour
     assert.ok(all.includes('Fixture summary for the next model call'), 'The next model call received the generated summary.');
     if (requests === 2) return call('read_file', { file: 'second.txt' }, 500);
     assert.ok(all.includes('COMPACTION_FIXTURE_AFTER'), 'The later model call received the second source.');
+    assert.ok(all.includes('TASK CONTINUATION'), 'The host restated task facts after compaction through the next tool result.');
     return say('Checked both fixture sources.', 500);
   });
   const host = await startHost(t, { root, settings: { serverUrl: baseUrl, model: model.model,
@@ -57,6 +58,7 @@ test('a real TrueForge compaction exposes event metadata and marks recorded sour
   assert.equal(summaries, 1);
   assert.equal(state.manifest.find(entry => entry.source === 'search_workspace').compactionTiming, 'before');
   assert.equal(state.manifest.find(entry => entry.source === 'read_file').compactionTiming, 'after');
+  assert.equal(state.manifest.find(entry => entry.kind === 'task continuation').compactionTiming, 'after');
   assert.equal(state.usageDetail.compactions.length, 1);
   const [reported] = state.usageDetail.compactions;
   assert.equal(reported.threadId, 'main');
@@ -83,5 +85,5 @@ test('a real TrueForge compaction exposes event metadata and marks recorded sour
   assert.match(report, /Context compactions: 1/);
   assert.match(report, /Retained context sources are unavailable after compaction/);
   assert.match(report, /Latest main-thread compaction .*300 input and 25 output tokens/);
-  assert.match(report, /\d+ recorded before this compaction · 1 recorded after/);
+  assert.match(report, /\d+ recorded before this compaction · 2 recorded after/);
 });

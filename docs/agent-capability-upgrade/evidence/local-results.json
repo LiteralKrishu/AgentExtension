@@ -1,0 +1,3041 @@
+{
+  "version": 1,
+  "recordedDate": "2026-11-22",
+  "sourceBaseline": "5c5fe676a444d51a5163c89abdb39dec0860817e",
+  "retrievalInputDigest": "e0fb47d71bffbb8c3bfbf699f46daf69667304ed5277845855751b5057d05b36",
+  "codingSmoke": {
+    "name": "edit-and-check",
+    "outcome": "complete",
+    "model": "local-lm-studio/qwen",
+    "seconds": 37,
+    "wallMs": 36249,
+    "activeMs": 36125,
+    "firstPatchMs": 27610,
+    "verificationMs": 127,
+    "errors": [],
+    "firstReviewPatchMs": 27610,
+    "timingNote": "Historical firstPatchMs measured the first reviewable patch. New runs separate first staged draft and first review."
+  },
+  "retrieval": {
+    "version": "agent-capability-upgrade/1",
+    "sourceRevision": "5c5fe676a444d51a5163c89abdb39dec0860817e",
+    "files": 140,
+    "sourceCharacters": 1811781,
+    "recallAt10": 0.6916666666666668,
+    "heldOutRecallAt10": 0.7916666666666666,
+    "exactSuccessRate": 1,
+    "limitation": "Same exposed 40-query set. This is a regression comparison, not a new independent held-out claim."
+  },
+  "semanticExperiment": {
+    "namespace": {
+      "schema": 1,
+      "endpoint": "http://127.0.0.1:1234/v1/embeddings",
+      "model": "agentextension-upgrade-embedding",
+      "dimension": 768,
+      "scope": "b749e804d637452993b762d63cf17465ec8f7073603154ee63c137b12e393373"
+    },
+    "files": 140,
+    "excerptLimit": 5000,
+    "contextBudget": 12000,
+    "preparationMs": 42070.449541,
+    "requests": 59,
+    "embeddedCharacters": 586649,
+    "cacheBytes": 2278653,
+    "apiSpend": 0,
+    "development": {
+      "lexical": 0.611111111111111,
+      "relationships": 0.5,
+      "hybrid": 0.6250000000000002
+    },
+    "heldOut": {
+      "lexical": 0.7916666666666666,
+      "relationships": 0.47916666666666663,
+      "hybrid": 0.6458333333333331
+    },
+    "overall": {
+      "lexical": 0.6833333333333333,
+      "relationships": 0.4916666666666667,
+      "hybrid": 0.6333333333333335
+    },
+    "decision": "reject this embedding configuration",
+    "enabledByDefault": false,
+    "limitation": "One bounded leading excerpt per file. These are file-candidate ablations, not completed coding tasks. Frozen held-out labels are now exposed for subsequent changes."
+  },
+  "scale": {
+    "hardware": {
+      "cpu": "Apple M5",
+      "cores": 10,
+      "memory": 25769803776
+    },
+    "fixture": {
+      "files": 20000,
+      "approximateBytes": 200000000
+    },
+    "coldMs": 1991.252875,
+    "warmMs": 490.95883300000014,
+    "savedChangeMs": 540.7877089999997,
+    "rankColdMs": 1219.958208,
+    "rankedP95Ms": 32.92816700000003,
+    "exactP95Ms": 497.31825000000026,
+    "memory": {
+      "rss": 556531712,
+      "heapTotal": 454918144,
+      "heapUsed": 357513056,
+      "external": 4907128,
+      "arrayBuffers": 2746139
+    },
+    "filesystem": {
+      "type": 26,
+      "bsize": 4096,
+      "frsize": 4096,
+      "blocks": 242824745,
+      "bfree": 131838756,
+      "bavail": 131838756,
+      "files": 5278447825,
+      "ffree": 5273550240
+    }
+  },
+  "validation": {
+    "fullSuite": {
+      "tests": 278,
+      "passed": 261,
+      "skipped": 17,
+      "failed": 0
+    },
+    "packageConnectionTest": {
+      "passed": 1,
+      "failed": 0
+    },
+    "laterQualificationAndPackingTests": {
+      "passed": 6,
+      "failed": 0
+    },
+    "standardConcurrentSuite": {
+      "tests": 282,
+      "passed": 265,
+      "skipped": 17,
+      "failed": 0
+    },
+    "inlineSearchAndCoreTests": {
+      "passed": 17,
+      "failed": 0
+    },
+    "budgetRecoveryCompactionTests": {
+      "passed": 16,
+      "failed": 0
+    },
+    "latestAppliedFullSuite": {
+      "tests": 286,
+      "passed": 269,
+      "skipped": 17,
+      "failed": 0
+    },
+    "serialAfterDiagnostics": {
+      "tests": 291,
+      "passed": 274,
+      "skipped": 17,
+      "failed": 0
+    },
+    "concurrentAfterDiagnostics": {
+      "tests": 291,
+      "passed": 273,
+      "skipped": 17,
+      "failed": 1,
+      "failure": "Local runtime connection in compaction test"
+    },
+    "progressAndFormatRecovery": {
+      "passed": 12,
+      "skipped": 0,
+      "failed": 0
+    },
+    "commandAnchorRanking": {
+      "passed": 12,
+      "failed": 0
+    },
+    "coreRecoveryFocused": {
+      "passed": 40,
+      "failed": 0,
+      "skipped": 0
+    },
+    "budgetNoticeAndCore": {
+      "passed": 20,
+      "failed": 0
+    },
+    "latestFullSerial": {
+      "tests": 304,
+      "passed": 284,
+      "skipped": 20,
+      "failed": 0
+    },
+    "availableNativeAndFlaskAcceptance": {
+      "tests": 10,
+      "passed": 10,
+      "skipped": 0,
+      "failed": 0
+    },
+    "latestFullWithDependencies": {
+      "tests": 315,
+      "passed": 298,
+      "skipped": 17,
+      "failed": 0
+    },
+    "batchReadAcceptance": {
+      "passed": 24,
+      "skipped": 0,
+      "failed": 0
+    },
+    "finishingAndBudgetContext": {
+      "passed": 11,
+      "failed": 0
+    },
+    "roadmapLocalLinks": {
+      "resolved": 222,
+      "missing": 0
+    },
+    "latestExtractedPackage": {
+      "artifact": "/tmp/agentextension-anchor-recovery-upgrade.vsix",
+      "bytes": 101914882,
+      "sha256": "15ae31e0ab4c668bf78f2cb4a10507147d9e1aaa5c5a946e510db5e784760e1b",
+      "passed": 1,
+      "skipped": 0,
+      "failed": 0,
+      "durationMs": 3622.709042,
+      "scope": "Extracted package, bundled runtime, saved connection, model connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform acceptance."
+    },
+    "verificationFollowupFullSuite": {
+      "tests": 319,
+      "passed": 302,
+      "skipped": 17,
+      "failed": 0
+    },
+    "verificationFollowupFocused": {
+      "passed": 25,
+      "failed": 0
+    },
+    "draftFeedbackFullSuite": {
+      "tests": 325,
+      "passed": 308,
+      "skipped": 17,
+      "failed": 0
+    },
+    "executionSettingsAndCompaction": {
+      "tests": 23,
+      "passed": 23,
+      "skipped": 0,
+      "failed": 0
+    },
+    "prematureFinishFocused": {
+      "tests": 39,
+      "passed": 39,
+      "skipped": 0,
+      "failed": 0
+    },
+    "prematureFinishInitialFullSuite": {
+      "tests": 330,
+      "passed": 310,
+      "skipped": 19,
+      "failed": 1,
+      "failure": "An unchanged skill fixture waited for the retired Run complete wording. Updated its terminal-status expectation.",
+      "limitation": "Two native-search fixtures were not enabled in this invocation; rerun uses the trusted ripgrep path."
+    },
+    "updatedStatusFixture": {
+      "tests": 2,
+      "passed": 2,
+      "skipped": 0,
+      "failed": 0
+    },
+    "finalCompletionFullSuite": {
+      "tests": 330,
+      "passed": 313,
+      "skipped": 17,
+      "failed": 0,
+      "durationMs": 99491.261083,
+      "nativeSearchEnabled": true,
+      "flaskAcceptanceEnabled": true
+    },
+    "sourceTypeLint": "passed",
+    "corePackageBeforeCompletionFixes": {
+      "artifact": "/tmp/agentextension-core-upgrade.vsix",
+      "bytes": 101878311,
+      "sha256": "d808c0de4804d39d5c3bd58e8c15e566d448e8b39e624439dc8786a383f4c51b",
+      "passed": 1,
+      "failed": 0,
+      "scope": "Bundled runtime and saved-connection fixture on macOS arm64. No full editor UI or cross-platform claim."
+    },
+    "finalSourceDigests": {
+      "implementation": "987dc8bf1169c29fa4c37cede6cad96ba0d2a48c6882f2e480ab6373e95c4be5",
+      "evaluator": "abddf473b523df79c93a269d40dc42d56849d1e342cf497ea3b7d5eae92d1762",
+      "postSmokeChange": "The final implementation extends short version-flag diagnostic classification. The final full suite covers this change; it was added after the last live model smoke."
+    },
+    "current": {
+      "fullSuite": {
+        "tests": 367,
+        "passed": 350,
+        "skipped": 17,
+        "failed": 0,
+        "durationMs": 107885.4975,
+        "nativeSearchEnabled": true,
+        "flaskAcceptanceEnabled": true
+      },
+      "previousFullSuite": {
+        "tests": 364,
+        "passed": 347,
+        "skipped": 17,
+        "failed": 0,
+        "durationMs": 105015.317708
+      },
+      "fullSuiteStatus": "Passed before the next frozen model smoke.",
+      "sourceTypeLint": "passed",
+      "focusedTests": {
+        "passed": 19,
+        "skipped": 0,
+        "failed": 0
+      },
+      "package": {
+        "artifact": "/tmp/agentextension-command-source-upgrade.vsix",
+        "bytes": 101925899,
+        "sha256": "79c82186525f9c02d1155d01db0b1610cfe2ffb6ff6a41681d17e28fba91d079",
+        "implementationDigest": "92361f0925d22f7616938e20ce9d87c68727a87649751afbb065700d1ec33289",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0,
+        "durationMs": 3730.958625,
+        "scope": "Extracted package, bundled runtime, saved model credentials, connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform claim.",
+        "setupFailure": "The initial Python ZIP extraction did not preserve executable permissions. Repeated with unzip; the fixture passed. Original failed log retained."
+      },
+      "previousPackage": {
+        "artifact": "/tmp/agentextension-anchor-recovery-upgrade.vsix",
+        "bytes": 101914882,
+        "sha256": "15ae31e0ab4c668bf78f2cb4a10507147d9e1aaa5c5a946e510db5e784760e1b",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0,
+        "durationMs": 3622.709042,
+        "scope": "Extracted package, bundled runtime, saved connection, model connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform acceptance."
+      },
+      "packageStatus": "Fresh package built and permission-preserving extracted-package fixture passed.",
+      "realModelTrialStatus": "Completed: small task passed in 64 seconds; Flask timed out in 721 seconds without checks or review. Coding model unloaded.",
+      "sourceDigests": {
+        "implementation": "92361f0925d22f7616938e20ce9d87c68727a87649751afbb065700d1ec33289",
+        "evaluator": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
+      },
+      "roadmapLocalLinks": {
+        "resolved": 223,
+        "missing": 0
+      }
+    },
+    "judgmentAuditFullSuite": {
+      "tests": 336,
+      "passed": 319,
+      "skipped": 17,
+      "failed": 0,
+      "durationMs": 131473.242458,
+      "nativeSearchEnabled": true,
+      "flaskAcceptanceEnabled": true
+    },
+    "judgmentAndQualification": {
+      "tests": 6,
+      "passed": 6,
+      "skipped": 0,
+      "failed": 0
+    },
+    "workspaceCommandCancellation": {
+      "tests": 2,
+      "passed": 2,
+      "skipped": 0,
+      "failed": 0,
+      "scope": "Running-process observation and cleanup on macOS; pre-materialization abort also checked. The original workspace stayed unchanged."
+    },
+    "judgmentAuditSnapshot": {
+      "fullSuite": {
+        "tests": 336,
+        "passed": 319,
+        "skipped": 17,
+        "failed": 0,
+        "durationMs": 131473.242458,
+        "nativeSearchEnabled": true,
+        "flaskAcceptanceEnabled": true
+      },
+      "sourceTypeLint": "passed",
+      "package": {
+        "artifact": "/tmp/agentextension-completion-upgrade.vsix",
+        "bytes": 101895227,
+        "sha256": "32abc3b1b1e04a5d7854b86c2b35397bdec60518feb7c0219667b612538703e5",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0,
+        "durationMs": 3723.611291,
+        "scope": "Extracted package: bundled runtime, saved credentials, model connection, and authenticated health checks on macOS arm64. Host fixture; no interactive UI or cross-platform acceptance."
+      },
+      "roadmapLocalLinks": {
+        "resolved": 216,
+        "missing": 0
+      },
+      "sourceDigests": {
+        "implementation": "987dc8bf1169c29fa4c37cede6cad96ba0d2a48c6882f2e480ab6373e95c4be5",
+        "evaluator": "8c2d6bfb9fb7b00fc5aaea8567399fed3c8c240f834682b606195209b2b6eb69"
+      },
+      "noNewRealModelTrials": true
+    },
+    "version2LineArrayFullSuite": {
+      "tests": 345,
+      "passed": 328,
+      "skipped": 17,
+      "failed": 0,
+      "durationMs": 161810.331167,
+      "nativeSearchEnabled": true,
+      "flaskAcceptanceEnabled": true
+    },
+    "version2SourceChecks": {
+      "tests": 4,
+      "passed": 4,
+      "skipped": 0,
+      "failed": 0,
+      "pinnedCancellationCases": 2,
+      "scope": "Hash-checked source overlay, fresh held-out guard, and cancellation against pinned source on macOS."
+    },
+    "version2Provenance": {
+      "tests": 7,
+      "passed": 7,
+      "skipped": 0,
+      "failed": 0
+    },
+    "lineArrayFormat": {
+      "tests": 10,
+      "passed": 10,
+      "skipped": 0,
+      "failed": 0
+    },
+    "lineArrayRuntime": {
+      "tests": 10,
+      "passed": 10,
+      "skipped": 0,
+      "failed": 0
+    },
+    "lineArrayContinuationSnapshot": {
+      "fullSuite": {
+        "tests": 345,
+        "passed": 328,
+        "skipped": 17,
+        "failed": 0,
+        "durationMs": 161810.331167,
+        "nativeSearchEnabled": true,
+        "flaskAcceptanceEnabled": true
+      },
+      "sourceTypeLint": "passed",
+      "package": {
+        "artifact": "/tmp/agentextension-line-array-upgrade.vsix",
+        "bytes": 101905586,
+        "sha256": "a11d78a6c1fbc04b4eee81c3ebc46f6fbc60525eb8a822c390c78ecca67f58fd",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0,
+        "durationMs": 4213.605875,
+        "scope": "Extracted package runtime, saved credentials, model connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform acceptance."
+      },
+      "previousPackage": {
+        "artifact": "/tmp/agentextension-completion-upgrade.vsix",
+        "bytes": 101895227,
+        "sha256": "32abc3b1b1e04a5d7854b86c2b35397bdec60518feb7c0219667b612538703e5",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0,
+        "durationMs": 3723.611291,
+        "scope": "Extracted package: bundled runtime, saved credentials, model connection, and authenticated health checks on macOS arm64. Host fixture; no interactive UI or cross-platform acceptance."
+      },
+      "packageStatus": "Built and extracted-package fixture passed.",
+      "sourceDigests": {
+        "implementation": "61ff5424671ac656a58ee76ee484dc5f195b8b2f8920234bcb2833d373ffe45a",
+        "evaluator": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
+      },
+      "realModelTrialStatus": "Completed local-only two-task smoke: small task complete, Flask failed. Zero API spend.",
+      "roadmapLocalLinks": {
+        "resolved": 222,
+        "missing": 0
+      },
+      "digestsUnchangedAfterTrialAndPackage": true
+    },
+    "anchorInsertionFullSuite": {
+      "tests": 350,
+      "passed": 333,
+      "skipped": 17,
+      "failed": 0,
+      "durationMs": 103777.425792,
+      "nativeSearchEnabled": true,
+      "flaskAcceptanceEnabled": true
+    },
+    "anchorInsertionFormat": {
+      "tests": 14,
+      "passed": 14,
+      "skipped": 0,
+      "failed": 0
+    },
+    "anchorInsertionRuntime": {
+      "tests": 11,
+      "passed": 11,
+      "skipped": 0,
+      "failed": 0,
+      "initialRun": "All 11 failed to connect to the stopped evaluation runtime. Same checks passed after restart."
+    },
+    "keywordOrderFocused": {
+      "tests": 23,
+      "passed": 20,
+      "skipped": 3,
+      "failed": 0,
+      "limitation": "Three runtime cases require the dedicated endpoint; enabled in the subsequent full run."
+    },
+    "anchorKeywordFullSuite": {
+      "tests": 352,
+      "passed": 335,
+      "skipped": 17,
+      "failed": 0,
+      "durationMs": 162219.604084,
+      "nativeSearchEnabled": true,
+      "flaskAcceptanceEnabled": true
+    },
+    "keywordOrderConfirmed": {
+      "tests": 23,
+      "passed": 23,
+      "skipped": 0,
+      "failed": 0,
+      "scope": "Focused checks with the runtime and native adapter; strengthened duplicate-location assertion also passed."
+    },
+    "anchorKeywordContinuationSnapshot": {
+      "fullSuite": {
+        "tests": 352,
+        "passed": 335,
+        "skipped": 17,
+        "failed": 0,
+        "durationMs": 162219.604084,
+        "nativeSearchEnabled": true,
+        "flaskAcceptanceEnabled": true
+      },
+      "fullSuiteStatus": "Passed before the real-model batch.",
+      "sourceTypeLint": "passed",
+      "package": null,
+      "previousPackage": {
+        "artifact": "/tmp/agentextension-line-array-upgrade.vsix",
+        "bytes": 101905586,
+        "sha256": "a11d78a6c1fbc04b4eee81c3ebc46f6fbc60525eb8a822c390c78ecca67f58fd",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0,
+        "durationMs": 4213.605875,
+        "scope": "Extracted package runtime, saved credentials, model connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform acceptance."
+      },
+      "packageStatus": "Previous package predates the current changes.",
+      "realModelTrialStatus": "Running frozen GPT-OSS smoke: small task complete in 24 seconds with 15,571 tokens; Flask pending.",
+      "sourceDigests": {
+        "implementation": "c1e0fd42f39114299038c431c5b8a4ba20497760703f5e1b3f7873215dbe37bf",
+        "evaluator": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
+      }
+    },
+    "anchorHintIsolated": {
+      "tests": 16,
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "setupCorrection": "Copied the required agent definition before the isolated rerun."
+    },
+    "anchorHintRuntimeInitial": {
+      "tests": 28,
+      "passed": 26,
+      "failed": 2,
+      "skipped": 0,
+      "reason": "The scripted fixture parsed a wrapped tool error as a plain string. Product recovery stayed exact; corrected the fixture envelope parsing."
+    },
+    "anchorHintConfirmed": {
+      "tests": 28,
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0
+    },
+    "anchorHintFullSuite": {
+      "tests": 355,
+      "passed": 338,
+      "skipped": 17,
+      "failed": 0,
+      "durationMs": 131136.569375,
+      "nativeSearchEnabled": true,
+      "flaskAcceptanceEnabled": true
+    },
+    "previousLineArrayPackage": {
+      "artifact": "/tmp/agentextension-line-array-upgrade.vsix",
+      "bytes": 101905586,
+      "sha256": "a11d78a6c1fbc04b4eee81c3ebc46f6fbc60525eb8a822c390c78ecca67f58fd",
+      "passed": 1,
+      "skipped": 0,
+      "failed": 0,
+      "durationMs": 4213.605875,
+      "scope": "Extracted package runtime, saved credentials, model connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform acceptance."
+    },
+    "beforeCommandSourceGuidance": {
+      "fullSuite": {
+        "tests": 355,
+        "passed": 338,
+        "skipped": 17,
+        "failed": 0,
+        "durationMs": 131136.569375,
+        "nativeSearchEnabled": true,
+        "flaskAcceptanceEnabled": true
+      },
+      "fullSuiteStatus": "Passed before the new model batch.",
+      "sourceTypeLint": "passed",
+      "package": {
+        "artifact": "/tmp/agentextension-anchor-recovery-upgrade.vsix",
+        "bytes": 101914882,
+        "sha256": "15ae31e0ab4c668bf78f2cb4a10507147d9e1aaa5c5a946e510db5e784760e1b",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0,
+        "durationMs": 3622.709042,
+        "scope": "Extracted package, bundled runtime, saved connection, model connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform acceptance."
+      },
+      "previousPackage": {
+        "artifact": "/tmp/agentextension-line-array-upgrade.vsix",
+        "bytes": 101905586,
+        "sha256": "a11d78a6c1fbc04b4eee81c3ebc46f6fbc60525eb8a822c390c78ecca67f58fd",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0,
+        "durationMs": 4213.605875,
+        "scope": "Extracted package runtime, saved credentials, model connection, and authenticated health on macOS arm64. Host fixture; no interactive editor or cross-platform acceptance."
+      },
+      "packageStatus": "Fresh package built and extracted-package fixture passed.",
+      "realModelTrialStatus": "Completed source-hint smoke: small task complete; Flask timed out. Test model unloaded and dedicated server stopped.",
+      "sourceDigests": {
+        "implementation": "fe92e42d9ce83072ba64905366058ab0d282c0c125e0f6e9e901cb60fb11facb",
+        "evaluator": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6"
+      },
+      "roadmapLocalLinks": {
+        "resolved": 223,
+        "missing": 0
+      }
+    }
+  },
+  "limitations": [
+    "The local profile is not qualified.",
+    "Only one physical computer is available.",
+    "The 40-query held-out set is exposed for later tuning.",
+    "All three replacement Qwen Flask attempts ended without a reviewed and independently verified patch."
+  ],
+  "developmentDiversityExperiment": {
+    "queries": 24,
+    "split": "development",
+    "enabledInRuntime": false,
+    "decision": "Research only. No variant reaches the overall quality target on development data.",
+    "results": [
+      {
+        "slots": [
+          4,
+          3,
+          3
+        ],
+        "recallAt10": 0.7222222222222223,
+        "exactFound": 16,
+        "exactCount": 16
+      },
+      {
+        "slots": [
+          5,
+          3,
+          2
+        ],
+        "recallAt10": 0.6666666666666666,
+        "exactFound": 16,
+        "exactCount": 16
+      },
+      {
+        "slots": [
+          5,
+          2,
+          3
+        ],
+        "recallAt10": 0.6666666666666666,
+        "exactFound": 16,
+        "exactCount": 16
+      },
+      {
+        "slots": [
+          3,
+          4,
+          3
+        ],
+        "recallAt10": 0.7083333333333334,
+        "exactFound": 15,
+        "exactCount": 16
+      },
+      {
+        "slots": [
+          3,
+          3,
+          4
+        ],
+        "recallAt10": 0.7916666666666666,
+        "exactFound": 15,
+        "exactCount": 16
+      }
+    ]
+  },
+  "budgetAccountingCandidate": {
+    "status": "Applied; 16 focused regression tests and full standard suite passed",
+    "streamLoopTest": "passed",
+    "stagedDraftPreservationTest": "passed",
+    "scope": "interactive usage counted during streaming; existing soft and hard budget controls retained"
+  },
+  "frozenQwenFlaskTrials": [
+    {
+      "repetition": 1,
+      "outcome": "incomplete",
+      "seconds": 602,
+      "reason": "token limit of 400,000",
+      "unapprovedActions": 0,
+      "tokens": 627551,
+      "toolCalls": 32
+    },
+    {
+      "repetition": 2,
+      "outcome": "timed-out",
+      "seconds": 721,
+      "reason": "time limit of 12 minutes",
+      "unapprovedActions": 0,
+      "tokens": 305518,
+      "toolCalls": 23
+    },
+    {
+      "repetition": 3,
+      "outcome": "timed-out",
+      "seconds": 720,
+      "reason": "",
+      "unapprovedActions": 0,
+      "tokens": 256526,
+      "toolCalls": 27
+    }
+  ],
+  "codingProfileSmoke": {
+    "model": "local-upgrade-coder/main",
+    "editAndCheck": {
+      "outcome": "complete",
+      "seconds": 45,
+      "tokens": 51570
+    },
+    "flask": {
+      "outcome": "timed-out",
+      "seconds": 721,
+      "tokens": 223482,
+      "toolCalls": 25
+    },
+    "qualified": false
+  },
+  "retrievalBeforeRegisteredTools": {
+    "version": "agent-capability-upgrade/1",
+    "sourceRevision": "5c5fe676a444d51a5163c89abdb39dec0860817e",
+    "files": 140,
+    "sourceCharacters": 1811781,
+    "recallAt10": 0.6833333333333333,
+    "heldOutRecallAt10": 0.7916666666666666,
+    "exactSuccessRate": 0.9375
+  },
+  "codingProfileFormatRecovery": {
+    "outcome": "timed-out",
+    "seconds": 878,
+    "wallMs": 874504,
+    "firstStagedDraftMs": 249336.50415039062,
+    "firstReviewPatchMs": 490287,
+    "tokens": 467082,
+    "toolCalls": 27,
+    "unapprovedActions": 0,
+    "reviewObserved": true,
+    "independentAcceptance": false,
+    "limitation": "Terminal report followed a long event gap. The cause of deadline overrun is unproven. No current final patch or checks passed."
+  },
+  "toolFormatProbe": {
+    "model": "agentextension-upgrade-coder",
+    "settings": {
+      "toolChoice": "required",
+      "maxOutputTokens": 512,
+      "temperature": "provider default",
+      "timeoutMs": 90000
+    },
+    "apiSpend": 0,
+    "results": [
+      {
+        "name": "single-line",
+        "stream": false,
+        "ok": true,
+        "category": "exact-round-trip",
+        "ms": 2526.047125
+      },
+      {
+        "name": "single-line",
+        "stream": true,
+        "ok": true,
+        "category": "exact-round-trip",
+        "ms": 625.6410420000002
+      },
+      {
+        "name": "multiline",
+        "stream": false,
+        "ok": false,
+        "category": "changed-text",
+        "ms": 951.3916249999997
+      },
+      {
+        "name": "multiline",
+        "stream": true,
+        "ok": false,
+        "category": "changed-text",
+        "ms": 769.8640829999995
+      },
+      {
+        "name": "literal-escapes",
+        "stream": false,
+        "ok": true,
+        "category": "exact-round-trip",
+        "ms": 1209.9317089999995
+      },
+      {
+        "name": "literal-escapes",
+        "stream": true,
+        "ok": true,
+        "category": "exact-round-trip",
+        "ms": 943.6835840000003
+      }
+    ],
+    "observation": "Both multiline cases omitted one trailing newline. This diagnostic does not isolate model generation from the serving parser."
+  },
+  "developmentMorphologyExperiment": {
+    "split": "development",
+    "enabledInRuntime": false,
+    "lexicalRecallBefore": 0.611111111111111,
+    "morphologyRecall": 0.6388888888888888,
+    "bestCombinedRecall": 0.8055555555555557,
+    "decision": "No morphology or category-diversity variant enabled. Targets missed. Only exact registered-tool recognition adopted."
+  },
+  "codingProfileBudgetGuidance": {
+    "model": "local-upgrade-coder/main",
+    "qualified": false,
+    "attempts": [
+      {
+        "name": "edit-and-check",
+        "outcome": "complete",
+        "seconds": 255,
+        "wallMs": 255316,
+        "tokens": 117397,
+        "toolCalls": 18,
+        "firstStagedDraftMs": 16032.2548828125,
+        "firstReviewPatchMs": 24140,
+        "maxPollGapMs": 626,
+        "deadlineOverrunMs": 0
+      },
+      {
+        "name": "flask-task-b",
+        "outcome": "timed-out",
+        "seconds": 721,
+        "wallMs": 720668,
+        "tokens": 498388,
+        "toolCalls": 28,
+        "firstStagedDraftMs": 274450.6765136719,
+        "firstReviewPatchMs": 682804,
+        "maxPollGapMs": 1059,
+        "deadlineOverrunMs": 476
+      }
+    ],
+    "partialFlaskDiagnostic": "Independent regression and behavior checks failed with an indentation error. The timed-out result remains unchanged."
+  },
+  "fullSourceSemanticExperiment": {
+    "version": 2,
+    "recordedAt": "2026-11-21T07:26:44.089Z",
+    "corpus": "agent-capability-upgrade/1",
+    "sourceRevision": "5c5fe676a444d51a5163c89abdb39dec0860817e",
+    "inputDigest": "e0fb47d71bffbb8c3bfbf699f46daf69667304ed5277845855751b5057d05b36",
+    "namespace": {
+      "schema": 2,
+      "endpoint": "http://127.0.0.1:1234/v1/embeddings",
+      "model": "agentextension-upgrade-embedding",
+      "dimension": 768,
+      "scope": "b749e804d637452993b762d63cf17465ec8f7073603154ee63c137b12e393373",
+      "chunkSize": 2200,
+      "overlap": 200
+    },
+    "files": 140,
+    "chunks": 964,
+    "chunkSize": 2200,
+    "overlap": 200,
+    "maxChunks": 1400,
+    "contextBudget": 12000,
+    "preparationMs": 42629.106917000005,
+    "requests": 127,
+    "embeddedCharacters": 2016619,
+    "cacheBytes": 15691001,
+    "cacheError": null,
+    "memory": {
+      "rss": 369623040,
+      "heapTotal": 243286016,
+      "heapUsed": 163919656,
+      "external": 4187766,
+      "arrayBuffers": 321309
+    },
+    "apiSpend": 0,
+    "selectedOnDevelopment": "hybrid-0.5",
+    "results": [
+      {
+        "name": "lexical",
+        "developmentRecall": 0.625,
+        "heldOutRecall": 0.7916666666666666,
+        "recallAt10": 0.6916666666666668,
+        "exactFound": 16
+      },
+      {
+        "name": "semantic",
+        "developmentRecall": 0.6111111111111112,
+        "heldOutRecall": 0.7291666666666665,
+        "recallAt10": 0.6583333333333334,
+        "exactFound": 9
+      },
+      {
+        "name": "hybrid-0.25",
+        "developmentRecall": 0.6527777777777778,
+        "heldOutRecall": 0.7916666666666666,
+        "recallAt10": 0.7083333333333334,
+        "exactFound": 16
+      },
+      {
+        "name": "hybrid-0.5",
+        "developmentRecall": 0.7222222222222223,
+        "heldOutRecall": 0.8125,
+        "recallAt10": 0.7583333333333334,
+        "exactFound": 16
+      },
+      {
+        "name": "hybrid-0.75",
+        "developmentRecall": 0.7083333333333334,
+        "heldOutRecall": 0.7708333333333333,
+        "recallAt10": 0.7333333333333333,
+        "exactFound": 16
+      }
+    ],
+    "enabledByDefault": false,
+    "decision": "Keep disabled. Recall targets are still missed; task non-regression and independent held-out evidence are absent.",
+    "limitation": "The original 40-query held-out set is exposed. Chunk candidates use full pinned source, unlike the earlier leading-excerpt configuration."
+  },
+  "authorizationEvidence": {
+    "measurement": "Completed parent calls are matched to observed permission records. Missing or unfinished trace evidence stays unknown.",
+    "crosscheck": [
+      {
+        "name": "edit-and-check",
+        "outcome": "complete",
+        "evidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 18,
+          "completedCalls": 18,
+          "successfulCalls": 18,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      },
+      {
+        "name": "flask-task-b",
+        "outcome": "timed-out",
+        "evidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 32,
+          "completedCalls": 32,
+          "successfulCalls": 27,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      }
+    ]
+  },
+  "localGptOssProfile": {
+    "model": "local-upgrade-gpt-oss/main",
+    "qualified": false,
+    "apiSpend": 0,
+    "attempts": [
+      {
+        "name": "edit-and-check",
+        "outcome": "complete",
+        "seconds": 18,
+        "wallMs": 17940,
+        "tokens": 11492,
+        "toolCalls": 3,
+        "firstStagedDraftMs": 8381.380126953125,
+        "firstReviewPatchMs": 13090,
+        "authorizationEvidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 3,
+          "completedCalls": 3,
+          "successfulCalls": 3,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      },
+      {
+        "name": "flask-task-b",
+        "outcome": "failed",
+        "seconds": 617,
+        "wallMs": 616528,
+        "tokens": 344551,
+        "toolCalls": 29,
+        "firstStagedDraftMs": 97592.10205078125,
+        "firstReviewPatchMs": 594946,
+        "authorizationEvidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 29,
+          "completedCalls": 29,
+          "successfulCalls": 28,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      }
+    ]
+  },
+  "environment": {
+    "lmStudioVersion": "0.4.28+2",
+    "editorVersion": "1.146.0",
+    "editorUse": "Native search binary only; coding uses a host fixture, not interactive editor UI acceptance."
+  },
+  "coreQualification": {
+    "qualified": false,
+    "thresholds": {
+      "complete": 51,
+      "heldOutComplete": 20,
+      "flaskComplete": 3,
+      "recallAt10": 0.9,
+      "heldOutRecallAt10": 0.85,
+      "exactSuccessRate": 0.95
+    },
+    "observed": {
+      "attempts": 2,
+      "complete": 1,
+      "heldOutComplete": 0,
+      "flaskComplete": 0,
+      "recallAt10": 0.6916666666666668,
+      "heldOutRecallAt10": 0.7916666666666666,
+      "exactSuccessRate": 1
+    },
+    "issues": [
+      "full-20-task-three-repetition-batch-required",
+      "complete-task-target-missed",
+      "held-out-task-target-missed",
+      "all-three-flask-attempts-must-pass",
+      "retrieval-recall-target-missed",
+      "held-out-retrieval-target-missed"
+    ]
+  },
+  "localGptOssVerificationFollowup": {
+    "model": "local-upgrade-gpt-oss/main",
+    "modelConfiguration": {
+      "model": "local-upgrade-gpt-oss/main",
+      "modelId": "agentextension-upgrade-gpt-oss",
+      "properties": {
+        "contextLength": 32768,
+        "maxOutputTokens": 2600
+      },
+      "compaction": false,
+      "turnTimeoutSeconds": 600,
+      "workerTimeoutSeconds": 180,
+      "fallbackModel": "",
+      "temperature": null,
+      "determinism": "Provider defaults; temperature was not exposed by this setup.",
+      "localOnly": true
+    },
+    "qualified": false,
+    "apiSpend": 0,
+    "attempts": [
+      {
+        "name": "edit-and-check",
+        "outcome": "complete",
+        "seconds": 20,
+        "reason": "",
+        "tokens": 11446,
+        "toolCalls": 3,
+        "modelCalls": 4,
+        "firstStagedDraftMs": 9246.34375,
+        "firstReviewPatchMs": 12585,
+        "implementationDigest": "bf9fc69c1741019fcb3633725d21d5a30d78d6ac737473130cfed76a4b847932",
+        "evaluationDigest": "11a996a2f9287c203983b481e0809c21721ce489df46d4864fee49d5f9c2372b",
+        "authorizationEvidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 3,
+          "completedCalls": 3,
+          "successfulCalls": 3,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      },
+      {
+        "name": "flask-task-b",
+        "outcome": "incomplete",
+        "seconds": 35,
+        "reason": "",
+        "tokens": 33088,
+        "toolCalls": 4,
+        "modelCalls": 5,
+        "implementationDigest": "bf9fc69c1741019fcb3633725d21d5a30d78d6ac737473130cfed76a4b847932",
+        "evaluationDigest": "11a996a2f9287c203983b481e0809c21721ce489df46d4864fee49d5f9c2372b",
+        "authorizationEvidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 4,
+          "completedCalls": 4,
+          "successfulCalls": 4,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      }
+    ]
+  },
+  "localGptOssPreviewRecovery": {
+    "model": "local-upgrade-gpt-oss/main",
+    "modelConfiguration": {
+      "model": "local-upgrade-gpt-oss/main",
+      "modelId": "agentextension-upgrade-gpt-oss",
+      "properties": {
+        "contextLength": 32768,
+        "maxOutputTokens": 2600
+      },
+      "compaction": false,
+      "turnTimeoutSeconds": 600,
+      "workerTimeoutSeconds": 180,
+      "fallbackModel": "",
+      "temperature": null,
+      "determinism": "Provider defaults; temperature was not exposed by this setup.",
+      "localOnly": true
+    },
+    "qualified": false,
+    "apiSpend": 0,
+    "attempts": [
+      {
+        "name": "flask-task-b",
+        "outcome": "incomplete",
+        "seconds": 396,
+        "reason": "token limit of 400,000",
+        "tokens": 516424,
+        "toolCalls": 25,
+        "modelCalls": 34,
+        "firstStagedDraftMs": 108676.81420898438,
+        "implementationDigest": "76a11f970e8cf7a7960e6b7f44f0604649dd2c398a238e3063ba25e3d60bb870",
+        "evaluationDigest": "79403ccb4682441e764cfb44070e590b729a7486f78edd2fd69f08add92b3aa1",
+        "authorizationEvidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 30,
+          "completedCalls": 30,
+          "successfulCalls": 24,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      }
+    ]
+  },
+  "categoryAllocationExperiment": {
+    "configuration": {
+      "slots": [
+        3,
+        3,
+        4
+      ],
+      "selectedOn": "development only; selected before this exposed held-out regression comparison"
+    },
+    "enabledInRuntime": false,
+    "recallAt10": 0.7916666666666667,
+    "developmentRecall": 0.8055555555555557,
+    "heldOutRecall": 0.7708333333333333,
+    "exactFound": 16,
+    "exactCount": 16,
+    "decision": "Keep disabled; exposed held-out recall regressed and both recall targets remain missed.",
+    "limitation": "Candidate selection only. Original held-out labels are exposed; four development judgments need source review. No task or packing claim."
+  },
+  "retrievalLabelReview": {
+    "scope": "Four development judgments reviewed against pinned source; full review pending.",
+    "frozenLabelsChanged": false,
+    "frozenTargetsChanged": false,
+    "independentHeldOut": false,
+    "requiredNextEvidence": "Cited source assertions for every relevance judgment in a new corpus version, then a new independent held-out set."
+  },
+  "localGptOssCompaction": {
+    "model": "local-upgrade-gpt-oss/main",
+    "modelConfiguration": {
+      "model": "local-upgrade-gpt-oss/main",
+      "modelId": "agentextension-upgrade-gpt-oss",
+      "properties": {
+        "contextLength": 32768,
+        "maxOutputTokens": 2600
+      },
+      "compaction": true,
+      "turnTimeoutSeconds": 600,
+      "workerTimeoutSeconds": 180,
+      "fallbackModel": "",
+      "temperature": null,
+      "determinism": "Provider defaults; temperature was not exposed by this setup.",
+      "localOnly": true
+    },
+    "qualified": false,
+    "apiSpend": 0,
+    "attempts": [
+      {
+        "name": "edit-and-check",
+        "outcome": "complete",
+        "seconds": 27,
+        "tokens": 12121,
+        "toolCalls": 3,
+        "modelCalls": 4,
+        "compactions": [],
+        "executionSettings": {
+          "compaction": true,
+          "turnTimeoutSeconds": 600,
+          "workerTimeoutSeconds": 180,
+          "fallbackModel": ""
+        },
+        "implementationDigest": "76a11f970e8cf7a7960e6b7f44f0604649dd2c398a238e3063ba25e3d60bb870",
+        "evaluationDigest": "e7e6aaee0cce123e5e409413b2dc0f229baa23510a62834f1c3f905634026c03",
+        "authorizationEvidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 3,
+          "completedCalls": 3,
+          "successfulCalls": 3,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      },
+      {
+        "name": "flask-task-b",
+        "outcome": "incomplete",
+        "seconds": 354,
+        "tokens": 279127,
+        "toolCalls": 25,
+        "modelCalls": 27,
+        "compactions": [],
+        "executionSettings": {
+          "compaction": true,
+          "turnTimeoutSeconds": 600,
+          "workerTimeoutSeconds": 180,
+          "fallbackModel": ""
+        },
+        "implementationDigest": "76a11f970e8cf7a7960e6b7f44f0604649dd2c398a238e3063ba25e3d60bb870",
+        "evaluationDigest": "e7e6aaee0cce123e5e409413b2dc0f229baa23510a62834f1c3f905634026c03",
+        "authorizationEvidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 25,
+          "completedCalls": 25,
+          "successfulCalls": 25,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      }
+    ],
+    "limitation": "No compaction event occurred. The Flask response promised future edits but staged no changes. This run does not demonstrate model quality after compaction.",
+    "contextObservation": {
+      "source": "Public local session API; all 27 completed model messages",
+      "maxObservedInputTokens": 16408,
+      "compactions": 0,
+      "limitation": "Observed input size does not identify the cause of the task failure."
+    },
+    "qualification": {
+      "qualified": false,
+      "thresholds": {
+        "complete": 51,
+        "heldOutComplete": 20,
+        "flaskComplete": 3,
+        "recallAt10": 0.9,
+        "heldOutRecallAt10": 0.85,
+        "exactSuccessRate": 0.95
+      },
+      "observed": {
+        "attempts": 2,
+        "complete": 1,
+        "heldOutComplete": 0,
+        "flaskComplete": 0,
+        "recallAt10": 0.6916666666666668,
+        "heldOutRecallAt10": 0.7916666666666666,
+        "exactSuccessRate": 1
+      },
+      "issues": [
+        "full-20-task-three-repetition-batch-required",
+        "complete-task-target-missed",
+        "held-out-task-target-missed",
+        "all-three-flask-attempts-must-pass",
+        "retrieval-recall-target-missed",
+        "held-out-retrieval-target-missed"
+      ]
+    }
+  },
+  "localGptOssPrematureFinish": {
+    "model": "local-upgrade-gpt-oss/main",
+    "modelConfiguration": {
+      "model": "local-upgrade-gpt-oss/main",
+      "modelId": "agentextension-upgrade-gpt-oss",
+      "properties": {
+        "contextLength": 32768,
+        "maxOutputTokens": 2600
+      },
+      "compaction": true,
+      "turnTimeoutSeconds": 600,
+      "workerTimeoutSeconds": 180,
+      "fallbackModel": "",
+      "temperature": null,
+      "determinism": "Provider defaults; temperature was not exposed by this setup.",
+      "localOnly": true
+    },
+    "qualified": false,
+    "apiSpend": 0,
+    "attempts": [
+      {
+        "name": "edit-and-check",
+        "outcome": "complete",
+        "seconds": 22,
+        "reason": "",
+        "tokens": 11951,
+        "modelCalls": 4,
+        "toolCalls": 3,
+        "compactions": [],
+        "executionSettings": {
+          "compaction": true,
+          "turnTimeoutSeconds": 600,
+          "workerTimeoutSeconds": 180,
+          "fallbackModel": ""
+        },
+        "implementationDigest": "678d1c31a61a948e604b1790ef6fb6ea1b0dcaad8012f863539f7ca67895eb3f",
+        "evaluationDigest": "abddf473b523df79c93a269d40dc42d56849d1e342cf497ea3b7d5eae92d1762",
+        "firstStagedDraftMs": 11099.4599609375,
+        "firstReviewPatchMs": 17087,
+        "files": [
+          "calc.js"
+        ],
+        "verification": {
+          "status": "complete",
+          "applied": true,
+          "checks": [
+            {
+              "name": "Arithmetic behavior and unchanged subtraction",
+              "exitCode": 0,
+              "ok": true
+            },
+            {
+              "name": "Project tests",
+              "exitCode": 0,
+              "ok": true
+            }
+          ]
+        },
+        "authorizationEvidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 3,
+          "completedCalls": 3,
+          "successfulCalls": 3,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      },
+      {
+        "name": "flask-task-b",
+        "outcome": "failed",
+        "seconds": 635,
+        "reason": "token limit of 400,000",
+        "tokens": 499063,
+        "modelCalls": 34,
+        "toolCalls": 30,
+        "compactions": [],
+        "executionSettings": {
+          "compaction": true,
+          "turnTimeoutSeconds": 600,
+          "workerTimeoutSeconds": 180,
+          "fallbackModel": ""
+        },
+        "implementationDigest": "678d1c31a61a948e604b1790ef6fb6ea1b0dcaad8012f863539f7ca67895eb3f",
+        "evaluationDigest": "abddf473b523df79c93a269d40dc42d56849d1e342cf497ea3b7d5eae92d1762",
+        "firstStagedDraftMs": 341928.92138671875,
+        "firstReviewPatchMs": 602574,
+        "files": [
+          "src/flask/cli.py"
+        ],
+        "verification": {
+          "status": "failed",
+          "applied": true,
+          "checks": [
+            {
+              "name": "Flask CLI regression tests",
+              "exitCode": 4,
+              "ok": false
+            },
+            {
+              "name": "Flask config behavior and help",
+              "exitCode": 1,
+              "ok": false
+            }
+          ]
+        },
+        "authorizationEvidence": {
+          "version": 1,
+          "scope": "Completed parent tool calls matched to observed host permission records",
+          "complete": true,
+          "observedRequests": 32,
+          "completedCalls": 32,
+          "successfulCalls": 30,
+          "unmatchedSuccessfulCalls": [],
+          "unapprovedActions": 0
+        }
+      }
+    ],
+    "limitation": "The full regression suite overlapped the smoke. Timings do not isolate the effect of the source change. No live compaction event occurred. The bounded promise continuation was not exercised by these model responses."
+  },
+  "latestCoreQualification": {
+    "qualified": false,
+    "source": "test-results/upgrade-coder-command-source/qualification.json",
+    "retrievalVersion": "agent-capability-upgrade/retrieval/2",
+    "sourceJudgmentsReady": true,
+    "attempts": 2,
+    "complete": 1,
+    "flaskComplete": 0,
+    "freshHeldOutEvaluated": false,
+    "issues": [
+      "full-20-task-three-repetition-batch-required",
+      "complete-task-target-missed",
+      "held-out-task-target-missed",
+      "all-three-flask-attempts-must-pass",
+      "full-frozen-retrieval-set-required",
+      "retrieval-recall-target-missed",
+      "held-out-retrieval-target-missed",
+      "exact-retrieval-target-missed"
+    ],
+    "limitation": "Partial coding and development-only retrieval batch. No measured fresh held-out or overall score."
+  },
+  "retrievalJudgmentAudit": {
+    "version": "retrieval-judgment-audit/1",
+    "sourceRevision": "5c5fe676a444d51a5163c89abdb39dec0860817e",
+    "inputDigest": "e0fb47d71bffbb8c3bfbf699f46daf69667304ed5277845855751b5057d05b36",
+    "labelsDigest": "ef8e775650abb77626abe990468d6efe40e63de03e8ffe2fd931c3f4f777113a",
+    "judgments": 120,
+    "citedSources": 56,
+    "decisions": {
+      "retain": 114,
+      "replace-proposed": 5,
+      "coverage-gap": 1
+    },
+    "valid": true,
+    "readyForRevisedCorpus": false,
+    "pending": [
+      {
+        "query": "query-01",
+        "category": "test",
+        "decision": "replace-proposed",
+        "originalFiles": [
+          "test/core.test.js"
+        ],
+        "proposedFiles": [
+          "test/live.test.js"
+        ],
+        "reason": "The core test file checks draft operations but never calls propose_lines. This runtime fixture calls the tool and asserts range, newline, anchor, and stale-receipt rejection."
+      },
+      {
+        "query": "query-04",
+        "category": "test",
+        "decision": "replace-proposed",
+        "originalFiles": [
+          "test/core.test.js"
+        ],
+        "proposedFiles": [
+          "test/instructions.test.js"
+        ],
+        "reason": "The core test file never constructs ContextManifest. This fixture constructs it and asserts trust labels, character totals, and token estimates."
+      },
+      {
+        "query": "query-09",
+        "category": "test",
+        "decision": "replace-proposed",
+        "originalFiles": [
+          "test/core.test.js"
+        ],
+        "proposedFiles": [
+          "test/vscode.cjs"
+        ],
+        "reason": "The core test file never creates a draft file. The native fixture creates one, asserts it is absent before apply, and checks its contents after apply. This tests the underlying creation flow rather than the bridge call itself."
+      },
+      {
+        "query": "query-18",
+        "category": "test",
+        "decision": "replace-proposed",
+        "originalFiles": [
+          "test/hardening.test.js"
+        ],
+        "proposedFiles": [
+          "test/vscode.cjs"
+        ],
+        "reason": "The hardening file tests isolation rather than applyWorkspaceChanges. The native fixture calls that function with a mismatching source and expects changed-since-review rejection."
+      },
+      {
+        "query": "query-20",
+        "category": "test",
+        "decision": "coverage-gap",
+        "originalFiles": [
+          "test/hardening.test.js"
+        ],
+        "reason": "This fixture creates an active AbortSignal and tests isolation. It never aborts a running workspace command or asserts removal of that command copy. No direct cancellation-and-cleanup assertion was found in the pinned test tree. A new corpus must record this coverage gap instead of inventing a positive test path."
+      },
+      {
+        "query": "query-21",
+        "category": "test",
+        "decision": "replace-proposed",
+        "originalFiles": [
+          "test/permissions.test.js"
+        ],
+        "proposedFiles": [
+          "test/hardening.test.js"
+        ],
+        "reason": "The permissions test file checks grants rather than network isolation. This fixture runs isolated curl and asserts a nonzero exit."
+      }
+    ],
+    "frozenLabelsChanged": false,
+    "frozenTargetsChanged": false,
+    "originalHeldOutExposed": true,
+    "currentCodeCancellationTestNotInPinnedTree": true,
+    "limitation": "Hash validation checks pinned text and citation coverage. It does not prove semantic relevance, feature correctness, or independent held-out quality. Frozen labels and scores stay unchanged."
+  },
+  "phase2RetrievalDataStatus": {
+    "state": "completed",
+    "version": "agent-capability-upgrade/retrieval/2",
+    "sourceVersion": "git-overlay/1:4bb46d0c9ce2b5ea5fc54a30c3e58f33097eb8f8fd8a53667a6888ec1a27a7a4",
+    "inputDigest": "f5295ef17c74321845461253a8f3c8c256d7c92266f0cf3bc7768e72ac93b849",
+    "corrections": 5,
+    "coverageGapsResolved": 1,
+    "judgmentsValidated": 120,
+    "judgmentsPending": 0,
+    "sourceFiles": 141,
+    "developmentQueries": 24,
+    "freshHeldOutQueries": 16,
+    "heldOutEvaluated": false,
+    "reviewLimitation": "Source review by the same implementer; fresh queries were frozen before evaluation and kept out of development selection. External independent comparison remains open."
+  },
+  "retrievalVersion2": {
+    "state": "completed",
+    "version": "agent-capability-upgrade/retrieval/2",
+    "sourceVersion": "git-overlay/1:4bb46d0c9ce2b5ea5fc54a30c3e58f33097eb8f8fd8a53667a6888ec1a27a7a4",
+    "inputDigest": "f5295ef17c74321845461253a8f3c8c256d7c92266f0cf3bc7768e72ac93b849",
+    "corrections": 5,
+    "coverageGapsResolved": 1,
+    "judgmentsValidated": 120,
+    "judgmentsPending": 0,
+    "sourceFiles": 141,
+    "developmentQueries": 24,
+    "freshHeldOutQueries": 16,
+    "heldOutEvaluated": false,
+    "reviewLimitation": "Source review by the same implementer; fresh queries were frozen before evaluation and kept out of development selection. External independent comparison remains open.",
+    "recordedAt": "2026-11-22T13:11:33.277Z",
+    "developmentRecallAt10": 0.6805555555555557,
+    "exactDevelopmentIdentifiers": {
+      "passed": 16,
+      "total": 16
+    },
+    "overallRecallAt10": null,
+    "heldOutRecallAt10": null,
+    "implementationDigest": "61ff5424671ac656a58ee76ee484dc5f195b8b2f8920234bcb2833d373ffe45a",
+    "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6",
+    "sourceManifest": "test/retrieval/corpora/v2/source.json",
+    "freezeRecord": "test/retrieval/corpora/v2/freeze.json",
+    "historicalVersion1Unchanged": true
+  },
+  "retrievalVersion2DevelopmentExperiment": {
+    "enabledInRuntime": false,
+    "split": "development",
+    "heldOutEvaluated": false,
+    "bestRecallAt10": 0.8472222222222223,
+    "allocations": [
+      [
+        1,
+        5,
+        4
+      ],
+      [
+        2,
+        4,
+        4
+      ]
+    ],
+    "limitation": "File candidates only; packing and task nonregression not established. Not an overall score."
+  },
+  "retrievalVersion2DependencyExperiment": {
+    "enabledInRuntime": false,
+    "split": "development",
+    "heldOutEvaluated": false,
+    "method": "Within-category inverse-degree incoming dependency support; fixed 2/4/4 slots",
+    "settings": 18,
+    "baselineRecallAt10": 0.8472222222222223,
+    "bestRecallAt10": 0.8472222222222223,
+    "decision": "Rejected; no improvement over category-only candidates. Larger weights reduce development recall."
+  },
+  "localGptOssLineArrays": {
+    "variant": "compaction enabled with literal line-array edits",
+    "model": "local-upgrade-gpt-oss/main",
+    "apiSpend": 0,
+    "qualification": "not qualified",
+    "implementationDigest": "61ff5424671ac656a58ee76ee484dc5f195b8b2f8920234bcb2833d373ffe45a",
+    "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6",
+    "attempts": [
+      {
+        "task": "edit-and-check",
+        "outcome": "complete",
+        "wallMs": 20509,
+        "seconds": 21,
+        "tokens": 12219,
+        "hostToolCalls": 3,
+        "modelCalls": 4,
+        "changedFiles": [
+          "calc.js"
+        ],
+        "agentChecks": 1,
+        "compactions": 0,
+        "independentVerification": "complete",
+        "authorizationEvidence": {
+          "complete": true,
+          "completedCalls": 3,
+          "unapprovedActions": 0
+        },
+        "verificationContinuation": 0
+      },
+      {
+        "task": "flask-task-b",
+        "outcome": "failed",
+        "wallMs": 436559,
+        "seconds": 437,
+        "tokens": 286615,
+        "hostToolCalls": 24,
+        "modelCalls": 27,
+        "changedFiles": [
+          "src/flask/cli.py"
+        ],
+        "agentChecks": 0,
+        "compactions": 0,
+        "independentVerification": "failed",
+        "authorizationEvidence": {
+          "complete": true,
+          "completedCalls": 24,
+          "unapprovedActions": 0
+        },
+        "verificationContinuation": 1
+      }
+    ],
+    "publicToolFormatObservations": [
+      {
+        "task": "edit-and-check",
+        "modelMessages": 4,
+        "tools": {
+          "review_changes": 1,
+          "run_command": 1,
+          "propose_write": 1
+        },
+        "lineFormats": {
+          "new_lines": 0,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "acceptedLineFormats": [],
+        "compactions": 0,
+        "maxInputTokens": 3223
+      },
+      {
+        "task": "flask-task-b",
+        "modelMessages": 27,
+        "tools": {
+          "review_changes": 1,
+          "read_file": 8,
+          "search_workspace": 13,
+          "propose_lines": 1,
+          "read_files": 1
+        },
+        "lineFormats": {
+          "new_lines": 1,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "acceptedLineFormats": [
+          {
+            "inputFormat": "new_lines",
+            "staged": true
+          }
+        ],
+        "compactions": 0,
+        "maxInputTokens": 16327
+      }
+    ],
+    "failure": "Flask changed only src/flask/cli.py. Independent checks found IndentationError at line 607. Tests, documentation, and an agent check were absent.",
+    "limitation": "One smoke repetition per task; no full corpus or completion-rate claim. The full regression suite finished before these trials."
+  },
+  "previousJudgmentAuditQualification": {
+    "batch": "upgrade-gpt-oss-promised-work",
+    "evaluation": "Rechecked historical batch with source-judgment readiness gate; original result files preserved.",
+    "qualified": false,
+    "thresholds": {
+      "complete": 51,
+      "heldOutComplete": 20,
+      "flaskComplete": 3,
+      "recallAt10": 0.9,
+      "heldOutRecallAt10": 0.85,
+      "exactSuccessRate": 0.95
+    },
+    "judgmentAudit": {
+      "valid": true,
+      "readyForRevisedCorpus": false,
+      "judgments": 120,
+      "expectedJudgments": 120,
+      "citedSources": 56,
+      "decisions": {
+        "retain": 114,
+        "replace-proposed": 5,
+        "coverage-gap": 1
+      },
+      "issues": [],
+      "pending": [
+        {
+          "query": "query-01",
+          "category": "test",
+          "decision": "replace-proposed",
+          "originalFiles": [
+            "test/core.test.js"
+          ],
+          "proposedFiles": [
+            "test/live.test.js"
+          ],
+          "reason": "The core test file checks draft operations but never calls propose_lines. This runtime fixture calls the tool and asserts range, newline, anchor, and stale-receipt rejection."
+        },
+        {
+          "query": "query-04",
+          "category": "test",
+          "decision": "replace-proposed",
+          "originalFiles": [
+            "test/core.test.js"
+          ],
+          "proposedFiles": [
+            "test/instructions.test.js"
+          ],
+          "reason": "The core test file never constructs ContextManifest. This fixture constructs it and asserts trust labels, character totals, and token estimates."
+        },
+        {
+          "query": "query-09",
+          "category": "test",
+          "decision": "replace-proposed",
+          "originalFiles": [
+            "test/core.test.js"
+          ],
+          "proposedFiles": [
+            "test/vscode.cjs"
+          ],
+          "reason": "The core test file never creates a draft file. The native fixture creates one, asserts it is absent before apply, and checks its contents after apply. This tests the underlying creation flow rather than the bridge call itself."
+        },
+        {
+          "query": "query-18",
+          "category": "test",
+          "decision": "replace-proposed",
+          "originalFiles": [
+            "test/hardening.test.js"
+          ],
+          "proposedFiles": [
+            "test/vscode.cjs"
+          ],
+          "reason": "The hardening file tests isolation rather than applyWorkspaceChanges. The native fixture calls that function with a mismatching source and expects changed-since-review rejection."
+        },
+        {
+          "query": "query-20",
+          "category": "test",
+          "decision": "coverage-gap",
+          "originalFiles": [
+            "test/hardening.test.js"
+          ],
+          "reason": "This fixture creates an active AbortSignal and tests isolation. It never aborts a running workspace command or asserts removal of that command copy. No direct cancellation-and-cleanup assertion was found in the pinned test tree. A new corpus must record this coverage gap instead of inventing a positive test path."
+        },
+        {
+          "query": "query-21",
+          "category": "test",
+          "decision": "replace-proposed",
+          "originalFiles": [
+            "test/permissions.test.js"
+          ],
+          "proposedFiles": [
+            "test/hardening.test.js"
+          ],
+          "reason": "The permissions test file checks grants rather than network isolation. This fixture runs isolated curl and asserts a nonzero exit."
+        }
+      ],
+      "limitation": "Hash validation checks pinned text and citation coverage. It does not prove semantic relevance, feature correctness, or independent held-out quality. Frozen labels and scores stay unchanged."
+    },
+    "observed": {
+      "attempts": 2,
+      "complete": 1,
+      "heldOutComplete": 0,
+      "flaskComplete": 0,
+      "recallAt10": 0.6916666666666668,
+      "heldOutRecallAt10": 0.7916666666666666,
+      "exactSuccessRate": 1
+    },
+    "issues": [
+      "retrieval-label-review-pending",
+      "full-20-task-three-repetition-batch-required",
+      "complete-task-target-missed",
+      "held-out-task-target-missed",
+      "all-three-flask-attempts-must-pass",
+      "retrieval-recall-target-missed",
+      "held-out-retrieval-target-missed"
+    ]
+  },
+  "anchorInsertion": {
+    "enabledInRuntime": true,
+    "sourceEvidence": "Previous Flask draft inserted one registration at line 606, inside an if/else boundary.",
+    "causeLimit": "The draft does not prove whether the model miscounted or chose the wrong location.",
+    "behavior": "insert_after requires an exact source anchor and zero deletion. A repeated anchor requires its matching source line. Scope, receipts, line endings, and review limits remain enforced."
+  },
+  "freshKeywordOrdering": {
+    "enabledInRuntime": true,
+    "reproduction": {
+      "query": "approval request",
+      "weakerFile": "a.txt",
+      "strongerFile": "z.txt",
+      "beforeFirst": "a.txt"
+    },
+    "behavior": "Preserve keyword relevance through fresh-source collection and pagination. Exact modes keep source-location order. Scores stay internal.",
+    "limitation": "The previous Flask smoke used literal search; this defect is separate. This change does not alter the frozen candidate-ranker Recall@10."
+  },
+  "retrievalVersion2Current": {
+    "version": "agent-capability-upgrade/retrieval/2",
+    "sourceRevision": "5c5fe676a444d51a5163c89abdb39dec0860817e",
+    "sourceVersion": "git-overlay/1:4bb46d0c9ce2b5ea5fc54a30c3e58f33097eb8f8fd8a53667a6888ec1a27a7a4",
+    "inputDigest": "f5295ef17c74321845461253a8f3c8c256d7c92266f0cf3bc7768e72ac93b849",
+    "split": "development",
+    "heldOutEvaluated": false,
+    "recordedAt": "2026-11-22T15:16:03.279Z",
+    "implementationDigest": "92361f0925d22f7616938e20ce9d87c68727a87649751afbb065700d1ec33289",
+    "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6",
+    "files": 141,
+    "sourceCharacters": 1815577,
+    "recallAt10": 0.6805555555555557,
+    "heldOutRecallAt10": null,
+    "exactSuccessRate": 1
+  },
+  "retrievalVersion2DescriptionExperiment": {
+    "enabledInRuntime": false,
+    "split": "development",
+    "heldOutEvaluated": false,
+    "expandedQueries": 9,
+    "settings": 15,
+    "method": "Bounded source tool-description expansion; within-category fusion; fixed 2/4/4 slots.",
+    "baselineRecallAt10": 0.8472222222222223,
+    "bestRecallAt10": 0.8472222222222223,
+    "decision": "Rejected; no measured improvement."
+  },
+  "localGptOssAnchorKeyword": {
+    "model": "local-upgrade-gpt-oss/main",
+    "variant": "compaction enabled with exact after-anchor insertion and corrected keyword order",
+    "apiSpend": 0,
+    "qualification": "not qualified",
+    "implementationDigest": "c1e0fd42f39114299038c431c5b8a4ba20497760703f5e1b3f7873215dbe37bf",
+    "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6",
+    "attempts": [
+      {
+        "task": "edit-and-check",
+        "outcome": "complete",
+        "wallMs": 23992,
+        "seconds": 24,
+        "tokens": 15571,
+        "hostToolCalls": 3,
+        "modelCalls": 5,
+        "changedFiles": [
+          "calc.js"
+        ],
+        "agentChecks": 1,
+        "compactions": 0,
+        "independentVerification": "complete",
+        "authorizationEvidence": {
+          "complete": true,
+          "completedCalls": 3,
+          "unapprovedActions": 0
+        }
+      },
+      {
+        "task": "flask-task-b",
+        "outcome": "incomplete",
+        "wallMs": 303564,
+        "seconds": 304,
+        "tokens": 264739,
+        "hostToolCalls": 18,
+        "modelCalls": 22,
+        "changedFiles": [],
+        "agentChecks": 0,
+        "compactions": 0,
+        "independentVerification": "not run",
+        "authorizationEvidence": {
+          "complete": true,
+          "completedCalls": 18,
+          "unapprovedActions": 0
+        }
+      }
+    ],
+    "publicToolFormatObservations": [
+      {
+        "task": "edit-and-check",
+        "modelMessages": 5,
+        "tools": {
+          "review_changes": 1,
+          "run_command": 1,
+          "propose_write": 1,
+          "list_tools": 1
+        },
+        "searchModes": {},
+        "lineFormats": {
+          "new_lines": 0,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "lineAddresses": {
+          "anchor": 0,
+          "numeric": 0,
+          "after": 0
+        },
+        "acceptedLineEdits": [],
+        "compactions": 0,
+        "maxInputTokens": 3313
+      },
+      {
+        "task": "flask-task-b",
+        "modelMessages": 22,
+        "tools": {
+          "propose_lines": 7,
+          "search_workspace": 4,
+          "read_file": 9,
+          "list_tools": 1
+        },
+        "searchModes": {
+          "keywords": 4
+        },
+        "lineFormats": {
+          "new_lines": 7,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "lineAddresses": {
+          "anchor": 6,
+          "numeric": 1,
+          "after": 7
+        },
+        "acceptedLineEdits": [],
+        "compactions": 0,
+        "maxInputTokens": 15650
+      }
+    ],
+    "limitation": "No completion-quality gain established. The full suite finished before these trials; a short development retrieval experiment ran during the batch."
+  },
+  "sourceAnchorSuggestions": {
+    "enabledInRuntime": true,
+    "maxCandidates": 3,
+    "maxLineCharacters": 240,
+    "sourceScope": "Existing receipt only",
+    "automaticFuzzyEdit": false,
+    "behavior": "Rejected source anchors return complete source lines as data. A new exact-source proposal remains required."
+  },
+  "previousLineArrayQualification": {
+    "qualified": false,
+    "source": "test-results/upgrade-gpt-oss-line-arrays/qualification.json",
+    "retrievalVersion": "agent-capability-upgrade/retrieval/2",
+    "sourceJudgmentsReady": true,
+    "attempts": 2,
+    "complete": 1,
+    "flaskComplete": 0,
+    "freshHeldOutEvaluated": false,
+    "issues": [
+      "full-20-task-three-repetition-batch-required",
+      "complete-task-target-missed",
+      "held-out-task-target-missed",
+      "all-three-flask-attempts-must-pass",
+      "full-frozen-retrieval-set-required",
+      "retrieval-recall-target-missed",
+      "held-out-retrieval-target-missed",
+      "exact-retrieval-target-missed"
+    ],
+    "limitation": "Incomplete coding and retrieval batches. Missing query rows cannot supply measured overall or held-out metrics."
+  },
+  "replyLimitDiagnosis": {
+    "scope": "Public model-message metadata for the two completed GPT-OSS Flask batches before source hints.",
+    "declaredOutputLimit": 2600,
+    "batches": [
+      {
+        "variant": "literal line arrays",
+        "modelMessages": 27,
+        "maxOutputTokens": 1198,
+        "messagesAtLimit": 0,
+        "lengthFinishReasons": 0
+      },
+      {
+        "variant": "after-anchor and keyword order",
+        "modelMessages": 22,
+        "maxOutputTokens": 596,
+        "messagesAtLimit": 0,
+        "lengthFinishReasons": 0
+      }
+    ],
+    "decision": "These batches do not support increasing the reply limit as a remedy. Keep the recorded profile settings."
+  },
+  "localGptOssAnchorHints": {
+    "model": "local-upgrade-gpt-oss/main",
+    "variant": "compaction enabled with bounded source-anchor suggestions",
+    "apiSpend": 0,
+    "qualification": "not qualified",
+    "implementationDigest": "fe92e42d9ce83072ba64905366058ab0d282c0c125e0f6e9e901cb60fb11facb",
+    "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6",
+    "attempts": [
+      {
+        "task": "edit-and-check",
+        "outcome": "complete",
+        "wallMs": 24519,
+        "seconds": 25,
+        "tokens": 12774,
+        "hostToolCalls": 3,
+        "modelCalls": 4,
+        "changedFiles": [
+          "calc.js"
+        ],
+        "agentChecks": 1,
+        "compactions": 0,
+        "independentVerification": "complete",
+        "retries": 0,
+        "deadlineOverrunMs": 0,
+        "checkpointFiles": [],
+        "authorizationEvidence": {
+          "complete": true,
+          "completedCalls": 3,
+          "unapprovedActions": 0
+        }
+      },
+      {
+        "task": "flask-task-b",
+        "outcome": "timed-out",
+        "wallMs": 720633,
+        "seconds": 721,
+        "tokens": 399917,
+        "hostToolCalls": 29,
+        "modelCalls": 32,
+        "changedFiles": [],
+        "agentChecks": 0,
+        "compactions": 0,
+        "independentVerification": "not run",
+        "retries": 1,
+        "deadlineOverrunMs": 90,
+        "checkpointFiles": [
+          "src/flask/cli.py"
+        ],
+        "authorizationEvidence": {
+          "complete": true,
+          "completedCalls": 29,
+          "unapprovedActions": 0
+        }
+      }
+    ],
+    "publicToolFormatObservations": [
+      {
+        "task": "edit-and-check",
+        "modelMessages": 4,
+        "tools": {
+          "review_changes": 1,
+          "run_command": 1,
+          "propose_write": 1
+        },
+        "searchModes": {},
+        "lineFormats": {
+          "new_lines": 0,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "lineAddresses": {
+          "anchor": 0,
+          "numeric": 0,
+          "after": 0
+        },
+        "acceptedLineEdits": [],
+        "anchorSuggestionResponses": 0,
+        "laterAnchorsMatchingSuggestions": 0,
+        "acceptedAfterSuggestionMatch": 0,
+        "compactions": 0,
+        "maxInputTokens": 3327,
+        "sessionRole": "initial"
+      },
+      {
+        "task": "flask-task-b",
+        "modelMessages": 25,
+        "tools": {
+          "propose_lines": 7,
+          "read_file": 10,
+          "search_workspace": 8
+        },
+        "searchModes": {
+          "keywords": 7,
+          "regex": 1
+        },
+        "lineFormats": {
+          "new_lines": 7,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "lineAddresses": {
+          "anchor": 7,
+          "numeric": 0,
+          "after": 7
+        },
+        "acceptedLineEdits": [
+          {
+            "inputFormat": "new_lines",
+            "staged": true,
+            "insertedAfterLine": 595
+          }
+        ],
+        "anchorSuggestionResponses": 0,
+        "laterAnchorsMatchingSuggestions": 0,
+        "acceptedAfterSuggestionMatch": 0,
+        "compactions": 0,
+        "maxInputTokens": 19669,
+        "sessionRole": "initial"
+      },
+      {
+        "task": "flask-task-b",
+        "modelMessages": 7,
+        "tools": {
+          "search_workspace": 5,
+          "read_files": 1
+        },
+        "searchModes": {
+          "literal": 5
+        },
+        "lineFormats": {
+          "new_lines": 0,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "lineAddresses": {
+          "anchor": 0,
+          "numeric": 0,
+          "after": 0
+        },
+        "acceptedLineEdits": [],
+        "anchorSuggestionResponses": 0,
+        "laterAnchorsMatchingSuggestions": 0,
+        "acceptedAfterSuggestionMatch": 0,
+        "compactions": 0,
+        "maxInputTokens": 7742,
+        "sessionRole": "retry"
+      }
+    ],
+    "partialDiagnostic": {
+      "scope": "Read-only AST analysis of the interrupted checkpoint; no execution or acceptance pass.",
+      "syntaxValid": true,
+      "configCommandDefinitions": 0
+    },
+    "limitation": "The first and retry Flask sessions together have 32 model messages, matching the host total. A partial checkpoint cannot qualify. Source suggestions were not exercised."
+  },
+  "previousAnchorKeywordQualification": {
+    "qualified": false,
+    "source": "test-results/upgrade-gpt-oss-anchor-keyword/qualification.json",
+    "retrievalVersion": "agent-capability-upgrade/retrieval/2",
+    "sourceJudgmentsReady": true,
+    "attempts": 2,
+    "complete": 1,
+    "flaskComplete": 0,
+    "freshHeldOutEvaluated": false,
+    "issues": [
+      "full-20-task-three-repetition-batch-required",
+      "complete-task-target-missed",
+      "held-out-task-target-missed",
+      "all-three-flask-attempts-must-pass",
+      "full-frozen-retrieval-set-required",
+      "retrieval-recall-target-missed",
+      "held-out-retrieval-target-missed",
+      "exact-retrieval-target-missed"
+    ],
+    "limitation": "Incomplete batches; no measured overall or held-out metrics."
+  },
+  "retrievalVersion2CategorySemanticExperiment": {
+    "sourceVersion": "git-overlay/1:4bb46d0c9ce2b5ea5fc54a30c3e58f33097eb8f8fd8a53667a6888ec1a27a7a4",
+    "inputDigest": "f5295ef17c74321845461253a8f3c8c256d7c92266f0cf3bc7768e72ac93b849",
+    "implementationDigest": "fe92e42d9ce83072ba64905366058ab0d282c0c125e0f6e9e901cb60fb11facb",
+    "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6",
+    "split": "development",
+    "heldOutEvaluated": false,
+    "enabledInRuntime": false,
+    "files": 141,
+    "chunks": 966,
+    "model": "agentextension-upgrade-embedding",
+    "dimension": 768,
+    "preparedMs": 44876,
+    "requests": 125,
+    "embeddedCharacters": 2019701,
+    "cacheBytes": 15723546,
+    "apiSpend": 0,
+    "packingBudgetCharacters": 12000,
+    "trials": [
+      {
+        "weight": 0,
+        "recipe": "identifier-adaptive",
+        "recallAt10": 0.8611111111111112,
+        "packedRecall": 0.625,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.25,
+        "recipe": "identifier-adaptive",
+        "recallAt10": 0.8611111111111112,
+        "packedRecall": 0.625,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0,
+        "recipe": "2/4/4",
+        "recallAt10": 0.8472222222222223,
+        "packedRecall": 0.5416666666666667,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.5,
+        "recipe": "identifier-adaptive",
+        "recallAt10": 0.8472222222222222,
+        "packedRecall": 0.5972222222222222,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0,
+        "recipe": "3/3/4",
+        "recallAt10": 0.8333333333333334,
+        "packedRecall": 0.5416666666666667,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.25,
+        "recipe": "2/4/4",
+        "recallAt10": 0.8194444444444443,
+        "packedRecall": 0.5555555555555555,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.25,
+        "recipe": "3/3/4",
+        "recallAt10": 0.8194444444444443,
+        "packedRecall": 0.5416666666666666,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.5,
+        "recipe": "3/3/4",
+        "recallAt10": 0.8055555555555555,
+        "packedRecall": 0.5416666666666666,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.75,
+        "recipe": "identifier-adaptive",
+        "recallAt10": 0.7916666666666666,
+        "packedRecall": 0.5694444444444445,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.5,
+        "recipe": "2/4/4",
+        "recallAt10": 0.7916666666666666,
+        "packedRecall": 0.5555555555555556,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.75,
+        "recipe": "2/4/4",
+        "recallAt10": 0.7916666666666666,
+        "packedRecall": 0.5416666666666666,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.5,
+        "recipe": "global",
+        "recallAt10": 0.75,
+        "packedRecall": 0.5694444444444444,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 1,
+        "recipe": "identifier-adaptive",
+        "recallAt10": 0.7361111111111112,
+        "packedRecall": 0.5416666666666666,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.75,
+        "recipe": "global",
+        "recallAt10": 0.736111111111111,
+        "packedRecall": 0.5833333333333333,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.75,
+        "recipe": "3/3/4",
+        "recallAt10": 0.736111111111111,
+        "packedRecall": 0.5277777777777778,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 1,
+        "recipe": "global",
+        "recallAt10": 0.7083333333333334,
+        "packedRecall": 0.5416666666666666,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0.25,
+        "recipe": "global",
+        "recallAt10": 0.6944444444444445,
+        "packedRecall": 0.5277777777777778,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 1,
+        "recipe": "3/3/4",
+        "recallAt10": 0.6944444444444445,
+        "packedRecall": 0.4861111111111111,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 1,
+        "recipe": "2/4/4",
+        "recallAt10": 0.6944444444444443,
+        "packedRecall": 0.4861111111111111,
+        "exactSuccessRate": 1
+      },
+      {
+        "weight": 0,
+        "recipe": "global",
+        "recallAt10": 0.6805555555555557,
+        "packedRecall": 0.5277777777777778,
+        "exactSuccessRate": 1
+      }
+    ],
+    "decision": "Rejected for runtime adoption. Semantic fusion does not improve the best adaptive lexical recipe. Candidate and packed recall remain below the core quality goal.",
+    "limitation": "Development selection only. Uniform prototype packing is separate from normal runtime assembly. No task-completion or held-out claim."
+  },
+  "registrationReferenceGuidance": {
+    "enabledInRuntime": true,
+    "provenance": "inferred-syntax",
+    "maxNotes": 5,
+    "scope": "New bare registration arguments in Python and JS/TS drafts outside inline selections.",
+    "behavior": "Suggest resolving a handler whose only identifier occurrences are registration arguments. Advisory only; no automatic edit, compiler result, or scoring change.",
+    "limitation": "Lexical analysis can miss definitions or references. Python wildcard imports suppress the advisory.",
+    "stressRegression": {
+      "blankLines": 120000,
+      "languages": [
+        "Python",
+        "JavaScript"
+      ],
+      "passed": true,
+      "timeoutSeconds": 5
+    },
+    "validation": {
+      "focusedPassed": 36,
+      "fullTests": 364,
+      "fullPassed": 347,
+      "fullSkipped": 17,
+      "fullFailed": 0
+    }
+  },
+  "localCoderRegistrationGuidance": {
+    "model": "local-upgrade-coder/main",
+    "variant": "Registration reference guidance; compaction disabled",
+    "implementationDigest": "6544be8f280f7ab2dbc5ea1e4fe312675a4e951c7783d64d7546201a683a9c0f",
+    "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6",
+    "apiSpend": 0,
+    "qualification": "not qualified",
+    "attempts": [
+      {
+        "task": "edit-and-check",
+        "outcome": "failed",
+        "seconds": 150,
+        "wallMs": 149766,
+        "tokens": 117641,
+        "hostToolCalls": 18,
+        "modelCalls": 16,
+        "changedFiles": [],
+        "checkpointFiles": [],
+        "agentChecks": 8,
+        "independentVerification": "not run",
+        "compactions": 0,
+        "authorizationEvidence": {
+          "complete": true,
+          "completedCalls": 18,
+          "unapprovedActions": 0
+        },
+        "reviewRequests": 2
+      },
+      {
+        "task": "flask-task-b",
+        "outcome": "timed-out",
+        "seconds": 721,
+        "wallMs": 720505,
+        "tokens": 402675,
+        "hostToolCalls": 27,
+        "modelCalls": 29,
+        "changedFiles": [],
+        "checkpointFiles": [
+          "src/flask/cli.py",
+          "tests/test_cli.py"
+        ],
+        "agentChecks": 5,
+        "independentVerification": "not run",
+        "compactions": 0,
+        "authorizationEvidence": {
+          "complete": true,
+          "completedCalls": 28,
+          "unapprovedActions": 0
+        },
+        "reviewRequests": 0
+      }
+    ],
+    "publicToolFormatObservations": [
+      {
+        "task": "edit-and-check",
+        "modelMessages": 16,
+        "tools": {
+          "run_command": 10,
+          "review_changes": 2,
+          "read_file": 5,
+          "read_files": 1,
+          "propose_write": 1
+        },
+        "searchModes": {},
+        "lineFormats": {
+          "new_lines": 0,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "lineAddresses": {
+          "anchor": 0,
+          "numeric": 0,
+          "after": 0
+        },
+        "acceptedLineEdits": [],
+        "anchorSuggestionResponses": 0,
+        "laterAnchorsMatchingSuggestions": 0,
+        "acceptedAfterSuggestionMatch": 0,
+        "compactions": 0,
+        "maxInputTokens": 9608
+      },
+      {
+        "task": "flask-task-b",
+        "modelMessages": 29,
+        "tools": {
+          "run_command": 6,
+          "read_file": 14,
+          "propose_write": 4,
+          "propose_lines": 1,
+          "read_files": 1,
+          "search_workspace": 3
+        },
+        "searchModes": {
+          "literal": 3
+        },
+        "lineFormats": {
+          "new_lines": 1,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "lineAddresses": {
+          "anchor": 1,
+          "numeric": 0,
+          "after": 0
+        },
+        "acceptedLineEdits": [],
+        "anchorSuggestionResponses": 0,
+        "laterAnchorsMatchingSuggestions": 0,
+        "acceptedAfterSuggestionMatch": 0,
+        "compactions": 0,
+        "maxInputTokens": 20330
+      }
+    ],
+    "pythonImportDiagnostic": {
+      "scope": "Disposable staged-source import diagnostic, not a model task or acceptance run.",
+      "results": [
+        {
+          "name": "default-import",
+          "exitCode": 0,
+          "inputDigest": "df3156dd2b57e0c3f37ec23eed187418e147ab7c7bb95ae5150c5ba12b65792d",
+          "stagedMarker": false,
+          "insideCopy": false
+        },
+        {
+          "name": "explicit-src-import",
+          "exitCode": 0,
+          "inputDigest": "df3156dd2b57e0c3f37ec23eed187418e147ab7c7bb95ae5150c5ba12b65792d",
+          "stagedMarker": true,
+          "insideCopy": true
+        }
+      ],
+      "sourceUnchanged": true
+    },
+    "limitation": "Small task reached checks and review but failed termination at the existing pause limit. Flask retained only a partial unreviewed checkpoint, not an accepted patch. Source path diagnosis does not establish patch correctness."
+  },
+  "commandPreflight": {
+    "enabledInRuntime": true,
+    "behavior": "Reject empty or stdin-only known interpreter calls before command approval and dispatch.",
+    "unchanged": "Script arguments, explicit version diagnostics, standalone tools, approvals, run budgets, and pause limit.",
+    "focusedTests": {
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "pythonSourceGuidance": {
+    "enabledInRuntime": true,
+    "behavior": "Describe Python src-layout imports in the command tool and return an advisory for staged src Python changes.",
+    "automaticEnvironmentChanges": false,
+    "proofOfImportPath": false,
+    "validation": "Real isolated check failed without src and passed with explicit sys.path on the identical draft input digest. Source workspace stayed unchanged.",
+    "focusedTests": {
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "retrievalVersion2StemmingExperiment": {
+    "version": 1,
+    "recordedAt": "2026-11-22T14:34:07.033Z",
+    "corpus": "agent-capability-upgrade/retrieval/2",
+    "sourceVersion": "git-overlay/1:4bb46d0c9ce2b5ea5fc54a30c3e58f33097eb8f8fd8a53667a6888ec1a27a7a4",
+    "inputDigest": "f5295ef17c74321845461253a8f3c8c256d7c92266f0cf3bc7768e72ac93b849",
+    "split": "development",
+    "heldOutEvaluated": false,
+    "enabledInRuntime": false,
+    "normalizerValidation": {
+      "tested": 42374,
+      "failed": 0,
+      "examples": []
+    },
+    "normalizerDigest": "327ca1656b82a4794ebfb6de491e4244324540112523831a26a51ae898f350f4",
+    "packingBudgetCharacters": 12000,
+    "trials": [
+      {
+        "mode": "none",
+        "recipe": "identifier-adaptive",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.8611111111111112,
+        "packedRecall": 0.8611111111111112,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "none",
+        "recipe": "identifier-adaptive",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.8611111111111112,
+        "packedRecall": 0.611111111111111,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "none",
+        "recipe": "2/4/4",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.8472222222222223,
+        "packedRecall": 0.8472222222222223,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "augment",
+        "recipe": "identifier-adaptive",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.8472222222222223,
+        "packedRecall": 0.8472222222222223,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "augment",
+        "recipe": "identifier-adaptive",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.8472222222222223,
+        "packedRecall": 0.5833333333333333,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "none",
+        "recipe": "2/4/4",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.8472222222222223,
+        "packedRecall": 0.5416666666666667,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "none",
+        "recipe": "3/3/4",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.8333333333333334,
+        "packedRecall": 0.8333333333333334,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "none",
+        "recipe": "3/3/4",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.8333333333333334,
+        "packedRecall": 0.5416666666666667,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "replace",
+        "recipe": "3/3/4",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.8194444444444446,
+        "packedRecall": 0.8194444444444446,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "replace",
+        "recipe": "identifier-adaptive",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.8194444444444446,
+        "packedRecall": 0.8194444444444446,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "replace",
+        "recipe": "identifier-adaptive",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.8194444444444446,
+        "packedRecall": 0.5694444444444445,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "replace",
+        "recipe": "3/3/4",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.8194444444444446,
+        "packedRecall": 0.513888888888889,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "augment",
+        "recipe": "2/4/4",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.8194444444444445,
+        "packedRecall": 0.8194444444444445,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "augment",
+        "recipe": "2/4/4",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.8194444444444445,
+        "packedRecall": 0.5277777777777777,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "augment",
+        "recipe": "3/3/4",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.8194444444444443,
+        "packedRecall": 0.8194444444444443,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "augment",
+        "recipe": "3/3/4",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.8194444444444443,
+        "packedRecall": 0.5277777777777777,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "replace",
+        "recipe": "2/4/4",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.8055555555555558,
+        "packedRecall": 0.8055555555555558,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "replace",
+        "recipe": "2/4/4",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.8055555555555558,
+        "packedRecall": 0.513888888888889,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "replace",
+        "recipe": "global",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.7083333333333334,
+        "packedRecall": 0.7083333333333334,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "augment",
+        "recipe": "global",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.7083333333333334,
+        "packedRecall": 0.7083333333333334,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "augment",
+        "recipe": "global",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.7083333333333334,
+        "packedRecall": 0.5555555555555557,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "replace",
+        "recipe": "global",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.7083333333333334,
+        "packedRecall": 0.5555555555555556,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "none",
+        "recipe": "global",
+        "excerptCharacters": 1100,
+        "recallAt10": 0.6805555555555557,
+        "packedRecall": 0.6805555555555557,
+        "exactSuccessRate": 1
+      },
+      {
+        "mode": "none",
+        "recipe": "global",
+        "excerptCharacters": 2200,
+        "recallAt10": 0.6805555555555557,
+        "packedRecall": 0.5416666666666667,
+        "exactSuccessRate": 1
+      }
+    ],
+    "decision": "Rejected. Best replacement stemming recall was 81.94%; augmentation reached 84.72%; the unstemmed adaptive recipe reached 86.11%.",
+    "limitation": "Development only. Shorter prototype excerpts improve file coverage, not proven relevant-witness coverage or task completion. Held-out queries remain untouched."
+  },
+  "previousAnchorHintsQualification": {
+    "qualified": false,
+    "source": "test-results/upgrade-gpt-oss-anchor-hints/qualification.json",
+    "retrievalVersion": "agent-capability-upgrade/retrieval/2",
+    "sourceJudgmentsReady": true,
+    "attempts": 2,
+    "complete": 1,
+    "flaskComplete": 0,
+    "freshHeldOutEvaluated": false,
+    "issues": [
+      "full-20-task-three-repetition-batch-required",
+      "complete-task-target-missed",
+      "held-out-task-target-missed",
+      "all-three-flask-attempts-must-pass",
+      "full-frozen-retrieval-set-required",
+      "retrieval-recall-target-missed",
+      "held-out-retrieval-target-missed",
+      "exact-retrieval-target-missed"
+    ],
+    "limitation": "Incomplete batches; no measured overall or fresh held-out metrics."
+  },
+  "localRerankerPreparation": {
+    "status": "LM Studio legacy completion score probe unavailable; native local backend fallback being prepared.",
+    "model": "Qwen3-Reranker-0.6B",
+    "publisher": "giladgd/Qwen3-Reranker-0.6B-GGUF",
+    "revision": "dfad7d6a83064e655eadb0c7f049d3f68a51d823",
+    "file": "Qwen3-Reranker-0.6B.Q8_0.gguf",
+    "bytes": 639153376,
+    "sha256": "6ab9a9c52869c92f39414839a0e5ffebf2fc2f5259d60e46811aacbe54217e3f",
+    "hashVerified": true,
+    "apiSpend": 0,
+    "enabledInRuntime": false,
+    "heldOutEvaluated": false,
+    "tokenizer": {
+      "format": "GGUF/3",
+      "architecture": "qwen3",
+      "yes": 9693,
+      "no": 2152
+    },
+    "scope": "Local-only development experiment. Imported without loading during the frozen coding run.",
+    "memoryEstimate": {
+      "contextLength": 8192,
+      "parallel": 1,
+      "totalMiB": 965.16,
+      "guard": "passed without override",
+      "loaded": false
+    },
+    "legacyProbe": {
+      "supported": false,
+      "reason": "Token log probabilities absent (logprobs: null). No corpus query evaluated."
+    },
+    "chatProbe": {
+      "supported": false,
+      "reason": "Chat returned token probabilities, but no finite yes/no pair under the required ranking suffix. Synthetic inputs only."
+    }
+  },
+  "retrievalVersion2PackingWitnessDiagnostic": {
+    "version": 1,
+    "recordedAt": "2026-11-22T15:30:43.577Z",
+    "sourceVersion": "git-overlay/1:4bb46d0c9ce2b5ea5fc54a30c3e58f33097eb8f8fd8a53667a6888ec1a27a7a4",
+    "split": "development",
+    "heldOutEvaluated": false,
+    "enabledInRuntime": false,
+    "packingBudgetCharacters": 12000,
+    "method": "A witness counts only when a packed excerpt contains the complete cited text from the reviewed pinned source. Conservative diagnostic; relevant partial excerpts can fail this measure.",
+    "trials": [
+      {
+        "mode": "normal",
+        "fileCoverage": 0.5694444444444444,
+        "citedLineCoverage": 0.32416516550503477,
+        "anyCompleteCitationCoverage": 0.19444444444444445,
+        "allCompleteCitationCoverage": 0.18055555555555555,
+        "maxPackedCharacters": 11997
+      },
+      {
+        "mode": "adaptive-700",
+        "fileCoverage": 0.8611111111111112,
+        "citedLineCoverage": 0.047442937720715506,
+        "anyCompleteCitationCoverage": 0,
+        "allCompleteCitationCoverage": 0,
+        "maxPackedCharacters": 7032
+      },
+      {
+        "mode": "adaptive-1100",
+        "fileCoverage": 0.8611111111111112,
+        "citedLineCoverage": 0.10400362920787758,
+        "anyCompleteCitationCoverage": 0.027777777777777776,
+        "allCompleteCitationCoverage": 0.027777777777777776,
+        "maxPackedCharacters": 10653
+      },
+      {
+        "mode": "adaptive-1600",
+        "fileCoverage": 0.7916666666666666,
+        "citedLineCoverage": 0.14795860193123261,
+        "anyCompleteCitationCoverage": 0.06944444444444445,
+        "allCompleteCitationCoverage": 0.06944444444444445,
+        "maxPackedCharacters": 11943
+      },
+      {
+        "mode": "adaptive-2200",
+        "fileCoverage": 0.6527777777777778,
+        "citedLineCoverage": 0.16785928203148315,
+        "anyCompleteCitationCoverage": 0.08333333333333333,
+        "allCompleteCitationCoverage": 0.08333333333333333,
+        "maxPackedCharacters": 11988
+      }
+    ],
+    "limitation": "Prototype packing only; no model-completion or gate result. Complete citations are a conservative diagnostic, not an exhaustive relevance oracle. This experiment overlapped the running Coder smoke; do not infer a timing effect from that smoke.",
+    "decision": "Keep shorter uniform packing disabled. The 1100-character prototype has higher file coverage but lower complete-citation and mean cited-line coverage than normal assembly."
+  },
+  "localCoderCommandSource": {
+    "model": "local-upgrade-coder/main",
+    "variant": "Command preflight and Python source guidance; compaction disabled",
+    "implementationDigest": "92361f0925d22f7616938e20ce9d87c68727a87649751afbb065700d1ec33289",
+    "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6",
+    "apiSpend": 0,
+    "qualification": "not qualified",
+    "attempts": [
+      {
+        "task": "edit-and-check",
+        "outcome": "complete",
+        "seconds": 64,
+        "wallMs": 64233,
+        "tokens": 27326,
+        "hostToolCalls": 4,
+        "modelCalls": 5,
+        "agentChecks": 1,
+        "reviewRequests": 1,
+        "changedFiles": [
+          "calc.js"
+        ],
+        "checkpointFiles": [],
+        "independentVerification": "complete",
+        "compactions": 0,
+        "authorizationEvidence": {
+          "complete": true,
+          "completedCalls": 4,
+          "unapprovedActions": 0
+        }
+      },
+      {
+        "task": "flask-task-b",
+        "outcome": "timed-out",
+        "seconds": 721,
+        "wallMs": 720727,
+        "tokens": 345151,
+        "hostToolCalls": 27,
+        "modelCalls": 28,
+        "agentChecks": 0,
+        "reviewRequests": 0,
+        "changedFiles": [],
+        "checkpointFiles": [
+          "src/flask/cli.py"
+        ],
+        "independentVerification": "not run",
+        "compactions": 0,
+        "authorizationEvidence": {
+          "complete": true,
+          "completedCalls": 28,
+          "unapprovedActions": 0
+        }
+      }
+    ],
+    "publicToolFormatObservations": [
+      {
+        "task": "edit-and-check",
+        "modelMessages": 5,
+        "tools": {
+          "suggest_note": 1,
+          "review_changes": 1,
+          "run_command": 1,
+          "propose_write": 1
+        },
+        "searchModes": {},
+        "lineFormats": {
+          "new_lines": 0,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "lineAddresses": {
+          "anchor": 0,
+          "numeric": 0,
+          "after": 0
+        },
+        "acceptedLineEdits": [],
+        "anchorSuggestionResponses": 0,
+        "laterAnchorsMatchingSuggestions": 0,
+        "acceptedAfterSuggestionMatch": 0,
+        "compactions": 0,
+        "maxInputTokens": 5878,
+        "sessionRole": "initial"
+      },
+      {
+        "task": "flask-task-b",
+        "modelMessages": 19,
+        "tools": {
+          "read_file": 14,
+          "propose_write": 1,
+          "search_workspace": 4
+        },
+        "searchModes": {
+          "literal": 4
+        },
+        "lineFormats": {
+          "new_lines": 0,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "lineAddresses": {
+          "anchor": 0,
+          "numeric": 0,
+          "after": 0
+        },
+        "acceptedLineEdits": [],
+        "anchorSuggestionResponses": 0,
+        "laterAnchorsMatchingSuggestions": 0,
+        "acceptedAfterSuggestionMatch": 0,
+        "compactions": 0,
+        "maxInputTokens": 18550,
+        "sessionRole": "initial"
+      },
+      {
+        "task": "flask-task-b",
+        "modelMessages": 9,
+        "tools": {
+          "read_file": 4,
+          "search_workspace": 3,
+          "read_files": 2
+        },
+        "searchModes": {
+          "literal": 3
+        },
+        "lineFormats": {
+          "new_lines": 0,
+          "new_text": 0,
+          "both": 0,
+          "neither": 0
+        },
+        "lineAddresses": {
+          "anchor": 0,
+          "numeric": 0,
+          "after": 0
+        },
+        "acceptedLineEdits": [],
+        "anchorSuggestionResponses": 0,
+        "laterAnchorsMatchingSuggestions": 0,
+        "acceptedAfterSuggestionMatch": 0,
+        "compactions": 0,
+        "maxInputTokens": 12051,
+        "sessionRole": "retry"
+      }
+    ],
+    "limitation": "Small task pass only. Flask ran no commands, so source-path guidance was not exercised. Packing diagnostics overlapped this smoke; elapsed time cannot isolate a performance effect."
+  },
+  "previousRegistrationQualification": {
+    "qualified": false,
+    "source": "test-results/upgrade-coder-registration-guidance/qualification.json",
+    "retrievalVersion": "agent-capability-upgrade/retrieval/2",
+    "sourceJudgmentsReady": true,
+    "attempts": 2,
+    "complete": 0,
+    "flaskComplete": 0,
+    "freshHeldOutEvaluated": false,
+    "issues": [
+      "full-20-task-three-repetition-batch-required",
+      "complete-task-target-missed",
+      "held-out-task-target-missed",
+      "all-three-flask-attempts-must-pass",
+      "full-frozen-retrieval-set-required",
+      "retrieval-recall-target-missed",
+      "held-out-retrieval-target-missed",
+      "exact-retrieval-target-missed"
+    ],
+    "limitation": "Partial coding and development-only retrieval batch. No measured fresh held-out or overall score."
+  },
+  "retrievalVersion2BeforeCommandSource": {
+    "state": "completed",
+    "version": "agent-capability-upgrade/retrieval/2",
+    "sourceVersion": "git-overlay/1:4bb46d0c9ce2b5ea5fc54a30c3e58f33097eb8f8fd8a53667a6888ec1a27a7a4",
+    "inputDigest": "f5295ef17c74321845461253a8f3c8c256d7c92266f0cf3bc7768e72ac93b849",
+    "corrections": 5,
+    "coverageGapsResolved": 1,
+    "judgmentsValidated": 120,
+    "judgmentsPending": 0,
+    "sourceFiles": 141,
+    "developmentQueries": 24,
+    "freshHeldOutQueries": 16,
+    "heldOutEvaluated": false,
+    "reviewLimitation": "Source review by the same implementer; fresh queries were frozen before evaluation and kept out of development selection. External independent comparison remains open.",
+    "recordedAt": "2026-11-22T13:59:35.340Z",
+    "developmentRecallAt10": 0.6805555555555557,
+    "exactDevelopmentIdentifiers": {
+      "passed": 16,
+      "total": 16
+    },
+    "overallRecallAt10": null,
+    "heldOutRecallAt10": null,
+    "implementationDigest": "fe92e42d9ce83072ba64905366058ab0d282c0c125e0f6e9e901cb60fb11facb",
+    "evaluationDigest": "12edfaa174cb07db715edf7a318c6c4d804ae5d95e818fcfc0ac7885e45907e6",
+    "sourceManifest": "test/retrieval/corpora/v2/source.json",
+    "freezeRecord": "test/retrieval/corpora/v2/freeze.json",
+    "historicalVersion1Unchanged": true
+  }
+}
